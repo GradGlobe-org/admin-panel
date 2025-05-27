@@ -1,0 +1,36 @@
+from django.db import models
+import uuid
+# Create your models here.
+
+class JobRole(models.Model):
+    role = models.CharField(max_length=100, verbose_name="Job Role", db_index=True)
+
+    class Meta:
+        verbose_name = "Job Role"
+        verbose_name_plural = "Job Roles"
+        ordering = ['role']
+
+    def __str__(self):
+        return self.role
+
+
+class Employee(models.Model):
+    username = models.CharField(max_length=100, unique=True, verbose_name="Username", db_index=True)
+    password = models.CharField(max_length=50, verbose_name="Password")
+    name = models.CharField(max_length=100, verbose_name="Full Name", db_index=True)
+    phone_number = models.CharField(max_length=12, verbose_name="Phone Number", db_index=True)
+    email = models.EmailField(max_length=100, verbose_name="Email Address", db_index=True)
+    job_roles = models.ManyToManyField(JobRole, verbose_name="Job Roles")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    modified_at = models.DateTimeField(auto_now=True, verbose_name="Last Modified At")
+    authToken = models.UUIDField(default=uuid.uuid4, editable=False)
+
+    class Meta:
+        verbose_name = "Employee"
+        verbose_name_plural = "Employees"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.username
+
+# class permissions():
