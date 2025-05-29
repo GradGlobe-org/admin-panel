@@ -123,3 +123,59 @@ CACHES = {
         "LOCATION": "unique-snowflake",  # just needs to be unique per project
     }
 }
+
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Admin",
+    "site_header": " Dashboard",
+    "site_brand": "Gradglobe ",
+    # "site_logo": "images/logo.png",  # Place your logo in your static files
+    # "site_icon": "images/favicon.ico",
+    "welcome_sign": "Welcome to the GradGlobe Admin Panel",
+    "copyright": "GradGlobe © 2025",
+    "user_avatar": None,
+    # Top menu links
+    # "topmenu_links": [
+    #     {"name": "Home", "url": "/", "permissions": ["auth.view_user"]},
+    #     {"model": "users.customuser"},
+    #     {"model": "projects.project"},
+    #     {"model": "tasks.task"},
+    # ],
+    # Side menu
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    
+    # Custom links in the user menu
+    "user_menu_links": [
+        {
+            "name": "Support",
+            "url": "https://your-support-link.com",
+            "icon": "fas fa-life-ring",
+            "new_window": True,
+        },
+    ],
+    # UI Tweaks (see below)
+    # "show_ui_builder": True,  # Enables the live UI customizer
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "cyborg",
+    "dark_mode_theme": "darkly",
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-primary",
+    "accent": "accent-primary",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+}
