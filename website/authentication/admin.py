@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import JobRole, Employee
+from .models import JobRole, Employee, api_key
 
 # Register your models here.
 
@@ -36,3 +36,4 @@ class EmployeeAdmin(admin.ModelAdmin):
     )
 
 
+admin.site.register(api_key)

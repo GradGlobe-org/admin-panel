@@ -33,4 +33,9 @@ class Employee(models.Model):
     def __str__(self):
         return self.username
 
-# class permissions():
+class api_key(models.Model):
+    name = models.CharField(max_length=100)
+    key = models.UUIDField(default=uuid.uuid4, editable=False)
+
+    def __str__(self):
+        return f"{self.name} : {self.key}"

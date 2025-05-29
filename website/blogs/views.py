@@ -2,7 +2,9 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection
 import json
+from website.utils import api_key_required
 
+@api_key_required
 def blog_post_summary_view(request):
     with connection.cursor() as cursor:
         cursor.execute("""
@@ -50,3 +52,6 @@ def blog_post_summary_view(request):
         return JsonResponse({
             "error": "Missing required fields"
         }, status=400) """
+
+
+
