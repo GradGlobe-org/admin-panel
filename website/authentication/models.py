@@ -42,7 +42,7 @@ class api_key(models.Model):
     
 class LoginLog(models.Model):
     employee = models.ForeignKey(
-        'Employee',
+        Employee,
         on_delete=models.CASCADE,
         null=True,
         blank=True,
