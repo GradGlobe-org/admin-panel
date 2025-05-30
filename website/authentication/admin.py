@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import JobRole, Employee, api_key
+from .models import JobRole, Employee, api_key, LoginLog
 
 # Register your models here.
 
@@ -37,3 +37,24 @@ class EmployeeAdmin(admin.ModelAdmin):
 
 
 admin.site.register(api_key)
+
+@admin.register(LoginLog)
+class LoginLogAdmin(admin.ModelAdmin):
+    list_display = ('id', 'employee', 'login_at')
+    list_filter = ('employee', 'login_at')
+    search_fields = ('employee__username', 'employee__name')
+    date_hierarchy = 'login_at'
+    ordering = ('-login_at',)
+    readonly_fields = ('employee', 'login_at')
+
+    def has_add_permission(self, request):
+        # Prevent adding logs via admin
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Prevent editing logs
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deleting logs
+        return False
