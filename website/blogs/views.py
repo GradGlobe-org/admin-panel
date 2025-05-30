@@ -271,7 +271,7 @@ def posts_by_author_view(request):
                 'content_snippet': post.content[:500],  # First 500 chars
                 'status': post.status,
                 'created_at': post.created_at,
-                'viewCount': post.viewCount,
+                'viewCount': post.view_count,
                 'featured_image': post.featured_image
             })
         
