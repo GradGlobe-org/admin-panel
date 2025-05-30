@@ -55,11 +55,11 @@ def meta_keywords(request):
 
     content = data.get("content")
 
-    # try:
-    keywords = extract_keywords_rake(content)
-    # except:
-        # return JsonResponse({
-        #     "error": "Internal Server Error"
-        # }, status=500)
+    try:
+        keywords = extract_keywords_rake(content)
+    except:
+        return JsonResponse({
+            "error": "Internal Server Error"
+        }, status=500)
     
     return JsonResponse({"keywords" : keywords})

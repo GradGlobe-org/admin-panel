@@ -244,3 +244,53 @@ def blog_post_delete_view(request, post_id):
             'status': 'error',
             'message': str(e)
         }, status=400)
+
+@csrf_exempt
+@api_key_required
+@require_http_methods(["POST"])  
+def posts_by_author_view(request):
+    try:
+        data = json.loads(request.body)
+        
+        # Validate author_id is provided
+        if 'author_id' not in data:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'author_id is required in request body'
+            }, status=400)
+        
+        author_id = data['author_id']
+        posts = Post.objects.filter(author_id=author_id).order_by('-created_at')
+        
+        posts_data = []
+        for post in posts:
+            posts_data.append({
+                'id': post.id,
+                'title': post.title,
+                'slug': post.slug,
+                'content_snippet': post.content[:500],  # First 500 chars
+                'status': post.status,
+                'created_at': post.created_at,
+                'viewCount': post.viewCount,
+                'featured_image': post.featured_image
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'author_id': author_id,
+                'posts': posts_data,
+                'count': len(posts_data)
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON payload'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=400)

@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Employee
+from .models import Employee, LoginLog
 import json
 from django.http import JsonResponse
 import uuid
@@ -37,6 +37,9 @@ def login(request):
     new_token = uuid.uuid4()
     employee_obj.authToken = new_token
     employee_obj.save()
+
+    # save login logs
+    LoginLog.objects.create(employee=employee_obj)
 
     # Get job roles as a list of strings
     job_roles_list = list(employee_obj.job_roles.values_list('role', flat=True))

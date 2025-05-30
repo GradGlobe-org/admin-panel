@@ -39,3 +39,22 @@ class api_key(models.Model):
 
     def __str__(self):
         return f"{self.name} : {self.key}"
+    
+class LoginLog(models.Model):
+    employee = models.ForeignKey(
+        'Employee',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='login_logs',
+        verbose_name="Employee"
+    )
+    login_at = models.DateTimeField(auto_now_add=True, verbose_name="Login Time")
+
+    class Meta:
+        verbose_name = "Login Log"
+        verbose_name_plural = "Login Logs"
+        ordering = ['-login_at']
+
+    def __str__(self):
+        return f"{self.employee.username if self.employee else 'Unknown'} logged in at {self.login_at}"
