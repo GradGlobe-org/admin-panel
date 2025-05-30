@@ -19,7 +19,7 @@ class StatusListFilter(admin.SimpleListFilter):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('title', 'author', 'status', 'created_at', 'modified_at', 'viewCount')
+    list_display = ('id', 'title', 'slug', 'status', 'created_at', 'view_count')
     search_fields = ('title', 'content', 'author__first_name', 'author__last_name')
     list_filter = (StatusListFilter, 'created_at', 'author')
     date_hierarchy = 'created_at'

@@ -11,7 +11,7 @@ from authentication.models import Employee
 from slugify import slugify  # using `python-slugify`
 from django.views.decorators.csrf import csrf_exempt
 
-
+@csrf_exempt
 @api_key_required
 def blog_post_summary_view(request):
     with connection.cursor() as cursor:
@@ -20,7 +20,7 @@ def blog_post_summary_view(request):
                 id,
                 title,
                 slug,
-                viewCount,
+                view_count,
                 featured_image,
                 SUBSTR(content, 1, 1000) as content_snippet
             FROM 

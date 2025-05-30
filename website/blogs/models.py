@@ -19,7 +19,7 @@ class Post(models.Model):
     meta_keyword = models.TextField(blank=True, null=True)
     meta_description = models.TextField(blank=True, null=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
-    viewCount = models.PositiveIntegerField(default=0)
+    view_count = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if not self.slug and self.title:
