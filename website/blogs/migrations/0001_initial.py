@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('meta_keyword', models.TextField(blank=True, null=True)),
                 ('meta_description', models.TextField(blank=True, null=True)),
                 ('slug', models.SlugField(blank=True, null=True, unique=True)),
-                ('viewCount', models.PositiveIntegerField(default=0)),
+                ('view_count', models.PositiveIntegerField(default=0)),
                 ('author', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='authentication.employee')),
             ],
             options={

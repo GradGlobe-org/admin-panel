@@ -37,7 +37,7 @@ class PostAdmin(admin.ModelAdmin):
             'classes': ('collapse',),  # Optional: makes this section collapsible
         }),
         ('Meta Data', {
-            'fields': ('viewCount', 'created_at', 'modified_at'),
+            'fields': ('view_count', 'created_at', 'modified_at'),
         }),
     )
     readonly_fields = ('created_at', 'modified_at')

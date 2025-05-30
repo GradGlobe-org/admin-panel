@@ -45,7 +45,7 @@ def blog_post_detail_view(request, identifier):
             post = get_object_or_404(Post.objects.select_related('author'), slug=identifier)
         
         # Increment view count
-        post.viewCount += 1
+        post.view_count += 1
         post.save()
         
         data = {
@@ -65,7 +65,7 @@ def blog_post_detail_view(request, identifier):
             'status': post.status,
             'meta_keyword': post.meta_keyword,
             'meta_description': post.meta_description,
-            'viewCount': post.viewCount
+            'view_count': post.view_count
         }
         return JsonResponse({'status': 'success', 'data': data})
     except Exception as e:
@@ -271,7 +271,7 @@ def posts_by_author_view(request):
                 'content_snippet': post.content[:500],  # First 500 chars
                 'status': post.status,
                 'created_at': post.created_at,
-                'viewCount': post.view_count,
+                'view_count': post.view_count,
                 'featured_image': post.featured_image
             })
         
