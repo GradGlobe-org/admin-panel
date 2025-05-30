@@ -42,6 +42,7 @@ def login(request):
     job_roles_list = list(employee_obj.job_roles.values_list('role', flat=True))
 
     return JsonResponse({
+        "id" : employee_obj.id,
         "authToken": str(new_token),
         "name": employee_obj.name,
         "jobRoles": job_roles_list
