@@ -58,3 +58,14 @@ class LoginLog(models.Model):
 
     def __str__(self):
         return f"{self.employee.username if self.employee else 'Unknown'} logged in at {self.login_at}"
+    
+class Permission(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Permission Name", db_index=True)
+    job_roles = models.ManyToManyField(JobRole, related_name='permissions', verbose_name="Job Roles")
+
+    class Meta:
+        verbose_name = "Permission"
+        verbose_name_plural = "Permissions"
+
+    def __str__(self):
+        return self.name

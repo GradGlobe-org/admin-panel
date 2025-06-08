@@ -43,10 +43,17 @@ def login(request):
 
     # Get job roles as a list of strings
     job_roles_list = list(employee_obj.job_roles.values_list('role', flat=True))
+    permissions = set()
+
+    for role in employee_obj.job_roles.all():
+        role_permissions = role.permissions.values_list("name", flat=True)
+        permissions.update(role_permissions)
+
 
     return JsonResponse({
         "id" : employee_obj.id,
         "authToken": str(new_token),
         "name": employee_obj.name,
-        "jobRoles": job_roles_list
+        "jobRoles": job_roles_list,
+        "permissions": list(permissions)
     }, status=200)
