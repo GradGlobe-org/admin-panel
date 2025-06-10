@@ -4,6 +4,8 @@ import uuid
 
 class JobRole(models.Model):
     role = models.CharField(max_length=100, verbose_name="Job Role", db_index=True)
+    permissions = models.ManyToManyField('Permission', related_name='job_roles', verbose_name="Permissions", blank=True)
+
 
     class Meta:
         verbose_name = "Job Role"
@@ -61,8 +63,7 @@ class LoginLog(models.Model):
     
 class Permission(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Permission Name", db_index=True)
-    job_roles = models.ManyToManyField(JobRole, related_name='permissions', verbose_name="Job Roles")
-
+    
     class Meta:
         verbose_name = "Permission"
         verbose_name_plural = "Permissions"

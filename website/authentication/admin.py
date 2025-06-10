@@ -7,7 +7,9 @@ from .models import JobRole, Employee, api_key, LoginLog, Permission
 class JobRoleAdmin(admin.ModelAdmin):
     list_display = ('id', 'role')
     search_fields = ('role',)
+    list_display_links = ('role',)
     ordering = ('role',)
+    filter_horizontal = ('permissions',)
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
@@ -63,4 +65,3 @@ class LoginLogAdmin(admin.ModelAdmin):
 class PermissionAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
-    filter_horizontal = ('job_roles',)
