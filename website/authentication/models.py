@@ -6,7 +6,6 @@ class JobRole(models.Model):
     role = models.CharField(max_length=100, verbose_name="Job Role", db_index=True)
     permissions = models.ManyToManyField('Permission', related_name='job_roles', verbose_name="Permissions", blank=True)
 
-
     class Meta:
         verbose_name = "Job Role"
         verbose_name_plural = "Job Roles"
