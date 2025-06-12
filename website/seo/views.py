@@ -1,65 +1,71 @@
-from rake_nltk import Rake
-import nltk
-from nltk import word_tokenize, pos_tag
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+import yake
 from website.utils import api_key_required
 
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('averaged_perceptron_tagger_eng')
 
-
-GOOD_POS = {"NN", "NNS", "NNP", "NNPS", "JJ"}
-
-def is_meaningful(phrase):
+def get_yake_keywords(text, ratio=0.04, max_keywords=20):
     """
-    Collects only the meaning full keywords good for seo
+    Extract keywords using YAKE based on word count ratio.
     """
-    words = word_tokenize(phrase)
-    tagged = pos_tag(words)
-    return any(tag in GOOD_POS for word, tag in tagged)
+    word_count = len(text.split())
+    top_keywords = max(1, min(max_keywords, int(word_count * ratio)))
 
-def extract_keywords_rake(text, top_n=10):
-    """
-    Extracts Keywrods from the text
-    """
-    r = Rake()
-    r.extract_keywords_from_text(text)
-    ranked = r.get_ranked_phrases()
+    kw_extractor = yake.KeywordExtractor(
+        lan="en",
+        n=3,
+        dedupLim=0.9,
+        dedupFunc='seqm',
+        windowsSize=1,
+        top=top_keywords,
+        features=None
+    )
 
-    filtered = [
-        phrase for phrase in ranked[:top_n]
-        if is_meaningful(phrase) and len(phrase.strip()) > 3
-    ]
-    return filtered
-
-
+    keywords = kw_extractor.extract_keywords(text)
+    keyword_list = [kw for kw, _ in keywords]
+    keyword_string = ", ".join(keyword_list)
+    return keyword_string
 
 
 @api_key_required
 @csrf_exempt
 def meta_keywords(request):
     if request.method != "POST":
-        return JsonResponse({
-            "error": "Method not allowed"
-        }, status=405)
-    
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
     try:
         data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({
-            "error": "Invalid JSON request"
-        }, status=400)
+        content = data.get("content")
 
-    content = data.get("content")
+        if not content:
+            return JsonResponse({"error": "No content provided."}, status=400)
+
+        keywords = get_yake_keywords(content)
+        return JsonResponse({"keywords": keywords})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON request"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_key_required
+@csrf_exempt
+def extract_keywords(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST method allowed.'}, status=405)
 
     try:
-        keywords = extract_keywords_rake(content)
-    except:
-        return JsonResponse({
-            "error": "Internal Server Error"
-        }, status=500)
-    
-    return JsonResponse({"keywords" : keywords})
+        data = json.loads(request.body)
+        text = data.get('text')
+
+        if not text:
+            return JsonResponse({'error': 'No text provided.'}, status=400)
+
+        keywords = get_yake_keywords(text)
+        return JsonResponse({'keywords': keywords})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

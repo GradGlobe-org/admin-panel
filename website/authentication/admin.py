@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import JobRole, Employee, api_key, LoginLog
+from .models import JobRole, Employee, api_key, LoginLog, Permission
 
 # Register your models here.
 
@@ -7,7 +7,9 @@ from .models import JobRole, Employee, api_key, LoginLog
 class JobRoleAdmin(admin.ModelAdmin):
     list_display = ('id', 'role')
     search_fields = ('role',)
+    list_display_links = ('role',)
     ordering = ('role',)
+    filter_horizontal = ('permissions',)
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
@@ -58,3 +60,8 @@ class LoginLogAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Prevent deleting logs
         return False
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
