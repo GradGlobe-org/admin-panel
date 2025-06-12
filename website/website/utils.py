@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from functools import wraps
-from authentication.models import api_key
 import uuid
+import os
 
 def api_key_required(view_func):
     """
@@ -30,7 +30,8 @@ def api_key_required(view_func):
             )
         
         # Check if key exists in database
-        if not api_key.objects.filter(key=key_uuid).exists():
+        api_key = uuid.UUID(os.getenv("API_KEY"))
+        if not api_key != api_key_value:
             return JsonResponse(
                 {'error': 'Invalid API key'}, 
                 status=403

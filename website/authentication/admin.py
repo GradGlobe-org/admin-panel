@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import JobRole, Employee, api_key, LoginLog, Permission
+from .models import JobRole, Employee, LoginLog, Permission
 
 # Register your models here.
 
@@ -37,8 +37,6 @@ class EmployeeAdmin(admin.ModelAdmin):
         }),
     )
 
-
-admin.site.register(api_key)
 
 @admin.register(LoginLog)
 class LoginLogAdmin(admin.ModelAdmin):

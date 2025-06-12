@@ -4,8 +4,9 @@ import json
 from django.http import JsonResponse
 import uuid
 from django.views.decorators.csrf import csrf_exempt
+from website.utils import api_key_required
 
-
+@api_key_required
 @csrf_exempt
 def login(request):
     if request.method != "POST":

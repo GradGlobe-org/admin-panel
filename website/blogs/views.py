@@ -35,6 +35,7 @@ def blog_post_summary_view(request):
         ]
     return JsonResponse(results, safe=False)
 
+
 @api_key_required
 def blog_post_detail_view(request, identifier):
     try:
