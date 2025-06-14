@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection
 import json
-from website.utils import api_key_required
+from website.utils import api_key_required, has_perms
 from .models import Post
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
@@ -91,6 +91,12 @@ def blog_post_create_view(request):
         # Verify author exists
         author = get_object_or_404(Employee, id=data['author_id'])
         
+        if not has_perms(int(data['author_id']), ["Blog_create"]):
+            return JsonResponse({
+                    'status': 'error',
+                    'message': f'Employee does not have permissions to perform this task'
+                }, status=400)
+
         # Create the post
         post = Post(
             title=data['title'],

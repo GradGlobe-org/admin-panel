@@ -2,7 +2,8 @@ from django.db import models
 
 class location(models.Model):
     name = models.CharField(max_length=1000)
-
+    location_map_link = models.URLField(max_length=1000)
+    
     class Meta:
         verbose_name = "Location"
         verbose_name_plural = "Locations"

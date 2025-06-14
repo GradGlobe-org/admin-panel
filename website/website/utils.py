@@ -3,6 +3,9 @@ from functools import wraps
 import uuid
 import os
 
+from authentication.models import Employee, Permission
+
+
 def api_key_required(view_func):
     """
     Decorator to verify API key in request headers.
@@ -40,3 +43,21 @@ def api_key_required(view_func):
         return view_func(request, *args, **kwargs)
     
     return _wrapped_view
+
+
+def has_perms(employee_id: int, perms_list: list) -> bool:
+    try:
+        employee = Employee.objects.prefetch_related('job_roles__permissions').get(id=employee_id)
+    except Employee.DoesNotExist:
+        return False
+
+    # Gather all permissions attached to the employee's job roles
+    assigned_perms = set(
+        perm.name for role in employee.job_roles.all() for perm in role.permissions.all()
+    )
+
+    for perm_name in perms_list:
+        if perm_name not in assigned_perms:
+            return False
+
+    return True
