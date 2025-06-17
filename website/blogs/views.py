@@ -154,6 +154,13 @@ def blog_post_update_view(request, post_id):
                 'message': 'author_id is required'
             }, status=400)
         
+        # Verify author exists        
+        if not has_perms(int(data['author_id']), ["Blog_update"]):
+            return JsonResponse({
+                    'status': 'error',
+                    'message': f'Employee does not have permissions to perform this task'
+                }, status=400)
+        
         if post.author.id != int(data['author_id']):
             return JsonResponse({
                 'status': 'error',
@@ -226,6 +233,13 @@ def blog_post_delete_view(request, post_id):
                 'status': 'error',
                 'message': 'Invalid JSON payload'
             }, status=400)
+        
+        # Verify author exists        
+        if not has_perms(int(data['author_id']), ["Blog_delete"]):
+            return JsonResponse({
+                    'status': 'error',
+                    'message': f'Employee does not have permissions to perform this task'
+                }, status=400)
         
         # Verify the requesting user is the author
         if post.author.id != int(requesting_user_id):
