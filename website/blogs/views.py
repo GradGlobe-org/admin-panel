@@ -280,6 +280,13 @@ def posts_by_author_view(request):
                 'message': 'author_id is required in request body'
             }, status=400)
         
+        # Verify author exists        
+        if not has_perms(int(data['author_id']), ["Blog_view"]):
+            return JsonResponse({
+                    'status': 'error',
+                    'message': f'Employee does not have permissions to perform this task'
+                }, status=400)
+        
         author_id = data['author_id']
         posts = Post.objects.filter(author_id=author_id).order_by('-created_at')
         
