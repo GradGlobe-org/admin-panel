@@ -6,37 +6,39 @@ from .models import (
     videos_links,
     ranking_agency,
     university_ranking,
-    faqs
+    faqs,
+    Uni_contact,
 )
 
-# Inline for Stats
+# Inlines
 class StatsInline(admin.TabularInline):
     model = stats
     extra = 1
 
-# Inline for Videos
 class VideosInline(admin.TabularInline):
     model = videos_links
     extra = 1
 
-# Inline for FAQs
 class FaqsInline(admin.TabularInline):
     model = faqs
     extra = 1
 
-# Inline for Rankings
 class UniversityRankingInline(admin.TabularInline):
     model = university_ranking
     extra = 1
 
+class UniContactInline(admin.TabularInline):
+    model = Uni_contact
+    extra = 1
+
 @admin.register(university)
 class UniversityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'type', 'establish_year', 'location')
-    list_filter = ('type', 'location')
-    search_fields = ('name',)
-    inlines = [StatsInline, VideosInline, FaqsInline, UniversityRankingInline]
-
-# Register other models normally
+    list_display = ('id', 'name', 'type', 'establish_year', 'location', 'status')
+    list_filter = ('type', 'status', 'location')
+    search_fields = ('name', 'location__name')
+    raw_id_fields = ('location',)
+    inlines = [StatsInline, VideosInline, FaqsInline, UniversityRankingInline, UniContactInline]
+    ordering = ('name',)
 
 @admin.register(location)
 class LocationAdmin(admin.ModelAdmin):
@@ -46,11 +48,14 @@ class LocationAdmin(admin.ModelAdmin):
 @admin.register(stats)
 class StatsAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'value', 'university')
-    search_fields = ('name',)
+    search_fields = ('name', 'university__name')
+    raw_id_fields = ('university',)
 
 @admin.register(videos_links)
 class VideosLinksAdmin(admin.ModelAdmin):
     list_display = ('id', 'url', 'university')
+    search_fields = ('url', 'university__name')
+    raw_id_fields = ('university',)
 
 @admin.register(ranking_agency)
 class RankingAgencyAdmin(admin.ModelAdmin):
@@ -60,7 +65,18 @@ class RankingAgencyAdmin(admin.ModelAdmin):
 @admin.register(university_ranking)
 class UniversityRankingAdmin(admin.ModelAdmin):
     list_display = ('id', 'university', 'ranking_agency', 'rank')
+    list_filter = ('ranking_agency',)
+    search_fields = ('university__name', 'ranking_agency__name')
+    raw_id_fields = ('university', 'ranking_agency')
 
 @admin.register(faqs)
 class FaqsAdmin(admin.ModelAdmin):
     list_display = ('id', 'question', 'university')
+    search_fields = ('question', 'university__name')
+    raw_id_fields = ('university',)
+
+@admin.register(Uni_contact)
+class UniContactAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'email', 'phone', 'university')
+    search_fields = ('name', 'email', 'phone', 'university__name')
+    raw_id_fields = ('university',)
