@@ -35,15 +35,15 @@ class UniContactInline(admin.TabularInline):
 class UniversityAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'type', 'establish_year', 'location', 'status')
     list_filter = ('type', 'status', 'location')
-    search_fields = ('name', 'location__name')
+    search_fields = ('name', 'location__city', 'location__state')  # Updated to use city and state
     raw_id_fields = ('location',)
     inlines = [StatsInline, VideosInline, FaqsInline, UniversityRankingInline, UniContactInline]
     ordering = ('name',)
 
 @admin.register(location)
 class LocationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
-    search_fields = ('name',)
+    list_display = ('id', 'city', 'state')  # Updated to include state
+    search_fields = ('city', 'state')  # Updated to search by city and state
 
 @admin.register(stats)
 class StatsAdmin(admin.ModelAdmin):

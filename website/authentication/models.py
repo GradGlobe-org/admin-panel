@@ -21,7 +21,7 @@ class Employee(models.Model):
     name = models.CharField(max_length=100, verbose_name="Full Name", db_index=True)
     phone_number = models.CharField(max_length=12, verbose_name="Phone Number", db_index=True)
     email = models.EmailField(max_length=100, verbose_name="Email Address", db_index=True)
-    job_roles = models.ManyToManyField(JobRole, verbose_name="Job Roles", blank=True, null=True)
+    job_roles = models.ManyToManyField(JobRole, verbose_name="Job Roles", blank=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     modified_at = models.DateTimeField(auto_now=True, verbose_name="Last Modified At")
     authToken = models.UUIDField(default=uuid.uuid4, editable=False)

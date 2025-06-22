@@ -1,22 +1,24 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 
-class location(models.Model):
-    name = models.CharField(
-        max_length=1000, unique=True, db_index=True,
-        help_text="Name of the location or city"
-    )
-    location_map_link = models.URLField(
-        max_length=1000, unique=True, db_index=True,
-        help_text="Google Maps URL or any map link for the location"
-    )
 
+
+class location(models.Model):
+    city = models.CharField(
+        max_length=1000, db_index=True,
+        help_text="Name of the city"
+    )
+    state = models.CharField(
+        max_length=1000, db_index=True,
+        help_text="Name of the state or country"
+    )
     class Meta:
         verbose_name = "Location"
         verbose_name_plural = "Locations"
 
     def __str__(self):
-        return self.name
+        return f"{self.city} , {self.state}"
+
 
 
 class university(models.Model):
@@ -55,6 +57,10 @@ class university(models.Model):
     )
     about = models.TextField(help_text="Brief description or history of the university")
     admission_requirements = models.TextField(help_text="Eligibility and admission criteria")
+    location_map_link = models.URLField(
+        max_length=1000, unique=True, db_index=True,
+        help_text="Google Maps URL or any map link for the location"
+    )
 
     commission = models.PositiveIntegerField(
         default=0,
