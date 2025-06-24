@@ -82,8 +82,8 @@ class mou(models.Model):
     MoU_copy_link=models.URLField(max_length=2000)
     SigningDate = models.DateField()
     ExpiryDate = models.DateField()
-    Duration_of_MoU  = models.PositiveIntegerField(help_text="Duration in Years")
-
+    Duration_in_years  = models.PositiveIntegerField(help_text="Duration in Years")
+    Duration_in_Months = models.PositiveIntegerField(help_text="Duration in Years")
     university = models.ForeignKey(university, on_delete=models.CASCADE, help_text="University this commission is assigned to")
 
     class Meta:

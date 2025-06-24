@@ -47,7 +47,7 @@ class CommissionInline(admin.TabularInline):
 class MouInline(admin.TabularInline):
     model = mou
     extra = 1
-    fields = ('MoU_copy_link', 'SigningDate', 'ExpiryDate', 'Duration_of_MoU')
+    fields = ('MoU_copy_link', 'SigningDate', 'ExpiryDate', 'Duration_in_years', 'Duration_in_Months')
 
 # University Admin
 @admin.register(university)
@@ -69,7 +69,7 @@ class LocationAdmin(admin.ModelAdmin):
 # Stats Admin
 @admin.register(stats)
 class StatsAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'value', 'university')  # Removed 'icon'
+    list_display = ('id', 'name', 'value', 'university')
     search_fields = ('name', 'university__name')
     raw_id_fields = ('university',)
 
@@ -124,7 +124,7 @@ class PartnerAgencyAdmin(admin.ModelAdmin):
 # MoU Admin
 @admin.register(mou)
 class MouAdmin(admin.ModelAdmin):
-    list_display = ('id', 'MoU_copy_link', 'SigningDate', 'ExpiryDate', 'Duration_of_MoU', 'university')
+    list_display = ('id', 'MoU_copy_link', 'SigningDate', 'ExpiryDate', 'Duration_in_years', 'Duration_in_Months', 'university')
     search_fields = ('MoU_copy_link', 'university__name')
     raw_id_fields = ('university',)
     list_filter = ('SigningDate', 'ExpiryDate')
