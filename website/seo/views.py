@@ -2,8 +2,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 import yake
-from website.utils import api_key_required
-
+from website.utils import api_key_required, token_required
 
 def get_yake_keywords(text, ratio=0.04, max_keywords=20):
     """
@@ -27,7 +26,7 @@ def get_yake_keywords(text, ratio=0.04, max_keywords=20):
     keyword_string = ", ".join(keyword_list)
     return keyword_string
 
-
+@token_required
 @api_key_required
 @csrf_exempt
 def meta_keywords(request):
@@ -49,6 +48,7 @@ def meta_keywords(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@token_required
 @api_key_required
 @csrf_exempt
 def extract_keywords(request):

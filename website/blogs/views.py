@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 @api_key_required
+@require_http_methods(["GET"])
 def blog_post_summary_view(request):
     with connection.cursor() as cursor:
         cursor.execute("""
@@ -233,7 +234,7 @@ def blog_post_delete_view(request, post_id):
     try:
         # Get the post and verify existence
         post = get_object_or_404(Post, id=post_id)
-        data = json.loads(request.body)
+        # data = json.loads(request.body)
         author = request.user
         author_id = author.id
         
@@ -284,26 +285,27 @@ def blog_post_delete_view(request, post_id):
 @csrf_exempt
 @api_key_required
 @token_required
-@require_http_methods(["POST"])  
+@require_http_methods(["GET"])  
 def posts_by_author_view(request):
     try:
         data = json.loads(request.body)
+        author = request.user
+        author_id = author.id
         
         # Validate author_id is provided
-        if 'author_id' not in data:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'author_id is required in request body'
-            }, status=400)
+        # if 'author_id' not in data:
+        #     return JsonResponse({
+        #         'status': 'error',
+        #         'message': 'author_id is required in request body'
+        #     }, status=400)
         
         # Verify author exists        
-        if not has_perms(int(data['author_id']), ["Blog_view"]):
+        if not has_perms(int(author_id), ["Blog_view"]):
             return JsonResponse({
                     'status': 'error',
                     'message': f'Employee does not have permissions to perform this task'
                 }, status=400)
         
-        author_id = data['author_id']
         posts = Post.objects.filter(author_id=author_id).order_by('-created_at')
         
         posts_data = []

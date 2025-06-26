@@ -4,7 +4,7 @@ from .views import blog_post_summary_view, blog_post_detail_view, blog_post_crea
 
 urlpatterns = [
     path('get_all_blogs/', blog_post_summary_view),
-    path('by_id_or_slug/<identifier>', blog_post_detail_view),
+    path('by_id_or_slug/<identifier>/', blog_post_detail_view),
     path('create/', blog_post_create_view),
     path('update/<int:post_id>/', blog_post_update_view),
     path('delete/<int:post_id>/', blog_post_delete_view),
