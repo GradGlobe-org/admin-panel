@@ -288,7 +288,7 @@ def blog_post_delete_view(request, post_id):
 @require_http_methods(["GET"])  
 def posts_by_author_view(request):
     try:
-        data = json.loads(request.body)
+        # data = json.loads(request.body)
         author = request.user
         author_id = author.id
         
