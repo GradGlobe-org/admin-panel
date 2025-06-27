@@ -25,7 +25,7 @@ def api_key_required(view_func):
         
         try:
             # Convert string to UUID object for proper comparison
-            key_uuid = uuid.UUID(api_key_value)
+            api_key_uuid = uuid.UUID(api_key_value)
         except ValueError:
             return JsonResponse(
                 {'error': 'Invalid API key format'}, 
@@ -34,7 +34,7 @@ def api_key_required(view_func):
         
         # Check if key exists in database
         api_key = uuid.UUID(os.getenv("API_KEY"))
-        if not api_key != api_key_value:
+        if api_key_uuid != api_key:
             return JsonResponse(
                 {'error': 'Invalid API key'}, 
                 status=403
