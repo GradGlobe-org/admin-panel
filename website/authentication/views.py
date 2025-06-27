@@ -4,8 +4,7 @@ import json
 from django.http import JsonResponse
 import uuid
 from django.views.decorators.csrf import csrf_exempt
-from website.utils import api_key_required, token_required
-from django.views.decorators.http import require_http_methods
+from website.utils import api_key_required
 
 @api_key_required
 @csrf_exempt
@@ -40,21 +39,22 @@ def login(request):
     employee_obj.authToken = new_token
     employee_obj.save()
 
-    # Save login logs
+    # save login logs
     LoginLog.objects.create(employee=employee_obj)
 
-    # Prepare role-permission structure
-    job_roles_list = []
+    # Get job roles as a list of strings
+    job_roles_list = list(employee_obj.job_roles.values_list('role', flat=True))
+    permissions = set()
+
     for role in employee_obj.job_roles.all():
-        role_permissions = list(role.permissions.values_list("name", flat=True))
-        job_roles_list.append({
-            "role": role.role,
-            "permissions": role_permissions
-        })
+        role_permissions = role.permissions.values_list("name", flat=True)
+        permissions.update(role_permissions)
+
 
     return JsonResponse({
-        "id": employee_obj.id,
+        "id" : employee_obj.id,
         "authToken": str(new_token),
         "name": employee_obj.name,
-        "jobRoles": job_roles_list
+        "jobRoles": job_roles_list,
+        "permissions": list(permissions)
     }, status=200)
