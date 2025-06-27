@@ -6,6 +6,7 @@ from .models import university, location, ranking_agency, Partner_Agency
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import location
+from django.db import connection
 # Create your views here.
 
 @csrf_exempt
@@ -81,29 +82,39 @@ def add_university(request):
         'authorName': employee.name
     }, status=201)
 
+
+
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
 def get_university_location(request):
-    locations = location.objects.all().values()
-    return JsonResponse({
-        "locations" : list(locations),
-    }, status=200)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id, city, state FROM appname_location")
+        columns = [col[0] for col in cursor.description]
+        locations = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    return JsonResponse({"locations": locations}, status=200)
+
 
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
 def get_university_ranking_agency(request):
-    agencies = ranking_agency.objects.all().values()
-    return JsonResponse({
-        "Ranking Agencies" : list(agencies)
-    }, status=200)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id, name, description, logo FROM appname_ranking_agency")
+        columns = [col[0] for col in cursor.description]
+        agencies = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    return JsonResponse({"Ranking Agencies": agencies}, status=200)
+
 
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
 def get_university_partner_agency(request):
-    agencies = Partner_Agency.objects.all().values()
-    return JsonResponse({
-        "Partner Agencies" : list(agencies)
-    }, status=200)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id, name FROM appname_partner_agency")
+        columns = [col[0] for col in cursor.description]
+        agencies = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    return JsonResponse({"Partner Agencies": agencies}, status=200)
