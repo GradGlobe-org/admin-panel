@@ -89,7 +89,7 @@ def add_university(request):
 @require_http_methods(["GET"])
 def get_university_location(request):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, city, state FROM appname_location")
+        cursor.execute("SELECT id, city, state FROM university_location")
         columns = [col[0] for col in cursor.description]
         locations = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -101,7 +101,7 @@ def get_university_location(request):
 @require_http_methods(["GET"])
 def get_university_ranking_agency(request):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, name, description, logo FROM appname_ranking_agency")
+        cursor.execute("SELECT id, name, description, logo FROM university_ranking_agency")
         columns = [col[0] for col in cursor.description]
         agencies = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -113,7 +113,7 @@ def get_university_ranking_agency(request):
 @require_http_methods(["GET"])
 def get_university_partner_agency(request):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, name FROM appname_partner_agency")
+        cursor.execute("SELECT id, name FROM university_partner_agency")
         columns = [col[0] for col in cursor.description]
         agencies = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
