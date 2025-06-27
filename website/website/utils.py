@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from functools import wraps
 import uuid
 import os
-
+from functools import wraps
 from authentication.models import Employee, Permission
 
 
@@ -25,7 +25,7 @@ def api_key_required(view_func):
         
         try:
             # Convert string to UUID object for proper comparison
-            key_uuid = uuid.UUID(api_key_value)
+            api_key_uuid = uuid.UUID(api_key_value)
         except ValueError:
             return JsonResponse(
                 {'error': 'Invalid API key format'}, 
@@ -34,7 +34,7 @@ def api_key_required(view_func):
         
         # Check if key exists in database
         api_key = uuid.UUID(os.getenv("API_KEY"))
-        if not api_key != api_key_value:
+        if api_key_uuid != api_key:
             return JsonResponse(
                 {'error': 'Invalid API key'}, 
                 status=403
@@ -61,3 +61,22 @@ def has_perms(employee_id: int, perms_list: list) -> bool:
             return False
 
     return True
+
+
+def token_required(view_func):
+    @wraps(view_func)
+    def wrapped(request, *args, **kwargs):
+        auth_token = request.headers.get("Authorization")
+        if not auth_token:
+            return JsonResponse({"error": "Authorization token missing"}, status=401)
+
+        try:
+            # Validate if it's a proper UUID first
+            uuid_token = uuid.UUID(auth_token)
+            request.user = Employee.objects.get(authToken=uuid_token)
+        except (ValueError, Employee.DoesNotExist):
+            return JsonResponse({"error": "Invalid or expired token"}, status=403)
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapped

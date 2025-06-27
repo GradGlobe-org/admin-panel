@@ -11,4 +11,5 @@ urlpatterns = [
     path('auth/', include("authentication.urls")),
     path('blog/', include("blogs.urls")),
     path('seo/', include("seo.urls")),
+    path('university/', include("university.urls"))
 ]

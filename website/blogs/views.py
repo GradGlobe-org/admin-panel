@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection
 import json
-from website.utils import api_key_required, has_perms
+from website.utils import api_key_required, has_perms, token_required
 from .models import Post
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 @api_key_required
+@require_http_methods(["GET"])
 def blog_post_summary_view(request):
     with connection.cursor() as cursor:
         cursor.execute("""
@@ -74,49 +75,55 @@ def blog_post_detail_view(request, identifier):
     
 @csrf_exempt
 @api_key_required
+@token_required
 @require_http_methods(["POST"])
 def blog_post_create_view(request):
     try:
         data = json.loads(request.body)
-        
-        # Validate required fields
-        required_fields = ['title', 'content', 'author_id']
-        for field in required_fields:
-            if field not in data:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': f'Missing required field: {field}'
-                }, status=400)
-        
-        # Verify author exists
-        author = get_object_or_404(Employee, id=data['author_id'])
-        
-        if not has_perms(int(data['author_id']), ["Blog_create"]):
-            return JsonResponse({
-                    'status': 'error',
-                    'message': f'Employee does not have permissions to perform this task'
-                }, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON'
+        }, status=400)
 
-        # Create the post
+    # Required fields (excluding author_id because it comes from token)
+    required_fields = ['title', 'content']
+    missing_fields = [field for field in required_fields if not data.get(field)]
+    if missing_fields:
+        return JsonResponse({
+            'status': 'error',
+            'message': f"Missing required fields: {', '.join(missing_fields)}"
+        }, status=400)
+
+    author = request.user  # comes from @token_required
+
+    # Permission check
+    if not has_perms(author.id, ["Blog_create"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
+
+    try:
+        # Create Post
         post = Post(
             title=data['title'],
             content=data['content'],
             author=author,
             status=data.get('status', 'DRAFT'),
             featured_image=data.get('featured_image', 'no image'),
-            meta_keyword=data.get('meta_keyword'),
-            meta_description=data.get('meta_description')
+            meta_keyword=data.get('meta_keyword', ''),
+            meta_description=data.get('meta_description', '')
         )
-        
-        # Handle custom slug if provided
-        if 'slug' in data and data['slug']:
-            post.slug = slugify(data['slug'])
-        else:
-            post.slug = slugify(data['title'])
-        
+
+        # Handle slug
+        slug_source = data.get('slug') or data['title']
+        post.slug = slugify(slug_source)
+
+        # Validate and save
         post.full_clean()
         post.save()
-        
+
         return JsonResponse({
             'status': 'success',
             'data': {
@@ -126,42 +133,47 @@ def blog_post_create_view(request):
                 'author': author.username
             }
         }, status=201)
-        
+
     except ValidationError as e:
         return JsonResponse({
             'status': 'error',
             'message': 'Validation failed',
-            'errors': dict(e)
+            'errors': e.message_dict  # Use .message_dict for structured validation error output
         }, status=400)
+
     except Exception as e:
         return JsonResponse({
             'status': 'error',
             'message': str(e)
-        }, status=400)
+        }, status=500)
     
 @csrf_exempt
 @api_key_required
+@token_required
 @require_http_methods(["PUT", "PATCH"])
 def blog_post_update_view(request, post_id):
     try:
         post = get_object_or_404(Post, id=post_id)
         data = json.loads(request.body)
+        author = request.user
         
         # Verify requesting user is the author
-        if 'author_id' not in data:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'author_id is required'
-            }, status=400)
+        # if 'author_id' not in data:
+        #     return JsonResponse({
+        #         'status': 'error',
+        #         'message': 'author_id is required'
+        #     }, status=400)
+
+        author_id = author.id
         
         # Verify author exists        
-        if not has_perms(int(data['author_id']), ["Blog_update"]):
+        if not has_perms(int(author_id), ["Blog_update"]):
             return JsonResponse({
                     'status': 'error',
                     'message': f'Employee does not have permissions to perform this task'
                 }, status=400)
         
-        if post.author.id != int(data['author_id']):
+        if post.author.id != int(author_id):
             return JsonResponse({
                 'status': 'error',
                 'message': 'Only the post author can update this post'
@@ -216,33 +228,37 @@ def blog_post_update_view(request, post_id):
 
 @csrf_exempt
 @api_key_required
+@token_required
 @require_http_methods(["DELETE"])
 def blog_post_delete_view(request, post_id):
     try:
         # Get the post and verify existence
         post = get_object_or_404(Post, id=post_id)
+        # data = json.loads(request.body)
+        author = request.user
+        author_id = author.id
         
         # Parse request body to get the requesting user's ID
-        try:
-            data = json.loads(request.body)
-            requesting_user_id = data.get('author_id')
-            if not requesting_user_id:
-                raise ValueError("Requesting user ID is required")
-        except json.JSONDecodeError:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid JSON payload'
-            }, status=400)
+        # try:
+        #     data = json.loads(request.body)
+        #     requesting_user_id = data.get('author_id')
+        #     if not requesting_user_id:
+        #         raise ValueError("Requesting user ID is required")
+        # except json.JSONDecodeError:
+        #     return JsonResponse({
+        #         'status': 'error',
+        #         'message': 'Invalid JSON payload'
+        #     }, status=400)
         
         # Verify author exists        
-        if not has_perms(int(data['author_id']), ["Blog_delete"]):
+        if not has_perms(int(author_id), ["Blog_delete"]):
             return JsonResponse({
                     'status': 'error',
                     'message': f'Employee does not have permissions to perform this task'
                 }, status=400)
         
         # Verify the requesting user is the author
-        if post.author.id != int(requesting_user_id):
+        if post.author.id != int(author_id):
             return JsonResponse({
                 'status': 'error',
                 'message': 'Only the post author can delete this post'
@@ -268,26 +284,28 @@ def blog_post_delete_view(request, post_id):
 
 @csrf_exempt
 @api_key_required
-@require_http_methods(["POST"])  
+@token_required
+@require_http_methods(["GET"])  
 def posts_by_author_view(request):
     try:
-        data = json.loads(request.body)
+        # data = json.loads(request.body)
+        author = request.user
+        author_id = author.id
         
         # Validate author_id is provided
-        if 'author_id' not in data:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'author_id is required in request body'
-            }, status=400)
+        # if 'author_id' not in data:
+        #     return JsonResponse({
+        #         'status': 'error',
+        #         'message': 'author_id is required in request body'
+        #     }, status=400)
         
         # Verify author exists        
-        if not has_perms(int(data['author_id']), ["Blog_view"]):
+        if not has_perms(int(author_id), ["Blog_view"]):
             return JsonResponse({
                     'status': 'error',
                     'message': f'Employee does not have permissions to perform this task'
                 }, status=400)
         
-        author_id = data['author_id']
         posts = Post.objects.filter(author_id=author_id).order_by('-created_at')
         
         posts_data = []
