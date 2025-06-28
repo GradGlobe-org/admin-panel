@@ -1,9 +1,11 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import add_university, get_university_location, get_university_ranking_agency, get_university_partner_agency, paginated_universities, paginated_universities_employee
+from .views import *
 
 urlpatterns = [
     path('add_university/', add_university),
+    path('get_universities/<int:university_id>/', university_detail),
+    path('get_universities_employee/<int:university_id>/', university_detail_employee),
     path('universities/', paginated_universities),
     path('universities_employee/', paginated_universities_employee),
     path('get_university_locations/', get_university_location),

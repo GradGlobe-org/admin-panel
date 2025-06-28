@@ -147,9 +147,10 @@ def get_university_location(request):
 
     return JsonResponse({"locations": locations}, status=200)
 
-@token_required
+
 @csrf_exempt
 @api_key_required
+@token_required
 @require_http_methods(["GET"])
 def get_university_ranking_agency(request):
     with connection.cursor() as cursor:
@@ -159,9 +160,10 @@ def get_university_ranking_agency(request):
 
     return JsonResponse({"Ranking Agencies": agencies}, status=200)
 
-@token_required
+
 @csrf_exempt
 @api_key_required
+@token_required
 @require_http_methods(["GET"])
 def get_university_partner_agency(request):
     with connection.cursor() as cursor:
@@ -172,7 +174,7 @@ def get_university_partner_agency(request):
     return JsonResponse({"Partner Agencies": agencies}, status=200)
 
 
-@token_required
+
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
@@ -229,7 +231,8 @@ def paginated_universities(request):
         rows = cursor.fetchall()
 
     data = [
-        {
+        {   
+            "id": row[0],
             "cover_url": row[1],
             "cover_origin": row[2],
             "name": row[3],
@@ -312,7 +315,8 @@ def paginated_universities_employee(request):
         rows = cursor.fetchall()
 
     data = [
-        {
+        {   
+            "id": row[0],
             "cover_url": row[1],
             "cover_origin": row[2],
             "name": row[3],
@@ -329,3 +333,362 @@ def paginated_universities_employee(request):
         "page": page,
         "count": len(data)
     })
+
+
+
+
+
+@csrf_exempt
+@api_key_required
+@require_http_methods(["GET"])
+def university_detail(request, university_id):
+    try:
+        # Execute raw SQL query with CTEs to prevent data duplication
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                WITH stats_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', s.id,
+                                    'name', s.name,
+                                    'value', s.value
+                                )
+                            ) FILTER (WHERE s.id IS NOT NULL),
+                            '[]'
+                        ) AS statistics
+                    FROM university_stats s
+                    GROUP BY university_id
+                ),
+                videos_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', v.id,
+                                    'url', v.url
+                                )
+                            ) FILTER (WHERE v.id IS NOT NULL),
+                            '[]'
+                        ) AS video_links
+                    FROM university_videos_links v
+                    GROUP BY university_id
+                ),
+                rankings_agg AS (
+                    SELECT 
+                        ur.university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', ur.id,
+                                    'rank', ur.rank,
+                                    'ranking_agency', json_build_object(
+                                        'id', ra.id,
+                                        'name', ra.name,
+                                        'description', ra.description,
+                                        'logo', ra.logo
+                                    )
+                                )
+                            ) FILTER (WHERE ur.id IS NOT NULL),
+                            '[]'
+                        ) AS rankings
+                    FROM university_university_ranking ur
+                    LEFT JOIN university_ranking_agency ra ON ur.ranking_agency_id = ra.id
+                    GROUP BY ur.university_id
+                ),
+                faqs_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', f.id,
+                                    'question', f.question,
+                                    'answer', f.answer
+                                )
+                            ) FILTER (WHERE f.id IS NOT NULL),
+                            '[]'
+                        ) AS faqs
+                    FROM university_faqs f
+                    GROUP BY university_id
+                )
+                SELECT
+                    u.id AS university_id,
+                    u.cover_url,
+                    u.cover_origin,
+                    u.name AS university_name,
+                    u.type,
+                    u.establish_year,
+                    u.about,
+                    u.admission_requirements,
+                    u.location_map_link,
+                    u.status,
+                    l.id AS location_id,
+                    l.city,
+                    l.state,
+                    COALESCE(sa.statistics, '[]') AS statistics,
+                    COALESCE(va.video_links, '[]') AS video_links,
+                    COALESCE(ra.rankings, '[]') AS rankings,
+                    COALESCE(fa.faqs, '[]') AS faqs
+                FROM
+                    university_university u
+                    LEFT JOIN university_location l ON u.location_id = l.id
+                    LEFT JOIN stats_agg sa ON u.id = sa.university_id
+                    LEFT JOIN videos_agg va ON u.id = va.university_id
+                    LEFT JOIN rankings_agg ra ON u.id = ra.university_id
+                    LEFT JOIN faqs_agg fa ON u.id = fa.university_id
+                WHERE
+                    u.id = %s;
+            """, [university_id])
+            
+            row = cursor.fetchone()
+            
+            if not row:
+                return JsonResponse({"error": "University not found"}, status=404)
+            
+            # Map the query result to a dictionary
+            result = {
+                "id": row[0],
+                "cover_url": row[1],
+                "cover_origin": row[2],
+                "name": row[3],
+                "type": row[4],
+                "establish_year": row[5],
+                "about": row[6],
+                "admission_requirements": row[7],
+                "location_map_link": row[8],
+                "status": row[9],
+                "location": {
+                    "id": row[10],
+                    "city": row[11],
+                    "state": row[12]
+                },
+                "statistics": row[13],  # JSON array from PostgreSQL
+                "video_links": row[14],  # JSON array
+                "rankings": row[15],     # JSON array
+                "faqs": row[16]          # JSON array
+            }
+            
+            return JsonResponse(result, status=200)
+            
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+
+@csrf_exempt
+@api_key_required
+@token_required
+@require_http_methods(["GET"])
+def university_detail_employee(request, university_id):
+    employee_id = request.user.id
+    if not has_perms(employee_id, ["university_view"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
+
+    try:
+        # Execute raw SQL query with CTEs
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                WITH commission_agg AS (
+                    SELECT 
+                        c.university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', c.id,
+                                    'inPercentage', c."inPercentage",
+                                    'inAmount', c."inAmount",
+                                    'partner_agency', json_build_object(
+                                        'id', pa.id,
+                                        'name', pa.name
+                                    )
+                                )
+                            ) FILTER (WHERE c.id IS NOT NULL),
+                            '[]'
+                        ) AS commissions
+                    FROM university_commission c
+                    LEFT JOIN university_partner_agency pa ON c.partner_agency_id = pa.id
+                    GROUP BY c.university_id
+                ),
+                mou_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', m.id,
+                                    'mou_copy_link', m."MoU_copy_link",
+                                    'signing_date', m."SigningDate",
+                                    'expiry_date', m."ExpiryDate",
+                                    'duration_in_years', m."Duration_in_years",
+                                    'duration_in_months', m."Duration_in_Months"
+                                )
+                            ) FILTER (WHERE m.id IS NOT NULL),
+                            '[]'
+                        ) AS mous
+                    FROM university_mou m
+                    GROUP BY university_id
+                ),
+                contact_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', uc.id,
+                                    'name', uc.name,
+                                    'designation', uc.designation,
+                                    'email', uc.email,
+                                    'phone', uc.phone
+                                )
+                            ) FILTER (WHERE uc.id IS NOT NULL),
+                            '[]'
+                        ) AS contacts
+                    FROM university_uni_contact uc
+                    GROUP BY university_id
+                ),
+                stats_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', s.id,
+                                    'name', s.name,
+                                    'value', s.value
+                                )
+                            ) FILTER (WHERE s.id IS NOT NULL),
+                            '[]'
+                        ) AS statistics
+                    FROM university_stats s
+                    GROUP BY university_id
+                ),
+                videos_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', v.id,
+                                    'url', v.url
+                                )
+                            ) FILTER (WHERE v.id IS NOT NULL),
+                            '[]'
+                        ) AS video_links
+                    FROM university_videos_links v
+                    GROUP BY university_id
+                ),
+                rankings_agg AS (
+                    SELECT 
+                        ur.university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', ur.id,
+                                    'rank', ur.rank,
+                                    'ranking_agency', json_build_object(
+                                        'id', ra.id,
+                                        'name', ra.name,
+                                        'description', ra.description,
+                                        'logo', ra.logo
+                                    )
+                                )
+                            ) FILTER (WHERE ur.id IS NOT NULL),
+                            '[]'
+                        ) AS rankings
+                    FROM university_university_ranking ur
+                    LEFT JOIN university_ranking_agency ra ON ur.ranking_agency_id = ra.id
+                    GROUP BY ur.university_id
+                ),
+                faqs_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', f.id,
+                                    'question', f.question,
+                                    'answer', f.answer
+                                )
+                            ) FILTER (WHERE f.id IS NOT NULL),
+                            '[]'
+                        ) AS faqs
+                    FROM university_faqs f
+                    GROUP BY university_id
+                )
+                SELECT
+                    u.id AS university_id,
+                    u.cover_url,
+                    u.cover_origin,
+                    u.name AS university_name,
+                    u.type,
+                    u.establish_year,
+                    u.about,
+                    u.admission_requirements,
+                    u.location_map_link,
+                    u.status,
+                    l.id AS location_id,
+                    l.city,
+                    l.state,
+                    COALESCE(ca.commissions, '[]') AS commissions,
+                    COALESCE(ma.mous, '[]') AS mous,
+                    COALESCE(coa.contacts, '[]') AS contacts,
+                    COALESCE(sa.statistics, '[]') AS statistics,
+                    COALESCE(va.video_links, '[]') AS video_links,
+                    COALESCE(ra.rankings, '[]') AS rankings,
+                    COALESCE(fa.faqs, '[]') AS faqs
+                FROM
+                    university_university u
+                    LEFT JOIN university_location l ON u.location_id = l.id
+                    LEFT JOIN commission_agg ca ON u.id = ca.university_id
+                    LEFT JOIN mou_agg ma ON u.id = ma.university_id
+                    LEFT JOIN contact_agg coa ON u.id = coa.university_id
+                    LEFT JOIN stats_agg sa ON u.id = sa.university_id
+                    LEFT JOIN videos_agg va ON u.id = va.university_id
+                    LEFT JOIN rankings_agg ra ON u.id = ra.university_id
+                    LEFT JOIN faqs_agg fa ON u.id = fa.university_id
+                WHERE
+                    u.id = %s;
+            """, [university_id])
+            
+            row = cursor.fetchone()
+            
+            if not row:
+                return JsonResponse({"error": "University not found"}, status=404)
+            
+            # Map the query result to a dictionary
+            result = {
+                "id": row[0],
+                "cover_url": row[1],
+                "cover_origin": row[2],
+                "name": row[3],
+                "type": row[4],
+                "establish_year": row[5],
+                "about": row[6],
+                "admission_requirements": row[7],
+                "location_map_link": row[8],
+                "status": row[9],
+                "location": {
+                    "id": row[10],
+                    "city": row[11],
+                    "state": row[12]
+                },
+                "commissions": row[13],
+                "mous": row[14],
+                "contacts": row[15],
+                "statistics": row[16],
+                "video_links": row[17],
+                "rankings": row[18],
+                "faqs": row[19]
+            }
+            
+            return JsonResponse(result, status=200)
+            
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
