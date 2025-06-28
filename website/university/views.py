@@ -95,7 +95,7 @@ def get_university_location(request):
 
     return JsonResponse({"locations": locations}, status=200)
 
-
+@token_required
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
@@ -107,7 +107,7 @@ def get_university_ranking_agency(request):
 
     return JsonResponse({"Ranking Agencies": agencies}, status=200)
 
-
+@token_required
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
@@ -120,7 +120,7 @@ def get_university_partner_agency(request):
     return JsonResponse({"Partner Agencies": agencies}, status=200)
 
 
-
+@token_required
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
