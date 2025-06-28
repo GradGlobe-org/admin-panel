@@ -135,6 +135,125 @@ def add_university(request):
     }, status=201)
 
 
+@csrf_exempt
+@api_key_required
+@token_required
+@require_http_methods(["PUT"])
+def edit_university(request, university_id):
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+
+    employee = request.user
+    if not has_perms(employee.id, ["edit_university"]):
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+
+    try:
+        university_obj = university.objects.get(id=university_id)
+    except university.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'University not found'}, status=404)
+
+    try:
+        with transaction.atomic():
+            # Update required and optional university fields
+            updatable_fields = [
+                'cover_url', 'cover_origin', 'name', 'type',
+                'establish_year', 'about', 'admission_requirements',
+                'location_map_link', 'status'
+            ]
+
+            for field in updatable_fields:
+                if field in data:
+                    setattr(university_obj, field, data[field])
+
+            # Update location if provided
+            if 'location_id' in data:
+                try:
+                    location_obj = location.objects.get(id=data['location_id'])
+                    university_obj.location = location_obj
+                except location.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid location_id'}, status=400)
+
+            university_obj.save()
+
+            # ----- Optional field replacements -----
+
+            # Rankings
+            if 'rankings' in data:
+                university_ranking.objects.filter(university=university_obj).delete()
+                for ranking in data['rankings']:
+                    if isinstance(ranking, list) and len(ranking) == 2:
+                        ranking_agency.objects.get(id=ranking[0])  # ensure valid FK
+                        university_ranking.objects.create(
+                            university=university_obj,
+                            ranking_agency_id=ranking[0],
+                            rank=ranking[1]
+                        )
+
+            # FAQs
+            if 'faqs' in data:
+                faqs.objects.filter(university=university_obj).delete()
+                for faq in data['faqs']:
+                    if isinstance(faq, list) and len(faq) == 2:
+                        faqs.objects.create(
+                            university=university_obj,
+                            question=faq[0],
+                            answer=faq[1]
+                        )
+
+            # Stats
+            if 'stats' in data:
+                stats.objects.filter(university=university_obj).delete()
+                for stat in data['stats']:
+                    if isinstance(stat, list) and len(stat) >= 2:
+                        stats.objects.create(
+                            university=university_obj,
+                            name=stat[0],
+                            value=stat[1]
+                        )
+
+            # Videos
+            if 'video' in data:
+                videos_links.objects.filter(university=university_obj).delete()
+                for video_url in data['video']:
+                    videos_links.objects.create(
+                        university=university_obj,
+                        url=video_url
+                    )
+
+            # Contacts
+            if 'contacts' in data:
+                Uni_contact.objects.filter(university=university_obj).delete()
+                for contact in data['contacts']:
+                    if isinstance(contact, list) and len(contact) == 4:
+                        Uni_contact.objects.create(
+                            university=university_obj,
+                            name=contact[0],
+                            email=contact[1],
+                            phone=contact[2],
+                            designation=contact[3]
+                        )
+
+    except ranking_agency.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid ranking_agency_id in rankings'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Error while updating university',
+            'error': str(e)
+        }, status=500)
+
+    return JsonResponse({
+        'status': 'success',
+        'message': f'University "{university_obj.name}" updated successfully by {employee.name}',
+        'universityId': university_obj.id
+    }, status=200)
+
+
 
 @csrf_exempt
 @api_key_required
