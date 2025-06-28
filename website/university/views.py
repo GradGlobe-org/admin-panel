@@ -39,7 +39,7 @@ def add_university(request):
 
     employee = request.user
 
-    if not has_perms(employee.id, ["add_university"]):
+    if not has_perms(employee.id, ["university_create"]):
         return JsonResponse({
             'status': 'error',
             'message': 'You do not have permission to perform this task'
@@ -146,7 +146,7 @@ def edit_university(request, university_id):
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
 
     employee = request.user
-    if not has_perms(employee.id, ["edit_university"]):
+    if not has_perms(employee.id, ["university_update"]):
         return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
 
     try:
