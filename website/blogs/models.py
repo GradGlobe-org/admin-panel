@@ -18,7 +18,7 @@ class Post(models.Model):
     status = models.CharField(max_length=50, choices=STATUS)
     meta_keyword = models.TextField(blank=True, null=True)
     meta_description = models.TextField(blank=True, null=True)
-    slug = models.SlugField(unique=True, blank=True, null=True)
+    slug = models.SlugField(max_length=1000, unique=True, blank=True, null=True)
     view_count = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
