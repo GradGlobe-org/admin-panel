@@ -55,7 +55,8 @@ class university(models.Model):
 
 class Partner_Agency(models.Model):
     name = models.CharField(max_length=200, db_index=True, help_text="Name of the partner agency")
-
+    PARTNER_TYPE  = (("Preferred Partner", "Preferred Partner"),("Standard Partner","Standard Partner"))
+    partner_type = models.CharField(max_length=80, choices=PARTNER_TYPE, default="Preferred Partner")
     class Meta:
         verbose_name = "Partner Agency"
         verbose_name_plural = "Partner Agencies"
