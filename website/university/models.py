@@ -92,7 +92,7 @@ class mou(models.Model):
         verbose_name_plural = "MoU"
 
     def __str__(self):
-        return f"{self.university.name} - {self.partner_agency.name}"
+        return f"{self.university.name}"
 
 
 class Uni_contact(models.Model):
