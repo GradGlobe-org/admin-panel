@@ -472,6 +472,7 @@ def universities_employee(request):
         u.cover_url,
         u.name,
         l.city || ', ' || l.state AS location,
+        u.status,
         COALESCE(
             (SELECT json_agg(
                 json_build_object(
@@ -487,11 +488,17 @@ def universities_employee(request):
             '[]'::json
         ) AS partners,
         COALESCE(
-            (SELECT json_agg(json_build_object('name', s.name, 'value', s.value))
-             FROM university_stats s
-             WHERE s.university_id = u.id),
+            (SELECT json_agg(
+                json_build_object(
+                    'rank', ur.rank,
+                    'ranking_agency_name', ra.name
+                )
+            )
+            FROM university_university_ranking ur
+            JOIN university_ranking_agency ra ON ur.ranking_agency_id = ra.id
+            WHERE ur.university_id = u.id),
             '[]'::json
-        ) AS statistics,
+        ) AS rankings,
         COALESCE(
             (SELECT MAX(c."inPercentage")
              FROM university_commission c
@@ -521,8 +528,9 @@ def universities_employee(request):
             "cover_url": row[1],
             "name": row[2],
             "location": row[3],
-            "partners": row[4],  # Array of objects with partner_agency, partner_type, commission_percentage, commission_amount
-            "statistics": row[5]  # Array of objects with name, value
+            "status": row[4],
+            "partners": row[5],  # Array of objects with partner_agency, partner_type, commission_percentage, commission_amount
+            "rankings": row[6]   # Array of objects with rank, ranking_agency_name
         }
         for row in rows
     ]
