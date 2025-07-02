@@ -454,8 +454,83 @@ def paginated_universities_employee(request):
     })
 
 
+@csrf_exempt
+@api_key_required
+@token_required
+@require_http_methods(["GET"])
+def universities_employee(request):
+    employee_id = request.user.id
+    if not has_perms(employee_id, ["university_view"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
 
+    query = """
+    SELECT 
+        u.id,
+        u.cover_url,
+        u.name,
+        l.city || ', ' || l.state AS location,
+        COALESCE(
+            (SELECT json_agg(
+                json_build_object(
+                    'partner_agency', pa.name,
+                    'partner_type', pa.partner_type,
+                    'commission_percentage', c."inPercentage",
+                    'commission_amount', c."inAmount"
+                )
+            )
+            FROM university_commission c
+            LEFT JOIN university_partner_agency pa ON c.partner_agency_id = pa.id
+            WHERE c.university_id = u.id),
+            '[]'::json
+        ) AS partners,
+        COALESCE(
+            (SELECT json_agg(json_build_object('name', s.name, 'value', s.value))
+             FROM university_stats s
+             WHERE s.university_id = u.id),
+            '[]'::json
+        ) AS statistics,
+        COALESCE(
+            (SELECT MAX(c."inPercentage")
+             FROM university_commission c
+             WHERE c.university_id = u.id),
+            -1
+        ) AS max_percentage,
+        COALESCE(
+            (SELECT MAX(c."inAmount")
+             FROM university_commission c
+             WHERE c.university_id = u.id),
+            -1
+        ) AS max_amount
+    FROM university_university u
+    JOIN university_location l ON u.location_id = l.id
+    ORDER BY 
+        max_percentage DESC,
+        max_amount DESC;
+    """
 
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+    data = [
+        {
+            "id": row[0],
+            "cover_url": row[1],
+            "name": row[2],
+            "location": row[3],
+            "partners": row[4],  # Array of objects with partner_agency, partner_type, commission_percentage, commission_amount
+            "statistics": row[5]  # Array of objects with name, value
+        }
+        for row in rows
+    ]
+
+    return JsonResponse({
+        "results": data,
+        "count": len(data)
+    })
 
 @csrf_exempt
 @api_key_required
