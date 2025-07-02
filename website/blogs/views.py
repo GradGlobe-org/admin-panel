@@ -18,16 +18,19 @@ def blog_post_summary_view(request):
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
-                id,
-                title,
-                slug,
-                view_count,
-                featured_image,
-                SUBSTR(content, 1, 1000) as content_snippet
+                p.id,
+                p.title,
+                p.slug,
+                p.view_count,
+                p.featured_image,
+                SUBSTR(p.content, 1, 1000) AS content_snippet,
+                e.name AS author_name
             FROM 
-                blogs_post
+                blogs_post p
+            JOIN 
+                authentication_employee e ON p.author_id = e.id
             ORDER BY
-                created_at DESC
+                p.created_at DESC
         """)
         columns = [col[0] for col in cursor.description]
         results = [
@@ -35,7 +38,6 @@ def blog_post_summary_view(request):
             for row in cursor.fetchall()
         ]
     return JsonResponse(results, safe=False)
-
 
 @api_key_required
 def blog_post_detail_view(request, identifier):
