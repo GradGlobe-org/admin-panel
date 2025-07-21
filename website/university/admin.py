@@ -63,8 +63,8 @@ class UniversityAdmin(admin.ModelAdmin):
 # Location Admin
 @admin.register(location)
 class LocationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'city', 'state')
-    search_fields = ('city', 'state')
+    list_display = ('id', 'city', 'state', 'country')
+    search_fields = ('city', 'state', 'country')
 
 # Stats Admin
 @admin.register(stats)

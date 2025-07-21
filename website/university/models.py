@@ -4,8 +4,9 @@ from django.core.validators import MinValueValidator
 
 class location(models.Model):
     city = models.CharField(max_length=1000, db_index=True, help_text="Name of the city")
-    state = models.CharField(max_length=1000, db_index=True, help_text="Name of the state or country")
-
+    state = models.CharField(max_length=1000, db_index=True, help_text="Name of the state")
+    country = models.CharField(max_length=1000, db_index=True, help_text="Name of the country")
+    
     class Meta:
         verbose_name = "Location"
         verbose_name_plural = "Locations"
