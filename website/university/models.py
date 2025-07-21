@@ -1,6 +1,5 @@
 from django.db import models
-from django.core.validators import MinValueValidator
-
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 class location(models.Model):
     city = models.CharField(max_length=1000, db_index=True, help_text="Name of the city")
@@ -13,6 +12,101 @@ class location(models.Model):
 
     def __str__(self):
         return f"{self.city}, {self.state}"
+
+
+class Country(models.Model):
+    name = models.CharField(max_length=1000, unique=True, db_index=True, help_text="Name of the country")
+
+    class Meta:
+        verbose_name = "Country"
+        verbose_name_plural = "Countries"
+
+    def __str__(self):
+        return self.name
+
+class WhyStudyInSection(models.Model):
+    country = models.ForeignKey(
+        Country,
+        on_delete=models.CASCADE,
+        related_name="study_sections",
+        help_text="The country this section is related to"
+    )
+    content = models.TextField(
+        help_text="Detailed content about why to study in this country, comma seperated"
+    )
+
+    class Meta:
+        verbose_name = "WhyStudyIn"
+        verbose_name_plural = "WhyStudyIn Sections"
+
+    def __str__(self):
+        return f"{self.country.name}"
+
+
+class CostOfLiving(models.Model):
+    country = models.ForeignKey(
+        Country,
+        on_delete=models.CASCADE,
+        related_name="cost_of_living",
+        help_text="The country this cost of living data is related to"
+    )
+    rent_min = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Minimum rent cost in Australian Dollars (AUD)"
+    )
+    rent_max = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Maximum rent cost in Australian Dollars (AUD)"
+    )
+    food_min = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Minimum food cost in Australian Dollars (AUD)"
+    )
+    food_max = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Maximum food cost in Australian Dollars (AUD)"
+    )
+    transport_min = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Minimum transport cost in Australian Dollars (AUD)"
+    )
+    transport_max = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Maximum transport cost in Australian Dollars (AUD)"
+    )
+    miscellaneous_min = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Minimum miscellaneous cost in Australian Dollars (AUD)"
+    )
+    miscellaneous_max = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Maximum miscellaneous cost in Australian Dollars (AUD)"
+    )
+    total_min = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Minimum total cost of living in Australian Dollars (AUD)"
+    )
+    total_max = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Maximum total cost of living in Australian Dollars (AUD)"
+    )
+
+    class Meta:
+        verbose_name = "Cost of Living"
+        verbose_name_plural = "Costs of Living"
+
+    def __str__(self):
+        return f"Cost of Living - {self.country.name}"
 
 
 class university(models.Model):
@@ -40,7 +134,14 @@ class university(models.Model):
         max_length=1000, unique=True, db_index=True,
         help_text="Google Maps URL or any map link for the location"
     )
-
+    review_rating = models.DecimalField(
+        max_digits=3,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
     STATUS = (("DRAFT", "DRAFT"), ("PUBLISH", "PUBLISH"))
     status = models.CharField(max_length=50, choices=STATUS, default="DRAFT", db_index=True, help_text="Publishing status of the university data")
 
@@ -51,8 +152,71 @@ class university(models.Model):
     def __str__(self):
         return self.name
 
+class AdmissionStats(models.Model):
+    university = models.ForeignKey(university, on_delete=models.CASCADE, help_text="University this Admission stats is assigned to")
+    TYPE = (("UNDERGRADUATE","UNDERGRADUATE"), ("GRADUATE","GRADUATE"))
+    admission_type = models.CharField(max_length=50, choices=TYPE)
+    GPA_min = models.PositiveIntegerField()
+    GPA_max = models.PositiveIntegerField()
+    SAT_min = models.PositiveIntegerField()
+    SAT_max = models.PositiveIntegerField()
+    ACT_min = models.PositiveIntegerField()
+    ACT_max = models.PositiveIntegerField()
+    IELTS_min = models.PositiveIntegerField()
+    IELTS_max = models.PositiveIntegerField()
+
+    class Meta:
+        verbose_name = "Admission Stats"
+        verbose_name_plural = "Admission Stats"
+
+class Visa(models.Model):
+    # Define choices for type_of_visa
+    VISA_TYPES = (
+        ('TOURIST', 'Tourist Visa'),
+        ('BUSINESS', 'Business Visa'),
+        ('WORK', 'Work Visa'),
+        ('STUDENT', 'Student Visa'),
+        ('TRANSIT', 'Transit Visa'),
+        ('IMMIGRANT', 'Immigrant Visa'),
+        ('FAMILY', 'Family Reunion Visa'),
+        ('DIPLOMATIC', 'Diplomatic/Official Visa'),
+        ('MEDICAL', 'Medical Visa'),
+        ('REFUGEE', 'Refugee/Asylum Visa'),
+        ('SPECIAL', 'Special Purpose Visa'),
+        ('E_VISA', 'e-Visa/Visa on Arrival'),
+    )
+
+    university = models.ForeignKey(
+        university,
+        on_delete=models.CASCADE,
+        help_text="University this Visa is assigned to"
+    )
+    name = models.CharField(max_length=1000)  
+    cost = models.PositiveIntegerField()
+    type_of_visa = models.CharField(
+        max_length=20,
+        choices=VISA_TYPES,
+        help_text="Type of visa"
+    )
+    describe = models.TextField(max_length=10000)
+    class Meta:
+        verbose_name = "Visa"
+        verbose_name_plural = "Visas"
+
+    def __str__(self):
+        return f"{self.name} ({self.type_of_visa})"
 
 
+class WorkOpportunity(models.Model):
+    university = models.ForeignKey(
+        university,
+        on_delete=models.CASCADE,
+        help_text="University this Visa is assigned to"
+    )
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
 
 class Partner_Agency(models.Model):
     name = models.CharField(max_length=200, db_index=True, help_text="Name of the partner agency")
