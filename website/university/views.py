@@ -616,6 +616,80 @@ def university_detail(request, university_id):
                         ) AS faqs
                     FROM university_faqs f
                     GROUP BY university_id
+                ),
+                admission_stats_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', a.id,
+                                    'admission_type', a.admission_type,
+                                    'GPA_min', a.GPA_min,
+                                    'GPA_max', a.GPA_max,
+                                    'SAT_min', a.SAT_min,
+                                    'SAT_max', a.SAT_max,
+                                    'ACT_min', a.ACT_min,
+                                    'ACT_max', a.ACT_max,
+                                    'IELTS_min', a.IELTS_min,
+                                    'IELTS_max', a.IELTS_max
+                                )
+                            ) FILTER (WHERE a.id IS NOT NULL),
+                            '[]'
+                        ) AS admission_stats
+                    FROM university_admissionstats a
+                    GROUP BY university_id
+                ),
+                visa_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', v.id,
+                                    'name', v.name,
+                                    'cost', v.cost,
+                                    'type_of_visa', v.type_of_visa,
+                                    'describe', v.describe
+                                )
+                            ) FILTER (WHERE v.id IS NOT NULL),
+                            '[]'
+                        ) AS visas
+                    FROM university_visa v
+                    GROUP BY university_id
+                ),
+                work_opportunity_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', w.id,
+                                    'name', w.name
+                                )
+                            ) FILTER (WHERE v.id IS NOT NULL),
+                            '[]'
+                        ) AS work_opportunities
+                    FROM university_workopportunity w
+                    GROUP BY university_id
+                ),
+                contact_agg AS (
+                    SELECT 
+                        university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', c.id,
+                                    'name', c.name,
+                                    'designation', c.designation,
+                                    'email', c.email,
+                                    'phone', c.phone
+                                )
+                            ) FILTER (WHERE c.id IS NOT NULL),
+                            '[]'
+                        ) AS contacts
+                    FROM university_uni_contact c
+                    GROUP BY university_id
                 )
                 SELECT
                     u.id AS university_id,
@@ -628,13 +702,21 @@ def university_detail(request, university_id):
                     u.admission_requirements,
                     u.location_map_link,
                     u.status,
+                    u.review_rating,
+                    u.avg_acceptance_rate,
+                    u.avg_tution_fee,
                     l.id AS location_id,
                     l.city,
                     l.state,
+                    l.country AS country_name,
                     COALESCE(sa.statistics, '[]') AS statistics,
                     COALESCE(va.video_links, '[]') AS video_links,
                     COALESCE(ra.rankings, '[]') AS rankings,
-                    COALESCE(fa.faqs, '[]') AS faqs
+                    COALESCE(fa.faqs, '[]') AS faqs,
+                    COALESCE(asa.admission_stats, '[]') AS admission_stats,
+                    COALESCE(va2.visas, '[]') AS visas,
+                    COALESCE(woa.work_opportunities, '[]') AS work_opportunities,
+                    COALESCE(ca.contacts, '[]') AS contacts
                 FROM
                     university_university u
                     LEFT JOIN university_location l ON u.location_id = l.id
@@ -642,6 +724,10 @@ def university_detail(request, university_id):
                     LEFT JOIN videos_agg va ON u.id = va.university_id
                     LEFT JOIN rankings_agg ra ON u.id = ra.university_id
                     LEFT JOIN faqs_agg fa ON u.id = fa.university_id
+                    LEFT JOIN admission_stats_agg asa ON u.id = asa.university_id
+                    LEFT JOIN visa_agg va2 ON u.id = va2.university_id
+                    LEFT JOIN work_opportunity_agg woa ON u.id = woa.university_id
+                    LEFT JOIN contact_agg ca ON u.id = ca.university_id
                 WHERE
                     u.id = %s;
             """, [university_id])
@@ -663,15 +749,23 @@ def university_detail(request, university_id):
                 "admission_requirements": row[7],
                 "location_map_link": row[8],
                 "status": row[9],
+                "review_rating": float(row[10]) if row[10] is not None else None,
+                "avg_acceptance_rate": row[11],
+                "avg_tution_fee": row[12],
                 "location": {
-                    "id": row[10],
-                    "city": row[11],
-                    "state": row[12]
+                    "id": row[13],
+                    "city": row[14],
+                    "state": row[15],
+                    "country": row[16]
                 },
-                "statistics": row[13],  # JSON array from PostgreSQL
-                "video_links": row[14],  # JSON array
-                "rankings": row[15],     # JSON array
-                "faqs": row[16]          # JSON array
+                "statistics": row[17],  # JSON array
+                "video_links": row[18],  # JSON array
+                "rankings": row[19],     # JSON array
+                "faqs": row[20],         # JSON array
+                "admission_stats": row[21],  # JSON array
+                "visas": row[22],        # JSON array
+                "work_opportunities": row[23],  # JSON array
+                "contacts": row[24]      # JSON array
             }
             
             return JsonResponse(result, status=200)
