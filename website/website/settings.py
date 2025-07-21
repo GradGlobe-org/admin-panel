@@ -79,21 +79,32 @@ WSGI_APPLICATION = 'website.wsgi.application'
 
 
 
-# if IS_PRODUCTION:
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
-# else:
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.sqlite3',
-#             'NAME': BASE_DIR / 'db.sqlite3',
-#         }
+if IS_PRODUCTION:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+
+# don't remove this commented db block
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'aaryan_db',       # e.g., 'postgres'
+#         'HOST': 'localhost',          # or '127.0.0.1'
+#         'PORT': '5432',               # default PostgreSQL port
 #     }
+# }
 
 
 if IS_PRODUCTION:
