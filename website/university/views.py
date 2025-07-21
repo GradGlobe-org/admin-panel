@@ -541,7 +541,7 @@ def universities_employee(request):
     })
 
 @csrf_exempt
-# @api_key_required
+@api_key_required
 @require_http_methods(["GET"])
 def university_detail(request, university_id):
     try:
