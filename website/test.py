@@ -45,6 +45,8 @@ try:
     uni.admission_requirements = uni_data['admission_requirements']
     uni.location_map_link = uni_data['location_map_link']
     uni.review_rating = uni_data['review_rating']
+    uni.avg_acceptance_rate = uni_data['avg_acceptance_rate']
+    uni.avg_tution_fee = uni_data['avg_tution_fee']
     uni.status = uni_data['status']
     uni.save()
 except ObjectDoesNotExist:
@@ -60,6 +62,8 @@ except ObjectDoesNotExist:
         admission_requirements=uni_data['admission_requirements'],
         location_map_link=uni_data['location_map_link'],
         review_rating=uni_data['review_rating'],
+        avg_acceptance_rate=uni_data['avg_acceptance_rate'],
+        avg_tution_fee=uni_data['avg_tution_fee'],
         status=uni_data['status']
     )
 
@@ -134,8 +138,8 @@ for admission in data['Admission Stats']:
     AdmissionStats.objects.create(
         university=uni,
         admission_type=admission['admission_type'],
-        GPA_min=admission['GPA_min'],
-        GPA_max=admission['GPA_max'],
+        GPA_min=int(admission['GPA_min']),  # Convert to int to match PositiveIntegerField
+        GPA_max=int(admission['GPA_max']),  # Convert to int to match PositiveIntegerField
         SAT_min=admission['SAT_min'],
         SAT_max=admission['SAT_max'],
         ACT_min=admission['ACT_min'],

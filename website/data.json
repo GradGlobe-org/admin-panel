@@ -1,29 +1,35 @@
 {
     "General": {
-      "name": "New York University 2",
-      "cover_url": "https://www.nyu.edu/content/nyu/en/about/leadership-university-administration/university-senate/membership/faculty-senators/_jcr_content/1/text_copy_copy/image.img.480.high.jpg/1487002615984.jpg",
-      "cover_origin": "https://www.nyu.edu",
+      "name": "Lund University",
+      "cover_url": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+      "cover_origin": "https://www.lunduniversity.lu.se/",
       "location": {
-        "city": "New York City",
-        "state": "New York",
-        "country": "United States"
+        "city": "Lund",
+        "state": "Scania",
+        "country": "Sweden"
       },
-      "type": "PRIVATE",
-      "establish_year": 1831,
-      "about": "Founded in 1831 as the \"University of the City of New York,\" NYU was envisioned as a metropolitan institution that is democratic in spirit and responsive to commercial culture demands. Located in Greenwich Village, Manhattan, NYU has grown into one of the world's most prestigious universities with over 50,000 students and global campuses in Abu Dhabi and Shanghai.",
-      "admission_requirements": "Application Process: Visit the official website, click 'Apply Now', complete education history, employment details, and personal statement, then submit with required fees. Documents Required: Official academic transcripts, passport photos, passport copy, visa, updated CV/Resume, English proficiency test scores, letters of recommendation, and statement of purpose.",
-      "location_map_link": "https://maps.google.com/maps?q=New+York+University,+4+Washington+Square+North,+New+York,+NY",
+      "type": "PUBLIC",
+      "establish_year": 1666,
+      "about": "Lund University, founded in 1666, is one of Sweden's oldest and most prestigious institutions, consistently ranked among the world's top 100 universities. Located in Lund, Sweden, it serves over 40,000 students from 150+ nations across 9 faculties. The university is renowned for its outstanding research facilities, Nobel Prize-winning alumni, and strong industry partnerships with companies like Ericsson, Sony Mobile, and Tetra Pak.",
+      "admission_requirements": "Application Process: Visit the official website, complete the online application with education history, employment details, and personal statement, then submit with required fees. Required Documents: Official academic transcripts, passport photos and copy, visa documentation, updated CV/Resume, English proficiency test scores, letters of recommendation, and statement of purpose.",
+      "location_map_link": "https://maps.google.com/maps?q=Lund+University,+Lund,+Sweden&z=15",
       "review_rating": 4.3,
+      "avg_acceptance_rate": 34,
+      "avg_tution_fee": 15000,
       "status": "DRAFT"
     },
     "Statistics": [
       {
+        "name": "Total Students",
+        "value": "40,000"
+      },
+      {
         "name": "Intakes",
-        "value": "Fall, Spring, and Summer"
+        "value": "Autumn and Spring"
       },
       {
         "name": "Acceptance Rate",
-        "value": "12.8%"
+        "value": "34%"
       },
       {
         "name": "Student Teacher Ratio",
@@ -31,149 +37,148 @@
       },
       {
         "name": "International Student Rate",
-        "value": "24%"
+        "value": "25%"
       },
       {
         "name": "Female Male Ratio",
-        "value": "57:43"
-      },
-      {
-        "name": "Total Students",
-        "value": "50,000+"
+        "value": "55:45"
       },
       {
         "name": "Faculty Members",
-        "value": "4,500"
+        "value": "4,400"
       },
       {
         "name": "Residential Halls",
-        "value": "23"
+        "value": "15"
+      },
+      {
+        "name": "Bachelor Programs",
+        "value": "9"
+      },
+      {
+        "name": "Master Programs",
+        "value": "100+"
       },
       {
         "name": "Countries Represented",
-        "value": "183"
+        "value": "150+"
       },
       {
-        "name": "Annual Degrees Awarded",
-        "value": "17,000+"
-      },
-      {
-        "name": "Available Courses",
-        "value": "2,700+"
-      },
-      {
-        "name": "Academic Centers in US",
-        "value": "12"
+        "name": "Faculties",
+        "value": "9"
       }
     ],
     "Video Links": [
       {
-        "url": "https://www.youtube.com/watch?v=pjg13GVgyKU"
+        "url": "https://www.youtube.com/embed/QOkfCHkAdL8"
       },
       {
-        "url": "https://www.youtube.com/watch?v=GxqR6p8r6z0"
+        "url": "https://www.youtube.com/embed/S2KK6vKKkbQ"
       },
       {
-        "url": "https://www.youtube.com/watch?v=D3ciGUotgyo"
+        "url": "https://www.youtube.com/embed/mcK4bMIF4Z4"
       },
       {
-        "url": "https://www.youtube.com/watch?v=ol_GBFzJdC8"
+        "url": "https://www.youtube.com/embed/sO47LUtyunc"
       },
       {
-        "url": "https://www.youtube.com/watch?v=4G468Db_YlM"
+        "url": "https://www.youtube.com/embed/b5sbYnmN0l8"
       }
     ],
     "FAQs": [
       {
-        "question": "What is NYU famous for?",
-        "answer": "The most popular majors at New York University include Visual and Performing Arts; Social Sciences; Business, Management, Marketing, and Related Support Services; Liberal Arts and Sciences, General Studies and Humanities; and Health Professions and Related Programs."
+        "question": "What is Lund University known for?",
+        "answer": "Lund University (LU) is one of the top 100 institutions in the world and Sweden's most popular foreign university. Aside from academic and research prowess, LU is known for its distinctive student life, which includes the historic student 'nations,' which offer year-round social activities."
       },
       {
-        "question": "Is NYU an Ivy League?",
-        "answer": "No, NYU is not an Ivy League university."
+        "question": "Is Lund University free?",
+        "answer": "Citizens of the European Union (EU), the European Economic Area (EEA), and Switzerland do not have to pay tuition. Students from countries outside the European Union (EU), the European Economic Area (EEA), and Switzerland must pay application and tuition fees in most cases."
       },
       {
-        "question": "Is it difficult to get into NYU?",
-        "answer": "In 2020, NYU's acceptance rate fell to a record low: 15%. That means that NYU admits 15 out of every 100 applicants. An acceptance rate of just 15% means that NYU is highly selective—and getting even more so."
+        "question": "Is Lund University good for Engineering?",
+        "answer": "According to the New York Times, Lund University is among the top 100 universities in the world for graduate employability in 2018. Their engineering graduates go on to work in government, industry, and non-profit organisations all across the world."
       },
       {
-        "question": "Why is NYU so expensive?",
-        "answer": "NYU was not always the high-rated university it is today; it jumped tiers very quickly and with that came rapid expansion and demand for costly additions that were not self-funding, such as facilities to make it have more of a \"campus.\""
+        "question": "Why should I study at Lund University?",
+        "answer": "Students in Lund have exceptional chances for business contact, thanks to the city's distinctive, world-class environment for technology, information, innovation, and entrepreneurship, which attracts a diverse range of international firms."
       },
       {
-        "question": "Does NYU have a good reputation?",
-        "answer": "NYU has forged a strong reputation as a world-class institution. It's ranked ninth in the USA overall and places first in the diversity and internationalisation indicators."
+        "question": "In what language does Lund University teach?",
+        "answer": "Swedish is the language of teaching at Lund University, which offers 300-degree programmes and over 2000 stand-alone courses."
       },
       {
-        "question": "Does NYU have dorms?",
-        "answer": "Over 11,000 NYU students are housed in 23 residential halls, the majority of which are located in Greenwich Village. Two halls are also located near the NYU Tandon School of Engineering in Brooklyn Heights, an exceptionally diverse and dynamic neighbourhood."
+        "question": "Why Lund University is famous?",
+        "answer": "Lund University (LU) is one of the top 100 institutions in the world and Sweden's most popular foreign university. Aside from academic and research prowess, LU is known for its distinctive student life, which includes the historic student 'nations,' which offer year-round social activities."
       },
       {
-        "question": "What is NYU known for?",
-        "answer": "New York University (NYU) is a selective private university in New York City recognised for its metropolitan setting. The school's renown stems mostly from its achievements in the arts and business."
+        "question": "Is Lund University prestigious?",
+        "answer": "Lund University has continuously been listed among the world's top 100 universities (among the top 0.4% of all universities) in various worldwide assessments of higher education institutions in recent years."
       },
       {
-        "question": "What SAT score is needed for NYU?",
-        "answer": "New York University admissions are most selective with an acceptance rate of 21%. Half the applicants admitted to NYU have an SAT score between 1370 and 1540."
-      },
-      {
-        "question": "Is NYU a private university?",
-        "answer": "Yes. Founded in 1831, New York University is the largest private university in the United States."
-      },
-      {
-        "question": "Can I provide additional information if I think that clarification is needed?",
-        "answer": "Do not send any additional information unless it is specifically requested of you. The university office will not review additional information that has not been explicitly requested."
+        "question": "Is it difficult to get into Lund University?",
+        "answer": "The acceptance rate for Bachelor's level courses at Lund University is around 34%. The university's admissions procedure is quite normal, with applicants having the chance to demonstrate their finest academic and practical abilities."
       }
     ],
     "University Rankings": [
       {
-        "rank": "42",
+        "rank": "87",
         "ranking_agency_id": 1,
         "year": 2022
       },
       {
-        "rank": "35",
-        "ranking_agency_id": 1,
-        "year": 2021
-      },
-      {
-        "rank": "39",
-        "ranking_agency_id": 1,
-        "year": 2023
-      },
-      {
-        "rank": "29",
-        "ranking_agency_id": 4,
-        "year": 2021
-      },
-      {
-        "rank": "30",
-        "ranking_agency_id": 4,
-        "year": 2022
-      },
-      {
-        "rank": "26",
+        "rank": "116",
         "ranking_agency_id": 3,
         "year": 2022
       },
       {
-        "rank": "27",
-        "ranking_agency_id": 2,
+        "rank": "95",
+        "ranking_agency_id": 4,
+        "year": 2022
+      },
+      {
+        "rank": "97",
+        "ranking_agency_id": 1,
         "year": 2021
+      },
+      {
+        "rank": "99",
+        "ranking_agency_id": 4,
+        "year": 2021
+      },
+      {
+        "rank": "103",
+        "ranking_agency_id": 3,
+        "year": 2021
+      },
+      {
+        "rank": "95",
+        "ranking_agency_id": 1,
+        "year": 2023
+      },
+      {
+        "rank": "85",
+        "ranking_agency_id": 1,
+        "year": 2024
       }
     ],
     "University Contacts": [
       {
         "name": "Admissions Office",
         "designation": "Student Guidance",
-        "email": "admissions@nyu.edu",
-        "phone": "17654944600"
+        "email": "userid@student.lu.se",
+        "phone": "+46-46-222-0000"
       },
       {
-        "name": "International Student Services",
-        "designation": "International Affairs",
-        "email": "global.admissions@nyu.edu",
-        "phone": "12129928500"
+        "name": "International Office",
+        "designation": "International Student Services",
+        "email": "international@lu.se",
+        "phone": "+46-46-222-7285"
+      },
+      {
+        "name": "Student Services",
+        "designation": "Student Support Coordinator",
+        "email": "studentservices@lu.se",
+        "phone": "+46-46-222-0050"
       }
     ],
     "Admission Stats": [
@@ -181,11 +186,11 @@
         "admission_type": "UNDERGRADUATE",
         "GPA_min": 3,
         "GPA_max": 4,
-        "SAT_min": 1370,
-        "SAT_max": 1540,
-        "ACT_min": 30,
-        "ACT_max": 34,
-        "IELTS_min": 7,
+        "SAT_min": 1200,
+        "SAT_max": 1550,
+        "ACT_min": 26,
+        "ACT_max": 35,
+        "IELTS_min": 6,
         "IELTS_max": 9
       },
       {
@@ -202,36 +207,48 @@
     ],
     "Visas": [
       {
-        "name": "F-1 Student Visa",
-        "cost": 350,
+        "name": "Swedish Student Visa (Residence Permit)",
+        "cost": 1500,
         "type_of_visa": "STUDENT",
-        "describe": "The F-1 visa is for international students enrolled in academic programs at US universities. This visa allows students to study full-time and work on-campus with restrictions. Students must maintain full-time enrollment and make satisfactory academic progress."
+        "describe": "Required for non-EU/EEA students planning to study in Sweden for more than 3 months. Must be applied for before arrival and requires proof of acceptance, financial support (SEK 8,694 per month), health insurance, and accommodation. Valid for the duration of studies with possibility of extension."
       },
       {
-        "name": "J-1 Exchange Visitor Visa",
-        "cost": 220,
-        "type_of_visa": "STUDENT",
-        "describe": "The J-1 visa is for international exchange students participating in educational and cultural exchange programs. This visa is typically for shorter-term study programs, research, or teaching positions with specific program requirements and return obligations."
+        "name": "Schengen Tourist Visa",
+        "cost": 80,
+        "type_of_visa": "TOURIST",
+        "describe": "Short-term visa for non-EU/EEA citizens visiting Sweden for tourism, family visits, or short courses up to 90 days within 180 days. Required documents include passport, travel insurance, proof of accommodation, return tickets, and financial means."
+      },
+      {
+        "name": "Swedish Work Visa",
+        "cost": 2000,
+        "type_of_visa": "WORK",
+        "describe": "For students seeking employment after graduation or during studies. Requires job offer from Swedish employer, work contract, and proof that employer cannot find suitable EU candidate. Student visa holders can work part-time without separate permit."
       }
     ],
     "Work Opportunities": [
       {
-        "name": "On-Campus Employment"
+        "name": "Research Assistant Positions"
       },
       {
-        "name": "Optional Practical Training (OPT)"
+        "name": "Teaching Assistant Roles"
       },
       {
-        "name": "Curricular Practical Training (CPT)"
+        "name": "Industry Internships"
       },
       {
-        "name": "Graduate Research Assistant"
+        "name": "Campus Work-Study Programs"
       },
       {
-        "name": "Teaching Assistant"
+        "name": "Technology Sector Employment"
       },
       {
-        "name": "Work-Study Programs"
+        "name": "Healthcare and Life Sciences Jobs"
+      },
+      {
+        "name": "Engineering and Innovation Roles"
+      },
+      {
+        "name": "Entrepreneurship Opportunities"
       }
     ]
   }

@@ -142,6 +142,9 @@ class university(models.Model):
             MinValueValidator(0.0)   # Minimum value of 0.0
         ]
     )
+    avg_acceptance_rate = models.PositiveIntegerField(help_text="in percentage")
+    avg_tution_fee = models.PositiveIntegerField(help_text="in USD")
+
     STATUS = (("DRAFT", "DRAFT"), ("PUBLISH", "PUBLISH"))
     status = models.CharField(max_length=50, choices=STATUS, default="DRAFT", db_index=True, help_text="Publishing status of the university data")
 
@@ -329,8 +332,8 @@ class university_ranking(models.Model):
 
 
 class faqs(models.Model):
-    question = models.TextField(unique=True, db_index=True, help_text="Frequently asked question")
-    answer = models.TextField(unique=True, help_text="Answer to the question")
+    question = models.TextField(db_index=True, help_text="Frequently asked question")
+    answer = models.TextField(help_text="Answer to the question")
     university = models.ForeignKey(university, on_delete=models.CASCADE, related_name='faqs', db_index=True, help_text="University this FAQ belongs to")
 
     class Meta:

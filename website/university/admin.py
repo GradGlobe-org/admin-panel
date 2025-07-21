@@ -73,7 +73,7 @@ class UniversityAdmin(admin.ModelAdmin):
     ordering = ('name',)
     fields = (
         'cover_url', 'cover_origin', 'name', 'type', 'establish_year', 'location',
-        'about', 'admission_requirements', 'location_map_link', 'review_rating', 'status'
+        'about', 'admission_requirements', 'location_map_link','avg_acceptance_rate','avg_tution_fee', 'review_rating', 'status'
     )
     inlines = [
         StatsInline, VideosInline, FaqsInline, UniversityRankingInline,
