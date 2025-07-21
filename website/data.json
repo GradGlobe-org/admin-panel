@@ -1,0 +1,237 @@
+{
+    "General": {
+      "name": "New York University 2",
+      "cover_url": "https://www.nyu.edu/content/nyu/en/about/leadership-university-administration/university-senate/membership/faculty-senators/_jcr_content/1/text_copy_copy/image.img.480.high.jpg/1487002615984.jpg",
+      "cover_origin": "https://www.nyu.edu",
+      "location": {
+        "city": "New York City",
+        "state": "New York",
+        "country": "United States"
+      },
+      "type": "PRIVATE",
+      "establish_year": 1831,
+      "about": "Founded in 1831 as the \"University of the City of New York,\" NYU was envisioned as a metropolitan institution that is democratic in spirit and responsive to commercial culture demands. Located in Greenwich Village, Manhattan, NYU has grown into one of the world's most prestigious universities with over 50,000 students and global campuses in Abu Dhabi and Shanghai.",
+      "admission_requirements": "Application Process: Visit the official website, click 'Apply Now', complete education history, employment details, and personal statement, then submit with required fees. Documents Required: Official academic transcripts, passport photos, passport copy, visa, updated CV/Resume, English proficiency test scores, letters of recommendation, and statement of purpose.",
+      "location_map_link": "https://maps.google.com/maps?q=New+York+University,+4+Washington+Square+North,+New+York,+NY",
+      "review_rating": 4.3,
+      "status": "DRAFT"
+    },
+    "Statistics": [
+      {
+        "name": "Intakes",
+        "value": "Fall, Spring, and Summer"
+      },
+      {
+        "name": "Acceptance Rate",
+        "value": "12.8%"
+      },
+      {
+        "name": "Student Teacher Ratio",
+        "value": "9:1"
+      },
+      {
+        "name": "International Student Rate",
+        "value": "24%"
+      },
+      {
+        "name": "Female Male Ratio",
+        "value": "57:43"
+      },
+      {
+        "name": "Total Students",
+        "value": "50,000+"
+      },
+      {
+        "name": "Faculty Members",
+        "value": "4,500"
+      },
+      {
+        "name": "Residential Halls",
+        "value": "23"
+      },
+      {
+        "name": "Countries Represented",
+        "value": "183"
+      },
+      {
+        "name": "Annual Degrees Awarded",
+        "value": "17,000+"
+      },
+      {
+        "name": "Available Courses",
+        "value": "2,700+"
+      },
+      {
+        "name": "Academic Centers in US",
+        "value": "12"
+      }
+    ],
+    "Video Links": [
+      {
+        "url": "https://www.youtube.com/watch?v=pjg13GVgyKU"
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=GxqR6p8r6z0"
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=D3ciGUotgyo"
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=ol_GBFzJdC8"
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=4G468Db_YlM"
+      }
+    ],
+    "FAQs": [
+      {
+        "question": "What is NYU famous for?",
+        "answer": "The most popular majors at New York University include Visual and Performing Arts; Social Sciences; Business, Management, Marketing, and Related Support Services; Liberal Arts and Sciences, General Studies and Humanities; and Health Professions and Related Programs."
+      },
+      {
+        "question": "Is NYU an Ivy League?",
+        "answer": "No, NYU is not an Ivy League university."
+      },
+      {
+        "question": "Is it difficult to get into NYU?",
+        "answer": "In 2020, NYU's acceptance rate fell to a record low: 15%. That means that NYU admits 15 out of every 100 applicants. An acceptance rate of just 15% means that NYU is highly selective—and getting even more so."
+      },
+      {
+        "question": "Why is NYU so expensive?",
+        "answer": "NYU was not always the high-rated university it is today; it jumped tiers very quickly and with that came rapid expansion and demand for costly additions that were not self-funding, such as facilities to make it have more of a \"campus.\""
+      },
+      {
+        "question": "Does NYU have a good reputation?",
+        "answer": "NYU has forged a strong reputation as a world-class institution. It's ranked ninth in the USA overall and places first in the diversity and internationalisation indicators."
+      },
+      {
+        "question": "Does NYU have dorms?",
+        "answer": "Over 11,000 NYU students are housed in 23 residential halls, the majority of which are located in Greenwich Village. Two halls are also located near the NYU Tandon School of Engineering in Brooklyn Heights, an exceptionally diverse and dynamic neighbourhood."
+      },
+      {
+        "question": "What is NYU known for?",
+        "answer": "New York University (NYU) is a selective private university in New York City recognised for its metropolitan setting. The school's renown stems mostly from its achievements in the arts and business."
+      },
+      {
+        "question": "What SAT score is needed for NYU?",
+        "answer": "New York University admissions are most selective with an acceptance rate of 21%. Half the applicants admitted to NYU have an SAT score between 1370 and 1540."
+      },
+      {
+        "question": "Is NYU a private university?",
+        "answer": "Yes. Founded in 1831, New York University is the largest private university in the United States."
+      },
+      {
+        "question": "Can I provide additional information if I think that clarification is needed?",
+        "answer": "Do not send any additional information unless it is specifically requested of you. The university office will not review additional information that has not been explicitly requested."
+      }
+    ],
+    "University Rankings": [
+      {
+        "rank": "42",
+        "ranking_agency_id": 1,
+        "year": 2022
+      },
+      {
+        "rank": "35",
+        "ranking_agency_id": 1,
+        "year": 2021
+      },
+      {
+        "rank": "39",
+        "ranking_agency_id": 1,
+        "year": 2023
+      },
+      {
+        "rank": "29",
+        "ranking_agency_id": 4,
+        "year": 2021
+      },
+      {
+        "rank": "30",
+        "ranking_agency_id": 4,
+        "year": 2022
+      },
+      {
+        "rank": "26",
+        "ranking_agency_id": 3,
+        "year": 2022
+      },
+      {
+        "rank": "27",
+        "ranking_agency_id": 2,
+        "year": 2021
+      }
+    ],
+    "University Contacts": [
+      {
+        "name": "Admissions Office",
+        "designation": "Student Guidance",
+        "email": "admissions@nyu.edu",
+        "phone": "17654944600"
+      },
+      {
+        "name": "International Student Services",
+        "designation": "International Affairs",
+        "email": "global.admissions@nyu.edu",
+        "phone": "12129928500"
+      }
+    ],
+    "Admission Stats": [
+      {
+        "admission_type": "UNDERGRADUATE",
+        "GPA_min": 3,
+        "GPA_max": 4,
+        "SAT_min": 1370,
+        "SAT_max": 1540,
+        "ACT_min": 30,
+        "ACT_max": 34,
+        "IELTS_min": 7,
+        "IELTS_max": 9
+      },
+      {
+        "admission_type": "GRADUATE",
+        "GPA_min": 3,
+        "GPA_max": 4,
+        "SAT_min": 0,
+        "SAT_max": 0,
+        "ACT_min": 0,
+        "ACT_max": 0,
+        "IELTS_min": 7,
+        "IELTS_max": 9
+      }
+    ],
+    "Visas": [
+      {
+        "name": "F-1 Student Visa",
+        "cost": 350,
+        "type_of_visa": "STUDENT",
+        "describe": "The F-1 visa is for international students enrolled in academic programs at US universities. This visa allows students to study full-time and work on-campus with restrictions. Students must maintain full-time enrollment and make satisfactory academic progress."
+      },
+      {
+        "name": "J-1 Exchange Visitor Visa",
+        "cost": 220,
+        "type_of_visa": "STUDENT",
+        "describe": "The J-1 visa is for international exchange students participating in educational and cultural exchange programs. This visa is typically for shorter-term study programs, research, or teaching positions with specific program requirements and return obligations."
+      }
+    ],
+    "Work Opportunities": [
+      {
+        "name": "On-Campus Employment"
+      },
+      {
+        "name": "Optional Practical Training (OPT)"
+      },
+      {
+        "name": "Curricular Practical Training (CPT)"
+      },
+      {
+        "name": "Graduate Research Assistant"
+      },
+      {
+        "name": "Teaching Assistant"
+      },
+      {
+        "name": "Work-Study Programs"
+      }
+    ]
+  }
