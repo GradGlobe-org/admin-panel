@@ -1,180 +1,190 @@
 {
   "General": {
-    "name": "Massachusetts Institute of Technology (MIT)",
-    "cover_url": "https://unsplash.com/photos/massachusetts-institute-of-technology-campus",
-    "cover_origin": "https://unsplash.com/s/photos/mit",
+    "name": "Curtin University",
+    "cover_url": "https://www.curtin.edu.au/images/curtin-university-campus-cover.jpg",
+    "cover_origin": "https://www.curtin.edu.au/about/campuses/bentley/",
     "location": {
-      "city": "Cambridge",
-      "state": "Massachusetts",
-      "country": "United States"
+      "city": "Perth",
+      "state": "Western Australia",
+      "country": "Australia"
     },
-    "type": "PRIVATE",
-    "establish_year": 1861,
-    "about": "Massachusetts Institute of Technology is a world-renowned private research university established in 1861, located in Cambridge, Massachusetts. MIT is globally recognized for its cutting-edge programs in engineering, physical sciences, economics, and technology, with a mission to enhance knowledge and educate students to serve the world's greatest challenges.",
-    "admission_requirements": "Application Process: Visit the official website, complete education and employment history, submit personal statement and required documents. Documents Required: Official academic transcripts, passport photographs, visa documentation, updated CV/Resume, English Language Proficiency Test Scores (TOEFL/IELTS), Letters of Recommendation, and Statement of Purpose. Standardized tests include SAT or ACT, with SAT subject tests required for math and science-focused programs.",
-    "location_map_link": "https://maps.google.com/maps?q=Massachusetts+Institute+of+Technology,+Cambridge,+MA",
-    "review_rating": 4.8,
-    "avg_acceptance_rate": 7,
-    "avg_tution_fee": 64310,
+    "type": "PUBLIC",
+    "establish_year": 1986,
+    "about": "Curtin University is an innovative, global university established in 1986 (originally founded as the Western Australian Institute of Technology in 1966). Known for high-impact research and strong industry networks, Curtin ranks among the top 1% of universities worldwide and is affiliated with the Australian Technology Network. The university has 5 campuses in Australia and 4 international campuses in Dubai, Malaysia, Singapore, and Mauritius.",
+    "admission_requirements": "Application Process: Visit the official website and click 'Apply Now', complete education history, employment history, and personal statement, then submit with required fees. Documents Required: Official academic transcripts, passport photos, passport copy, visa, updated CV/Resume, English Language Proficiency Test Scores, Letters of Recommendation, and Statement of Purpose.",
+    "location_map_link": "https://maps.google.com/maps?q=Curtin+University+Bentley+Campus+Perth+Western+Australia",
+    "review_rating": 4.3,
+    "avg_acceptance_rate": 50,
+    "avg_tution_fee": 35000,
     "status": "DRAFT"
   },
   "Statistics": [
     {
       "name": "Intakes",
-      "value": "Fall, Spring"
+      "value": "February, July"
     },
     {
       "name": "Acceptance Rate",
-      "value": "7%"
+      "value": "50%"
     },
     {
       "name": "Student Teacher Ratio",
-      "value": "3:1"
+      "value": "33:1"
     },
     {
       "name": "International Student Rate",
-      "value": "29.5%"
+      "value": "32%"
     },
     {
       "name": "Female Male Ratio",
-      "value": "48:52"
+      "value": "25:75"
     },
     {
       "name": "Total Students",
-      "value": "12,000+"
+      "value": "55,000+"
+    },
+    {
+      "name": "International Students",
+      "value": "13,000+"
     },
     {
       "name": "Faculty Members",
-      "value": "1,000+"
+      "value": "1,700+"
     },
     {
-      "name": "Residential Halls",
-      "value": "18"
+      "name": "Campuses Worldwide",
+      "value": "9"
+    },
+    {
+      "name": "Countries Represented",
+      "value": "100+"
+    },
+    {
+      "name": "Courses Offered",
+      "value": "150+"
     }
   ],
   "Video Links": [
     {
-      "url": "https://www.youtube.com/watch?v=x-ex7RZWl4A"
+      "url": "https://www.youtube.com/embed/J6JpBWPgC-o"
     },
     {
-      "url": "https://www.youtube.com/watch?v=b5_asXAkSZw"
+      "url": "https://www.youtube.com/embed/sEJtzJPtJ98"
     },
     {
-      "url": "https://www.youtube.com/watch?v=TBpEpeN-ufg"
+      "url": "https://www.youtube.com/embed/-KwP-BYm5-Q"
     },
     {
-      "url": "https://www.youtube.com/watch?v=B3lvAtN-PLg"
+      "url": "https://www.youtube.com/embed/yWVhIF6va_4"
     },
     {
-      "url": "https://www.youtube.com/watch?v=xGGuMbSmue4"
-    },
-    {
-      "url": "https://www.youtube.com/embed/JGj_qGk-2u0"
+      "url": "https://www.youtube.com/embed/cB6ISTcTy_o"
     }
   ],
   "FAQs": [
     {
-      "question": "What is MIT famous for?",
-      "answer": "While MIT is perhaps best known for its programs in engineering and the physical sciences, other areas—notably economics, political science, urban studies, linguistics, and philosophy—are also strong. Admission is extremely competitive, and undergraduate students are often able to pursue their own original research."
+      "question": "How many intakes does each course have per year?",
+      "answer": "Most courses at Curtin have intakes in Semester 1 and/or Semester 2. Intakes are typically in February for the beginning of semester one, and July for the beginning of semester two. However, not all courses will have intakes for both."
     },
     {
-      "question": "Is MIT better than IIT?",
-      "answer": "In India, IITs (Indian Institutes of Technology) are considered the best while at the global level, MIT (Massachusetts Institute of Technology) followed by Harvard's John A. Paulson School Of Engineering And Applied Sciences has constantly been at the top."
+      "question": "What is the difference between a single and a double major?",
+      "answer": "A single major concentrates on one area of specialization, whilst a double major focuses on two areas of specialization. A double major will allow a student to complete study in those two separate areas under the same award."
     },
     {
-      "question": "Is it hard to get into MIT?",
-      "answer": "MIT is one of the most selective schools in the world. A 7.3% acceptance rate means that MIT is extremely competitive to get into. You'll need excellent grades, test scores, essays, and letters of recommendation to even be considered."
+      "question": "What is the open day?",
+      "answer": "Curtin Open Day is one of the biggest events on the Curtin calendar and usually takes place on a Sunday. It provides a great opportunity for prospective students, their families, and friends to come to Curtin University to experience the innovative learning activities that the University offers."
     },
     {
-      "question": "Is MIT better than Harvard?",
-      "answer": "In terms of undergrad enrollment and the number of schools and universities, Harvard has MIT beat. While MIT has 4,369 students, Harvard has somewhat more at 6,699. Concerning complete enrollment (students and graduate students), MIT has under 12,000 students compared to Harvard's just shy of 20,000 students."
+      "question": "Does Curtin offer scholarships?",
+      "answer": "Yes, Curtin offers a range of scholarships to students. Scholarships are available for both commencing and current Curtin students."
     },
     {
-      "question": "What rank is MIT in the world?",
-      "answer": "Massachusetts Institute of Technology (MIT) is one of the top Private universities in Cambridge, United States. It is ranked #1 in QS Global World Rankings 2021."
+      "question": "How much time will I have to allocate to studying?",
+      "answer": "Students can expect that for every 1 hour of class time, they will put in 1 hour of additional study. As a full-time student, you can expect up to 30 hours of work per week, but this can vary as there may be busier periods when the workload is very demanding and other times when the load is somewhat reduced."
     },
     {
-      "question": "Why is MIT so famous?",
-      "answer": "While MIT is most renowned for its engineering and physical science degrees, it also has excellent programmes in economics, political science, urban studies, linguistics, and philosophy. The MIT library system is broad, including several specialised libraries. There are also a number of museums in the area."
+      "question": "Is Curtin a good university?",
+      "answer": "Curtin is globally recognized for its strong connections with industry, high-impact research and a wide range of innovative courses. In recent years, the University has established itself among the top one per cent of universities in the world (ARWU 2021)."
     },
     {
-      "question": "What is the salary of an MIT graduate?",
-      "answer": "According to an analysis from the salary comparison site PayScale, MIT graduates are the second highest-earning workers in the country, with early-career salaries of about $83,600 on average and mid-career salaries of about $150,400 on average."
+      "question": "What does Curtin University Specialise in?",
+      "answer": "Curtin leads major national or international research projects in minerals and energy, data analytics, sustainable development, health sciences, agriculture and astronomy."
     },
     {
-      "question": "Does MIT have a medical school?",
-      "answer": "MIT offers a popular combined MD-PhD programme with Harvard Medical School (HMS), as well as a Harvard-MIT programme in Health Sciences and Technology (HST), which brings MIT and Harvard together with Boston-area hospitals for a unique collaboration."
+      "question": "Who are some famous alumni of Curtin University?",
+      "answer": "Curtin University has also had a long list of notable alumni like Judy Davis (Australian actress), Cody Fem (Australia Actor and Director), John Butler (Musician), Natalia Cooper (Journalist for Nine News at the Nine Network Sydney), Jessica De Gouw (Actress), and many more."
     },
     {
-      "question": "Do MIT students get good jobs?",
-      "answer": "According to a survey of graduating students: 36% of 2020 bachelor's degree graduates had internships that led to a full-time job offer. 46% found jobs through networking. 43% found jobs through a career fair."
-    },
-    {
-      "question": "Does MIT have an entrance exam?",
-      "answer": "Yes. In addition to the SAT or ACT, you will also have to take at least two SAT subject tests. These are tests that you can take to showcase your particular skills. As a math and science-focused institution, MIT requires you to take either the Math Level 1 or Math Level 2 subject test."
+      "question": "How many international students are present in Curtin University?",
+      "answer": "Curtin University enrols more than 13,000 International students every year which comprise more than 25% of its overall student body. Students from more than 100 countries study at Curtin University."
     }
   ],
   "University Rankings": [
     {
-      "rank": "1",
-      "ranking_agency_id": 1,
-      "year": 2021
-    },
-    {
-      "rank": "3",
-      "ranking_agency_id": 3,
-      "year": 2021
-    },
-    {
-      "rank": "=5",
-      "ranking_agency_id": 3,
-      "year": 2022
-    },
-    {
-      "rank": "1",
+      "rank": "194",
       "ranking_agency_id": 1,
       "year": 2022
     },
     {
-      "rank": "2",
+      "rank": "251-300",
+      "ranking_agency_id": 3,
+      "year": 2022
+    },
+    {
+      "rank": "156",
       "ranking_agency_id": 4,
       "year": 2022
     },
     {
-      "rank": "4",
-      "ranking_agency_id": 2,
+      "rank": "217",
+      "ranking_agency_id": 1,
       "year": 2021
     },
     {
-      "rank": "1",
+      "rank": "201-250",
+      "ranking_agency_id": 3,
+      "year": 2021
+    },
+    {
+      "rank": "174",
+      "ranking_agency_id": 4,
+      "year": 2021
+    },
+    {
+      "rank": "193",
       "ranking_agency_id": 1,
       "year": 2023
+    },
+    {
+      "rank": "183",
+      "ranking_agency_id": 1,
+      "year": 2024
     }
   ],
   "University Contacts": [
     {
       "name": "Admissions Office",
       "designation": "Student Guidance",
-      "email": "admissions@mit.edu",
-      "phone": "6172531000"
+      "email": "enquiries@curtin.edu.my",
+      "phone": "61892665888"
     },
     {
       "name": "International Student Services",
-      "designation": "International Student Support",
-      "email": "iso@mit.edu",
-      "phone": "6172534860"
+      "designation": "International Admissions Coordinator",
+      "email": "international@curtin.edu.au",
+      "phone": "61892663699"
     }
   ],
   "Admission Stats": [
     {
       "admission_type": "UNDERGRADUATE",
-      "GPA_min": 4,
+      "GPA_min": 3,
       "GPA_max": 4,
-      "SAT_min": 1520,
-      "SAT_max": 1580,
-      "ACT_min": 34,
-      "ACT_max": 36,
-      "IELTS_min": 7,
+      "SAT_min": 1200,
+      "SAT_max": 1400,
+      "ACT_min": 25,
+      "ACT_max": 32,
+      "IELTS_min": 6,
       "IELTS_max": 9
     },
     {
@@ -185,42 +195,54 @@
       "SAT_max": 0,
       "ACT_min": 0,
       "ACT_max": 0,
-      "IELTS_min": 7,
+      "IELTS_min": 6,
       "IELTS_max": 9
     }
   ],
   "Visas": [
     {
-      "name": "F-1 Student Visa",
-      "cost": 350,
+      "name": "Student Visa (Subclass 500)",
+      "cost": 650,
       "type_of_visa": "STUDENT",
-      "describe": "The F-1 visa is issued to international students enrolled full-time at MIT to pursue academic studies. It requires maintaining full-time status and complying with U.S. immigration regulations. Students must demonstrate financial support and intent to return to their home country after completion of studies."
+      "describe": "The Student visa (subclass 500) allows you to remain in Australia for the duration of your study. This visa allows you to study full-time in Australia at a registered educational institution, bring eligible family members to Australia, and work up to 48 hours per fortnight while studying."
     },
     {
-      "name": "J-1 Exchange Visitor Visa",
-      "cost": 350,
-      "type_of_visa": "STUDENT",
-      "describe": "The J-1 visa is for exchange visitors including students, scholars, and interns participating in exchange programs at MIT. It supports cultural exchange and academic training opportunities. Recipients may be subject to the two-year home residency requirement."
+      "name": "Temporary Graduate Visa (Subclass 485)",
+      "cost": 1680,
+      "type_of_visa": "WORK",
+      "describe": "The Temporary Graduate visa allows international students who have recently graduated from an Australian educational institution to remain in Australia temporarily to gain work experience. This visa has two streams: Graduate Work stream and Post-Study Work stream, with varying duration based on qualifications."
     }
   ],
   "Work Opportunities": [
     {
-      "name": "On-Campus Employment"
+      "name": "IBM Graduate Programs"
     },
     {
-      "name": "MISTI International Internships"
+      "name": "Apple Internships"
     },
     {
-      "name": "Federal Work Study Program"
+      "name": "Tesla Engineering Roles"
     },
     {
-      "name": "Research Assistant Positions"
+      "name": "Bloomberg Technology Positions"
     },
     {
-      "name": "Teaching Assistant Opportunities"
+      "name": "Shell Energy Sector Jobs"
     },
     {
-      "name": "Career Services Support"
+      "name": "Ford Automotive Engineering"
+    },
+    {
+      "name": "Disney Creative Industries"
+    },
+    {
+      "name": "Coca-Cola Marketing Roles"
+    },
+    {
+      "name": "Mining Industry Positions"
+    },
+    {
+      "name": "Healthcare Sector Opportunities"
     }
   ]
 }
