@@ -88,12 +88,22 @@ if IS_PRODUCTION:
         )
     }
 else:
+    # DATABASES = {
+    #     'default': {
+    #         'ENGINE': 'django.db.backends.sqlite3',
+    #         'NAME': BASE_DIR / 'db.sqlite3',
+    #     }
+    # }
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'gradglobe',       # e.g., 'postgres'
+        # 'USER': 'your_db_user',       # e.g., 'postgres'
+        # 'PASSWORD': 'your_password',  # DB user's password
+        'HOST': 'localhost',          # or '127.0.0.1'
+        'PORT': '5432',               # default PostgreSQL port
     }
+}
 
 
 if IS_PRODUCTION:

@@ -42,7 +42,7 @@ class WhyStudyInSection(models.Model):
     def __str__(self):
         return f"{self.country.name}"
 
-
+# show country specific
 class CostOfLiving(models.Model):
     country = models.ForeignKey(
         Country,
@@ -53,52 +53,52 @@ class CostOfLiving(models.Model):
     rent_min = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Minimum rent cost in Australian Dollars (AUD)"
+        help_text="Minimum rent cost in USD"
     )
     rent_max = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Maximum rent cost in Australian Dollars (AUD)"
+        help_text="Maximum rent cost in USD"
     )
     food_min = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Minimum food cost in Australian Dollars (AUD)"
+        help_text="Minimum food cost in USD"
     )
     food_max = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Maximum food cost in Australian Dollars (AUD)"
+        help_text="Maximum food cost in USD"
     )
     transport_min = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Minimum transport cost in Australian Dollars (AUD)"
+        help_text="Minimum transport cost in USD"
     )
     transport_max = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Maximum transport cost in Australian Dollars (AUD)"
+        help_text="Maximum transport cost in USD"
     )
     miscellaneous_min = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Minimum miscellaneous cost in Australian Dollars (AUD)"
+        help_text="Minimum miscellaneous cost in USD"
     )
     miscellaneous_max = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Maximum miscellaneous cost in Australian Dollars (AUD)"
+        help_text="Maximum miscellaneous cost in USD"
     )
     total_min = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Minimum total cost of living in Australian Dollars (AUD)"
+        help_text="Minimum total cost of living in USD"
     )
     total_max = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Maximum total cost of living in Australian Dollars (AUD)"
+        help_text="Maximum total cost of living in USD"
     )
 
     class Meta:
