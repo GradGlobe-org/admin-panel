@@ -78,8 +78,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'website.wsgi.application'
 
 
-
-
 if IS_PRODUCTION:
     DATABASES = {
         'default': dj_database_url.config(
