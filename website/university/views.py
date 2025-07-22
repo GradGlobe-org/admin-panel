@@ -625,14 +625,14 @@ def university_detail(request, university_id):
                                 json_build_object(
                                     'id', a.id,
                                     'admission_type', a.admission_type,
-                                    'GPA_min', a.GPA_min,
-                                    'GPA_max', a.GPA_max,
-                                    'SAT_min', a.SAT_min,
-                                    'SAT_max', a.SAT_max,
-                                    'ACT_min', a.ACT_min,
-                                    'ACT_max', a.ACT_max,
-                                    'IELTS_min', a.IELTS_min,
-                                    'IELTS_max', a.IELTS_max
+                                    'GPA_min', a."GPA_min",
+                                    'GPA_max', a."GPA_max",
+                                    'SAT_min', a."SAT_min",
+                                    'SAT_max', a."SAT_max",
+                                    'ACT_min', a."ACT_min",
+                                    'ACT_max', a."ACT_max",
+                                    'IELTS_min', a."IELTS_min",
+                                    'IELTS_max', a."IELTS_max"
                                 )
                             ) FILTER (WHERE a.id IS NOT NULL),
                             '[]'
@@ -667,7 +667,7 @@ def university_detail(request, university_id):
                                     'id', w.id,
                                     'name', w.name
                                 )
-                            ) FILTER (WHERE v.id IS NOT NULL),
+                            ) FILTER (WHERE w.id IS NOT NULL),
                             '[]'
                         ) AS work_opportunities
                     FROM university_workopportunity w
