@@ -690,6 +690,45 @@ def university_detail(request, university_id):
                         ) AS contacts
                     FROM university_uni_contact c
                     GROUP BY university_id
+                ),
+                cost_of_living_agg AS (
+                    SELECT 
+                        country_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', col.id,
+                                    'rent_min', col.rent_min,
+                                    'rent_max', col.rent_max,
+                                    'food_min', col.food_min,
+                                    'food_max', col.food_max,
+                                    'transport_min', col.transport_min,
+                                    'transport_max', col.transport_max,
+                                    'miscellaneous_min', col.miscellaneous_min,
+                                    'miscellaneous_max', col.miscellaneous_max,
+                                    'total_min', col.total_min,
+                                    'total_max', col.total_max
+                                )
+                            ) FILTER (WHERE col.id IS NOT NULL),
+                            '[]'
+                        ) AS cost_of_living
+                    FROM university_costofliving col
+                    GROUP BY country_id
+                ),
+                why_study_agg AS (
+                    SELECT 
+                        country_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', ws.id,
+                                    'content', ws.content
+                                )
+                            ) FILTER (WHERE ws.id IS NOT NULL),
+                            '[]'
+                        ) AS why_study_sections
+                    FROM university_whystudyinsection ws
+                    GROUP BY country_id
                 )
                 SELECT
                     u.id AS university_id,
@@ -709,6 +748,8 @@ def university_detail(request, university_id):
                     l.city,
                     l.state,
                     l.country AS country_name,
+                    c.id AS country_id,
+                    c.name AS country_full_name,
                     COALESCE(sa.statistics, '[]') AS statistics,
                     COALESCE(va.video_links, '[]') AS video_links,
                     COALESCE(ra.rankings, '[]') AS rankings,
@@ -716,10 +757,13 @@ def university_detail(request, university_id):
                     COALESCE(asa.admission_stats, '[]') AS admission_stats,
                     COALESCE(va2.visas, '[]') AS visas,
                     COALESCE(woa.work_opportunities, '[]') AS work_opportunities,
-                    COALESCE(ca.contacts, '[]') AS contacts
+                    COALESCE(ca.contacts, '[]') AS contacts,
+                    COALESCE(cola.cost_of_living, '[]') AS cost_of_living,
+                    COALESCE(wsa.why_study_sections, '[]') AS why_study_sections
                 FROM
                     university_university u
                     LEFT JOIN university_location l ON u.location_id = l.id
+                    LEFT JOIN university_country c ON l.country = c.name
                     LEFT JOIN stats_agg sa ON u.id = sa.university_id
                     LEFT JOIN videos_agg va ON u.id = va.university_id
                     LEFT JOIN rankings_agg ra ON u.id = ra.university_id
@@ -728,6 +772,8 @@ def university_detail(request, university_id):
                     LEFT JOIN visa_agg va2 ON u.id = va2.university_id
                     LEFT JOIN work_opportunity_agg woa ON u.id = woa.university_id
                     LEFT JOIN contact_agg ca ON u.id = ca.university_id
+                    LEFT JOIN cost_of_living_agg cola ON c.id = cola.country_id
+                    LEFT JOIN why_study_agg wsa ON c.id = wsa.country_id
                 WHERE
                     u.id = %s;
             """, [university_id])
@@ -758,20 +804,27 @@ def university_detail(request, university_id):
                     "state": row[15],
                     "country": row[16]
                 },
-                "statistics": row[17],  # JSON array
-                "video_links": row[18],  # JSON array
-                "rankings": row[19],     # JSON array
-                "faqs": row[20],         # JSON array
-                "admission_stats": row[21],  # JSON array
-                "visas": row[22],        # JSON array
-                "work_opportunities": row[23],  # JSON array
-                "contacts": row[24]      # JSON array
+                "country_details": {
+                    "id": row[17],
+                    "name": row[18]
+                } if row[17] else None,
+                "statistics": row[19],  # JSON array
+                "video_links": row[20],  # JSON array
+                "rankings": row[21],     # JSON array
+                "faqs": row[22],         # JSON array
+                "admission_stats": row[23],  # JSON array
+                "visas": row[24],        # JSON array
+                "work_opportunities": row[25],  # JSON array
+                "contacts": row[26],      # JSON array
+                "cost_of_living": row[27],  # JSON array
+                "why_study_sections": row[28]  # JSON array
             }
             
             return JsonResponse(result, status=200)
             
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
 
 
 
