@@ -61,25 +61,29 @@ class WorkOpportunityInline(admin.TabularInline):
     model = WorkOpportunity
     extra = 1
 
-
 # === MODEL ADMINS ===
 
 @admin.register(university)
 class UniversityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'type', 'establish_year', 'location', 'status')
+    list_display = ('id', 'name', 'type', 'establish_year', 'location', 'get_country', 'status')
     list_filter = ('type', 'status', 'location')
-    search_fields = ('name', 'location__city', 'location__state')
+    search_fields = ('name', 'location__city', 'location__state', 'location__country')
     raw_id_fields = ('location',)
     ordering = ('name',)
     fields = (
         'cover_url', 'cover_origin', 'name', 'type', 'establish_year', 'location',
-        'about', 'admission_requirements', 'location_map_link','avg_acceptance_rate','avg_tution_fee', 'review_rating', 'status'
+        'about', 'admission_requirements', 'location_map_link', 'avg_acceptance_rate',
+        'avg_tution_fee', 'review_rating', 'status'
     )
     inlines = [
         StatsInline, VideosInline, FaqsInline, UniversityRankingInline,
         UniContactInline, CommissionInline, MouInline,
         AdmissionStatsInline, VisaInline, WorkOpportunityInline
     ]
+
+    def get_country(self, obj):
+        return obj.location.country
+    get_country.short_description = 'Country'
 
 @admin.register(location)
 class LocationAdmin(admin.ModelAdmin):

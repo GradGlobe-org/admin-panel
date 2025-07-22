@@ -272,7 +272,7 @@ class WorkOpportunity(models.Model):
         on_delete=models.CASCADE,
         help_text="University this Visa is assigned to"
     )
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
