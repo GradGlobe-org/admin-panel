@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from .models import *
 from django.db import connection
 from django.db import transaction
+from scholarship.models import Scholarship
 # Create your views here.
 
 @csrf_exempt
@@ -729,6 +730,23 @@ def university_detail(request, university_id):
                         ) AS why_study_sections
                     FROM university_whystudyinsection ws
                     GROUP BY country_id
+                ),
+                scholarships_agg AS (
+                    SELECT 
+                        su.university_id,
+                        COALESCE(
+                            json_agg(
+                                json_build_object(
+                                    'id', s.id,
+                                    'name', s.name,
+                                    'overview', s.overview
+                                )
+                            ) FILTER (WHERE s.id IS NOT NULL),
+                            '[]'
+                        ) AS scholarships
+                    FROM scholarship_scholarship s
+                    INNER JOIN scholarship_scholarship_university su ON s.id = su.scholarship_id
+                    GROUP BY su.university_id
                 )
                 SELECT
                     u.id AS university_id,
@@ -759,7 +777,8 @@ def university_detail(request, university_id):
                     COALESCE(woa.work_opportunities, '[]') AS work_opportunities,
                     COALESCE(ca.contacts, '[]') AS contacts,
                     COALESCE(cola.cost_of_living, '[]') AS cost_of_living,
-                    COALESCE(wsa.why_study_sections, '[]') AS why_study_sections
+                    COALESCE(wsa.why_study_sections, '[]') AS why_study_sections,
+                    COALESCE(scha.scholarships, '[]') AS scholarships
                 FROM
                     university_university u
                     LEFT JOIN university_location l ON u.location_id = l.id
@@ -774,6 +793,7 @@ def university_detail(request, university_id):
                     LEFT JOIN contact_agg ca ON u.id = ca.university_id
                     LEFT JOIN cost_of_living_agg cola ON c.id = cola.country_id
                     LEFT JOIN why_study_agg wsa ON c.id = wsa.country_id
+                    LEFT JOIN scholarships_agg scha ON u.id = scha.university_id
                 WHERE
                     u.id = %s;
             """, [university_id])
@@ -817,15 +837,13 @@ def university_detail(request, university_id):
                 "work_opportunities": row[25],  # JSON array
                 "contacts": row[26],      # JSON array
                 "cost_of_living": row[27],  # JSON array
-                "why_study_sections": row[28]  # JSON array
+                "why_study_sections": row[28],  # JSON array
+                "scholarships": row[29]  # JSON array - NEW FIELD
             }
-            
             return JsonResponse(result, status=200)
             
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
-
 
 
 @csrf_exempt

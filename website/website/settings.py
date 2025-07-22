@@ -96,13 +96,13 @@ else:
         }
     }
     # DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'gradglobe',
-    #     'HOST': 'localhost',
-    #     'PORT': '5432',
+    #     'default': {
+    #         'ENGINE': 'django.db.backends.postgresql',
+    #         'NAME': 'gradglobe',
+    #         'HOST': 'localhost',
+    #         'PORT': '5432',
+    #     }
     # }
-# }
 
 
 if IS_PRODUCTION:
