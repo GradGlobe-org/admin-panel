@@ -159,14 +159,70 @@ class AdmissionStats(models.Model):
     university = models.ForeignKey(university, on_delete=models.CASCADE, help_text="University this Admission stats is assigned to")
     TYPE = (("UNDERGRADUATE","UNDERGRADUATE"), ("GRADUATE","GRADUATE"))
     admission_type = models.CharField(max_length=50, choices=TYPE)
-    GPA_min = models.PositiveIntegerField()
-    GPA_max = models.PositiveIntegerField()
-    SAT_min = models.PositiveIntegerField()
-    SAT_max = models.PositiveIntegerField()
-    ACT_min = models.PositiveIntegerField()
-    ACT_max = models.PositiveIntegerField()
-    IELTS_min = models.PositiveIntegerField()
-    IELTS_max = models.PositiveIntegerField()
+    GPA_min = models.DecimalField(
+        max_digits=10,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
+    GPA_max = models.DecimalField(
+        max_digits=10,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
+    SAT_min = models.DecimalField(
+        max_digits=10,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
+    SAT_max = models.DecimalField(
+        max_digits=10,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
+    ACT_min = models.DecimalField(
+        max_digits=10,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
+    ACT_max = models.DecimalField(
+        max_digits=10,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
+    IELTS_min = models.DecimalField(
+        max_digits=10,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
+    IELTS_max = models.DecimalField(
+        max_digits=10,  # Total digits (including decimal)
+        decimal_places=1,  # One decimal place
+        validators=[
+            MaxValueValidator(5.0),  # Maximum value of 5.0
+            MinValueValidator(0.0)   # Minimum value of 0.0
+        ]
+    )
 
     class Meta:
         verbose_name = "Admission Stats"
