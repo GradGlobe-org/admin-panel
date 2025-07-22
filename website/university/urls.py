@@ -11,5 +11,6 @@ urlpatterns = [
     path('universities_employee/', universities_employee),
     path('get_university_locations/', get_university_location),
     path('get_university_ranking_agencies/', get_university_ranking_agency),
-    path('get_university_partner_agencies/', get_university_partner_agency)
+    path('get_university_partner_agencies/', get_university_partner_agency),
+    path('destination/', destination_page, name='destination_page'),
 ]

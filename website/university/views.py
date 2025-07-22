@@ -1059,3 +1059,119 @@ def university_detail_employee(request, university_id):
             
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
+
+
+@csrf_exempt
+@api_key_required
+@require_http_methods(["GET"])
+def destination_page(request):
+    try:
+        # Extract country from query parameters
+        country = request.GET.get('country')
+        if not country:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Country parameter is required'
+            }, status=400)
+
+        # SQL query with corrected table and column names
+        query = """
+            SELECT 
+                u.id,
+                u.name,
+                u.type,
+                u.avg_acceptance_rate,
+                u.avg_tution_fee,
+                l.city,
+                l.state,
+                l.country,
+                c."inPercentage" as commission_percentage,
+                ur.rank as first_ranking,
+                ra.name as ranking_agency,
+                ws.content as why_study_in
+            FROM 
+                university_university u
+                INNER JOIN university_location l ON u.location_id = l.id
+                LEFT JOIN university_commission c ON u.id = c.university_id
+                LEFT JOIN (
+                    SELECT 
+                        ur1.university_id,
+                        ur1.rank,
+                        ur1.ranking_agency_id
+                    FROM 
+                        university_university_ranking ur1
+                    WHERE 
+                        ur1.id = (
+                            SELECT MIN(ur2.id)
+                            FROM university_university_ranking ur2
+                            WHERE ur2.university_id = ur1.university_id
+                        )
+                ) ur ON u.id = ur.university_id
+                LEFT JOIN university_ranking_agency ra ON ur.ranking_agency_id = ra.id
+                LEFT JOIN (
+                    SELECT 
+                        w.country_id,
+                        STRING_AGG(w.content, ',') as content
+                    FROM 
+                        university_whystudyinsection w
+                    GROUP BY 
+                        w.country_id
+                ) ws ON l.country = (SELECT name FROM university_country WHERE id = ws.country_id)
+            WHERE 
+                l.country = %s
+                AND u.status = 'PUBLISH'
+            ORDER BY 
+                COALESCE(c."inPercentage", 0) DESC,
+                u.avg_acceptance_rate DESC
+            LIMIT 8;
+        """
+
+        with connection.cursor() as cursor:
+            cursor.execute(query, [country])
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        # Process the results to format the response
+        universities = []
+        why_study_in = None
+        
+        for row in results:
+            # Set why_study_in from the first row (same for all universities in the country)
+            if not why_study_in and row['why_study_in']:
+                why_study_in = row['why_study_in'].split(',')
+            
+            university = {
+                'id': row['id'],
+                'name': row['name'],
+                'location': {
+                    'city': row['city'],
+                    'state': row['state'],
+                    'country': row['country']
+                },
+                'type': row['type'],
+                'first_ranking': {
+                    'rank': row['first_ranking'],
+                    'agency': row['ranking_agency']
+                } if row['first_ranking'] else None,
+                'acceptance_rate': row['avg_acceptance_rate'],
+                'tuition_fee': row['avg_tution_fee'],
+                'commission_percentage': row['commission_percentage'] or 0
+            }
+            universities.append(university)
+
+        response = {
+            'status': 'success',
+            'data': {
+                'universities': universities,
+                'why_study_in': why_study_in or []
+            }
+        }
+
+        return JsonResponse(response, status=200)
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
