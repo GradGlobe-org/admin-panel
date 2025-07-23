@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'university',
     'schema_viewer',
     'scholarship',
+    'course',
     'django_prometheus',
     'django.contrib.admin',
     'django.contrib.auth',
