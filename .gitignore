@@ -2,3 +2,4 @@ env
 env2
 website/db.sqlite3
 website/.env
+website/data.json
