@@ -4,7 +4,7 @@ import uuid
 import os
 from functools import wraps
 from authentication.models import Employee, Permission
-
+from student.models import Student
 
 def api_key_required(view_func):
     """
@@ -75,6 +75,24 @@ def token_required(view_func):
             uuid_token = uuid.UUID(auth_token)
             request.user = Employee.objects.get(authToken=uuid_token)
         except (ValueError, Employee.DoesNotExist):
+            return JsonResponse({"error": "Invalid or expired token"}, status=403)
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapped
+
+def user_token_required(view_func):
+    @wraps(view_func)
+    def wrapped(request, *args, **kwargs):
+        auth_token = request.headers.get("Authorization")
+        if not auth_token:
+            return JsonResponse({"error": "Authorization token missing"}, status=401)
+
+        try:
+            # Validate if it's a proper UUID first
+            uuid_token = uuid.UUID(auth_token)
+            request.user = Student.objects.get(authToken=uuid_token)
+        except (ValueError, Student.DoesNotExist):
             return JsonResponse({"error": "Invalid or expired token"}, status=403)
 
         return view_func(request, *args, **kwargs)
