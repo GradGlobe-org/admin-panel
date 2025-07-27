@@ -116,6 +116,7 @@ class LoginView(View):
 
 
 @csrf_exempt
+@api_key_required
 @user_token_required
 @require_http_methods(["POST"])
 def add_to_shortlist(request):
@@ -162,6 +163,7 @@ def add_to_shortlist(request):
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
 
 @csrf_exempt
+@api_key_required
 @user_token_required
 @require_http_methods(["GET"])
 def get_student_details(request):
@@ -280,6 +282,7 @@ def validate_required_fields(data, required_fields):
 
 
 @csrf_exempt
+@api_key_required
 @user_token_required
 @require_http_methods(["POST"])
 def update_student_profile(request):
