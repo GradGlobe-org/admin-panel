@@ -25,11 +25,12 @@ class RegisterView(View):
             email = data.get("email")
             password = data.get("password")
             mobile_number = data.get("mobile_number")
+            full_name = data.get("full_name")  # Add full_name
 
             # Validate presence of required fields
-            if not email or not password or not mobile_number:
+            if not email or not password or not mobile_number or not full_name:
                 return JsonResponse(
-                    {"error": "Email, password, and mobile number are required."},
+                    {"error": "Email, password, mobile number, and full name are required."},
                     status=400,
                 )
 
@@ -46,6 +47,13 @@ class RegisterView(View):
                     status=400,
                 )
 
+            # Validate full_name (basic validation, e.g., not empty and reasonable length)
+            if not (1 <= len(full_name.strip()) <= 200):
+                return JsonResponse(
+                    {"error": "Full name must be between 1 and 200 characters."},
+                    status=400,
+                )
+
             # Check for existing email
             if Email.objects.filter(email=email).exists():
                 return JsonResponse({"error": "Email already registered."}, status=400)
@@ -56,8 +64,9 @@ class RegisterView(View):
 
             # Create student and associated records within a transaction
             with transaction.atomic():
-                # Create student
+                # Create student with full_name
                 student = Student.objects.create(
+                    full_name=full_name.strip(),  # Save full_name
                     password=make_password(password),
                     authToken=uuid4(),
                 )
@@ -79,6 +88,7 @@ class RegisterView(View):
                     "status": "success",
                     "email": email,
                     "mobile_number": mobile_number,
+                    "full_name": full_name,  # Include full_name in response
                     "authToken": str(student.authToken),
                 },
                 status=201,
@@ -187,6 +197,7 @@ def get_student_details(request):
         student_id = student.id
 
         student_data = {
+            'full_name': student.full_name,  # Add full_name
             'username': student.username
         }
 
@@ -271,7 +282,7 @@ def get_student_details(request):
             'gender_choices': [{'value': v, 'label': l} for v, l in StudentDetails.GENDERS],
             'degree_choices': [{'value': v, 'label': l} for v, l in Preference.DEGREE_CHOICES],
             'exam_type_choices': [{'value': v, 'label': l} for v, l in TestScores.EXAM_TYPE_CHOICES],
-            'country_choices': [v for v, _ in COUNTRY_CHOICES],  # ← as array of country names
+            'country_choices': [v for v, _ in COUNTRY_CHOICES],
         }
 
         return JsonResponse({
@@ -302,16 +313,17 @@ def validate_required_fields(data, required_fields):
 @require_http_methods(["POST"])
 def update_student_profile(request):
     student = request.user
-    data = json.loads(request.body.decode("utf-8"))
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON body"}, status=400)
 
     if not data:
-        return JsonResponse({
-            "status": "error",
-            "message": "Empty JSON body"
-        }, status=400)
+        return JsonResponse({"status": "error", "message": "Empty JSON body"}, status=400)
 
     results = {}
     allowed_sections = {
+        "student",  # Add student section for updating full_name
         "student_details",
         "education_details",
         "test_scores",
@@ -319,7 +331,7 @@ def update_student_profile(request):
         "experience_details",
     }
 
-    # 🔒 Check for invalid/unknown keys
+    # Check for invalid/unknown keys
     unknown_keys = set(data.keys()) - allowed_sections
     if unknown_keys:
         return JsonResponse({
@@ -328,7 +340,32 @@ def update_student_profile(request):
         }, status=400)
 
     try:
-        # 1. StudentDetails
+        # 1. Student (for updating full_name)
+        if "student" in data:
+            section = "student"
+            student_data = data[section]
+            required_fields = ["full_name"]
+            missing = validate_required_fields(student_data, required_fields)
+            if missing:
+                return JsonResponse({"status": "error", "message": f"Missing required fields in {section}: {', '.join(missing)}"}, status=400)
+
+            full_name = student_data.get("full_name").strip()
+            # Validate full_name
+            if not (1 <= len(full_name) <= 200):
+                return JsonResponse(
+                    {"status": "error", "message": "Full name must be between 1 and 200 characters."},
+                    status=400,
+                )
+
+            try:
+                with transaction.atomic():
+                    student.full_name = full_name
+                    student.save()
+                    results[section] = "updated"
+            except Exception as e:
+                results[section] = f"error: {str(e)}"
+
+        # 2. StudentDetails
         if "student_details" in data:
             section = "student_details"
             details_data = data[section]
@@ -350,7 +387,7 @@ def update_student_profile(request):
             except Exception as e:
                 results[section] = f"error: {str(e)}"
 
-        # 2. EducationDetails
+        # 3. EducationDetails
         if "education_details" in data:
             section = "education_details"
             edu_data = data[section]
@@ -369,7 +406,7 @@ def update_student_profile(request):
             except Exception as e:
                 results[section] = f"error: {str(e)}"
 
-        # 3. TestScores
+        # 4. TestScores
         if "test_scores" in data:
             section = "test_scores"
             ts_data = data[section]
@@ -388,7 +425,7 @@ def update_student_profile(request):
             except Exception as e:
                 results[section] = f"error: {str(e)}"
 
-        # 4. Preference
+        # 5. Preference
         if "preference" in data:
             section = "preference"
             pref_data = data[section]
@@ -407,7 +444,7 @@ def update_student_profile(request):
             except Exception as e:
                 results[section] = f"error: {str(e)}"
 
-        # 5. ExperienceDetails (List)
+        # 6. ExperienceDetails (List)
         if "experience_details" in data:
             section = "experience_details"
             exp_list = data[section]
@@ -439,8 +476,7 @@ def update_student_profile(request):
         return JsonResponse({"status": "success", "results": results}, status=200)
 
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
-    
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)    
 
 @require_http_methods(['GET'])
 def get_all_choices(request):

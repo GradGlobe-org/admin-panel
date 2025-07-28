@@ -56,7 +56,10 @@ class StudentAdmin(admin.ModelAdmin):
         "mobile_number",
         "gender",
     )
-    search_fields = ("email__email", "details__first_name", "details__last_name")
+    search_fields = ("email__email", "full_name", "details__first_name", "details__last_name")  # Updated to include full_name
+    list_filter = ("details__gender", "details__country")  # Optional: Added for better filtering
+    fields = ("full_name", "password", "authToken")  # Fields to show in the edit form
+    readonly_fields = ("authToken",)  # authToken should not be editable
 
     inlines = [
         StudentDetailsInline,
@@ -76,11 +79,9 @@ class StudentAdmin(admin.ModelAdmin):
 
     # --- Display Methods ---
     def full_name(self, obj):
-        # Handles missing related StudentDetails gracefully
-        if hasattr(obj, "details"):
-            return f"{obj.details.first_name} {obj.details.last_name}"
-        return "-"
-    full_name.short_description = "Name"
+        # Use the full_name field from the Student model
+        return obj.full_name if obj.full_name else "-"
+    full_name.short_description = "Full Name"
 
     def email_address(self, obj):
         # Handles missing Email object gracefully
@@ -93,7 +94,6 @@ class StudentAdmin(admin.ModelAdmin):
     mobile_number.short_description = "Mobile"
 
     def gender(self, obj):
-        if hasattr(obj, "details"):
-            return obj.details.gender
-        return "-"
+        # Handles missing StudentDetails object gracefully
+        return getattr(obj.details, "gender", "-")
     gender.short_description = "Gender"

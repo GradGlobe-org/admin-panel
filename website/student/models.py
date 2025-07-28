@@ -252,6 +252,7 @@ COUNTRY_CHOICES = [
 
 
 class Student(models.Model):
+    full_name = models.CharField(max_length=200)
     password = models.CharField(max_length=128)  # Expect hash
     authToken = models.UUIDField(default=uuid4, editable=False, unique=True)
 
@@ -260,9 +261,7 @@ class Student(models.Model):
         verbose_name_plural = "Students"
 
     def __str__(self):
-        # Use email as the string representation
-        return self.email.email if hasattr(self, 'email') else f"Student {self.id}"
-
+        return self.full_name if self.full_name else f"Student {self.id}"
 
 class Email(models.Model):
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name="email")
