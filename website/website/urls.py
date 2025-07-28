@@ -13,7 +13,8 @@ urlpatterns = [
     path('blog/', include("blogs.urls")),
     path('seo/', include("seo.urls")),
     path('university/', include("university.urls")),
-    path('scholarships/', include("scholarship.urls"))
+    path('scholarships/', include("scholarship.urls")),
+    path('user/', include("student.urls"))
 ]
 
 
