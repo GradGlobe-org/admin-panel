@@ -201,7 +201,6 @@ def get_student_details(request):
 
         student_data = {
             'full_name': student.full_name,  # Add full_name
-            'username': student.username
         }
 
         email_obj = getattr(student, 'email', None)
