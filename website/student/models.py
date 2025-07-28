@@ -252,17 +252,16 @@ COUNTRY_CHOICES = [
 
 
 class Student(models.Model):
-    username = models.CharField(max_length=100, unique=True)
     password = models.CharField(max_length=128)  # Expect hash
     authToken = models.UUIDField(default=uuid4, editable=False, unique=True)
 
     class Meta:
         verbose_name = "Student"
         verbose_name_plural = "Students"
-        ordering = ["username"]
 
     def __str__(self):
-        return self.username
+        # Use email as the string representation
+        return self.email.email if hasattr(self, 'email') else f"Student {self.id}"
 
 
 class Email(models.Model):

@@ -5,7 +5,6 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.decorators import method_decorator
 from django.views import View
-from .models import Student
 from uuid import uuid4
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -23,47 +22,63 @@ class RegisterView(View):
         try:
             data = json.loads(request.body.decode("utf-8"))
 
-            username = data.get("username")
-            email_address = data.get("email")
+            email = data.get("email")
             password = data.get("password")
+            mobile_number = data.get("mobile_number")
 
             # Validate presence of required fields
-            if not username or not email_address or not password:
+            if not email or not password or not mobile_number:
                 return JsonResponse(
-                    {"error": "All fields (username, email, password) are required."},
+                    {"error": "Email, password, and mobile number are required."},
                     status=400,
                 )
 
             # Validate email format
             try:
-                validate_email(email_address)
+                validate_email(email)
             except ValidationError:
                 return JsonResponse({"error": "Invalid email format."}, status=400)
 
-            # Check for existing username or email
-            if Student.objects.filter(username=username).exists():
-                return JsonResponse({"error": "Username already exists."}, status=400)
+            # Validate mobile number format (basic validation, adjust as needed)
+            if not (8 <= len(mobile_number) <= 15 and mobile_number.isdigit()):
+                return JsonResponse(
+                    {"error": "Invalid mobile number format. Must be 8-15 digits."},
+                    status=400,
+                )
 
-            if Email.objects.filter(email=email_address).exists():
+            # Check for existing email
+            if Email.objects.filter(email=email).exists():
                 return JsonResponse({"error": "Email already registered."}, status=400)
 
-            # Create student
-            student = Student.objects.create(
-                username=username,
-                password=make_password(password),
-                authToken=uuid4(),
-            )
+            # Check for existing mobile number
+            if PhoneNumber.objects.filter(mobile_number=mobile_number).exists():
+                return JsonResponse({"error": "Mobile number already registered."}, status=400)
 
-            # Link email
-            Email.objects.create(
-                student=student,
-                email=email_address,
-            )
+            # Create student and associated records within a transaction
+            with transaction.atomic():
+                # Create student
+                student = Student.objects.create(
+                    password=make_password(password),
+                    authToken=uuid4(),
+                )
+
+                # Link email
+                Email.objects.create(
+                    student=student,
+                    email=email,
+                )
+
+                # Link phone number
+                PhoneNumber.objects.create(
+                    student=student,
+                    mobile_number=mobile_number,
+                )
 
             return JsonResponse(
                 {
                     "status": "success",
-                    "username": student.username,
+                    "email": email,
+                    "mobile_number": mobile_number,
                     "authToken": str(student.authToken),
                 },
                 status=201,
@@ -83,17 +98,18 @@ class LoginView(View):
     def post(self, request):
         try:
             data = json.loads(request.body.decode("utf-8"))
-            username = data.get("username")
+            email = data.get("email")
             password = data.get("password")
 
-            if not username or not password:
+            if not email or not password:
                 return JsonResponse(
-                    {"error": "Both username and password are required."}, status=400
+                    {"error": "Both email and password are required."}, status=400
                 )
 
             try:
-                user = Student.objects.get(username=username)
-            except Student.DoesNotExist:
+                email_obj = Email.objects.get(email=email)
+                user = email_obj.student
+            except Email.DoesNotExist:
                 return JsonResponse({"error": "Invalid credentials."}, status=400)
 
             if not check_password(password, user.password):
@@ -102,12 +118,11 @@ class LoginView(View):
             user.authToken = uuid4()
             user.save()
 
-            # Generate a simple session token (JWT recommended for production)
             return JsonResponse(
                 {
-                    "status":"success",
-                    "username": user.username,
-                    "authToken": user.authToken,
+                    "status": "success",
+                    "email": email,
+                    "authToken": str(user.authToken),
                 },
                 status=200,
             )
@@ -425,3 +440,25 @@ def update_student_profile(request):
 
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    
+
+@require_http_methods(['GET'])
+def get_all_choices(request):
+    choices = {
+        "countries": [country for country, _ in COUNTRY_CHOICES],
+        "genders": [gender for gender, _ in [('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')]],
+        "degree_choices": [deg for deg, _ in EducationDetails.DEGREE_CHOICES],
+        "study_fields": [field for field, _ in EducationDetails.FIELD_CHOICES],
+        "employment_types": [emp for emp, _ in ExperienceDetails.EMPLOYMENT_TYPE_CHOICES],
+        "industry_types": [ind for ind, _ in ExperienceDetails.INDUSTRY_TYPE_CHOICES],
+        "exam_types": [exam for exam, _ in TestScores.EXAM_TYPE_CHOICES],
+        "english_exam_types": [exam for exam, _ in TestScores.ENGLISH_EXAM_CHOICES],
+        "preference_degrees": [deg for deg, _ in Preference.DEGREE_CHOICES],
+        "preference_disciplines": [disc for disc, _ in Preference.DISCIPLINE_CHOICES],
+        "preference_sub_disciplines": [sub for sub, _ in Preference.SUB_DISCIPLINE_CHOICES],
+    }
+
+    return JsonResponse(choices, status=200)
+
+
+

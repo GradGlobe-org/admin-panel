@@ -32,37 +32,31 @@ class PreferenceInline(admin.StackedInline):
     max_num = 1
     extra = 0
 
-# Inlines for multi-relations
-class ExperienceDetailsInline(admin.TabularInline):
-    model = ExperienceDetails
-    extra = 1
-
-# class DocumentInline(admin.TabularInline):
-#     model = Document
-#     extra = 1
-
-class ShortlistedUniversityInline(admin.TabularInline):
-    model = ShortlistedUniversity
-    extra = 1
-    readonly_fields = ['added_on']
-# Inline for TestScores (OneToOne)
 class TestScoresInline(admin.StackedInline):
     model = TestScores
     can_delete = False
     max_num = 1
     extra = 0
 
-# Add TestScoresInline to the StudentAdmin's inlines:
+# Inlines for multi-relations
+class ExperienceDetailsInline(admin.TabularInline):
+    model = ExperienceDetails
+    extra = 1
+
+class ShortlistedUniversityInline(admin.TabularInline):
+    model = ShortlistedUniversity
+    extra = 1
+    readonly_fields = ['added_on']
+
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
     list_display = (
-        "username",
-        "full_name",
         "email_address",
+        "full_name",
         "mobile_number",
-        "gender"
+        "gender",
     )
-    search_fields = ("username", )
+    search_fields = ("email__email", "details__first_name", "details__last_name")
 
     inlines = [
         StudentDetailsInline,
@@ -70,9 +64,8 @@ class StudentAdmin(admin.ModelAdmin):
         PhoneNumberInline,
         EducationDetailsInline,
         PreferenceInline,
-        TestScoresInline,         # <--- Add this here
+        TestScoresInline,
         ExperienceDetailsInline,
-        # DocumentInline,
         ShortlistedUniversityInline,
     ]
 
