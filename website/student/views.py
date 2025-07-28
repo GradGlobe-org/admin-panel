@@ -498,3 +498,88 @@ def get_all_choices(request):
 
 
 
+@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(require_http_methods(["POST"]), name="dispatch")
+class GoogleSignInView(View):
+    @method_decorator(api_key_required)
+    def post(self, request):
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            email = data.get("email")
+            full_name = data.get("full_name")
+
+            # Validate presence of required fields
+            if not email or not full_name:
+                return JsonResponse(
+                    {"error": "Email and full name are required."},
+                    status=400,
+                )
+
+            # Validate email format
+            try:
+                validate_email(email)
+            except ValidationError:
+                return JsonResponse({"error": "Invalid email format."}, status=400)
+
+            # Validate full_name
+            if not (1 <= len(full_name.strip()) <= 200):
+                return JsonResponse(
+                    {"error": "Full name must be between 1 and 200 characters."},
+                    status=400,
+                )
+
+            # Check if email already exists
+            try:
+                email_obj = Email.objects.get(email=email)
+                student = email_obj.student
+                # Update authToken for existing user
+                student.authToken = uuid4()
+                student.save()
+                return JsonResponse(
+                    {
+                        "status": "success",
+                        "message": "User already exists, logged in successfully.",
+                        "email": email,
+                        "full_name": student.full_name,
+                        "authToken": str(student.authToken),
+                    },
+                    status=200,
+                )
+            except Email.DoesNotExist:
+                # Create new user within a transaction
+                with transaction.atomic():
+                    # Create student with full_name and no password
+                    student = Student.objects.create(
+                        full_name=full_name.strip(),
+                        authToken=uuid4(),
+                        password=None,  # No password for Google Sign-In users
+                    )
+
+                    # Link email
+                    Email.objects.create(
+                        student=student,
+                        email=email,
+                    )
+
+                    # Optionally create a placeholder phone number or skip
+                    # For now, we'll skip phone_number as it's not provided by Google
+                    # If required, you can add logic to prompt for it later
+
+                return JsonResponse(
+                    {
+                        "status": "success",
+                        "message": "User registered successfully via Google Sign-In.",
+                        "email": email,
+                        "full_name": full_name,
+                        "authToken": str(student.authToken),
+                    },
+                    status=201,
+                )
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+        except Exception as e:
+            # Log the error in production
+            return JsonResponse({"error": "Internal server error."}, status=500)
+
+
