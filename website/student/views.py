@@ -12,6 +12,9 @@ from django.shortcuts import get_object_or_404
 from .models import *
 from website.utils import api_key_required, user_token_required
 from django.db import transaction
+import string
+import random
+
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -546,24 +549,33 @@ class GoogleSignInView(View):
                     status=200,
                 )
             except Email.DoesNotExist:
+                # Generate a random password
+                random_password = ''.join(random.choices(
+                    string.ascii_letters + string.digits, k=12
+                ))
                 # Create new user within a transaction
-                with transaction.atomic():
-                    # Create student with full_name and no password
-                    student = Student.objects.create(
-                        full_name=full_name.strip(),
-                        authToken=uuid4(),
-                        password=None,  # No password for Google Sign-In users
+                try:
+                    with transaction.atomic():
+                        # Create student with full_name and random password
+                        student = Student.objects.create(
+                            full_name=full_name.strip(),
+                            authToken=uuid4(),
+                            password=make_password(random_password),  # Hash the random password
+                        )
+                        # Link email
+                        Email.objects.create(
+                            student=student,
+                            email=email,
+                        )
+                        # Skip phone_number for Google Sign-In
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to create user: {str(e)}", exc_info=True)
+                    return JsonResponse(
+                        {"error": "Failed to create user.", "details": str(e)},
+                        status=500,
                     )
-
-                    # Link email
-                    Email.objects.create(
-                        student=student,
-                        email=email,
-                    )
-
-                    # Optionally create a placeholder phone number or skip
-                    # For now, we'll skip phone_number as it's not provided by Google
-                    # If required, you can add logic to prompt for it later
 
                 return JsonResponse(
                     {
@@ -579,7 +591,10 @@ class GoogleSignInView(View):
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
         except Exception as e:
-            # Log the error in production
-            return JsonResponse({"error": "Internal server error."}, status=500)
-
-
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Google Sign-In Error: {str(e)}", exc_info=True)
+            return JsonResponse(
+                {"error": "Internal server error.", "details": str(e)},
+                status=500,
+            )
