@@ -3,55 +3,46 @@ from .models import (
     location, Country, university, WhyStudyInSection, CostOfLiving,
     AdmissionStats, Visa, WorkOpportunity, Partner_Agency, commission,
     mou, Uni_contact, stats, videos_links, ranking_agency,
-    university_ranking, faqs
+    university_ranking, faqs, Fact
 )
 
-# === INLINE MODELS FOR UNIVERSITY ===
+# === INLINES ===
 
 class StatsInline(admin.TabularInline):
     model = stats
     extra = 1
 
-
 class VideosInline(admin.TabularInline):
     model = videos_links
     extra = 1
-
 
 class FaqsInline(admin.TabularInline):
     model = faqs
     extra = 1
 
-
 class UniversityRankingInline(admin.TabularInline):
     model = university_ranking
     extra = 1
-
 
 class UniContactInline(admin.TabularInline):
     model = Uni_contact
     extra = 1
 
-
 class CommissionInline(admin.TabularInline):
     model = commission
     extra = 1
-
 
 class MouInline(admin.TabularInline):
     model = mou
     extra = 1
 
-
 class AdmissionStatsInline(admin.TabularInline):
     model = AdmissionStats
     extra = 1
 
-
 class VisaInline(admin.TabularInline):
     model = Visa
     extra = 1
-
 
 class WorkOpportunityInline(admin.TabularInline):
     model = WorkOpportunity
@@ -105,44 +96,51 @@ class UniversityAdmin(admin.ModelAdmin):
     def make_draft(self, request, queryset):
         queryset.update(status='DRAFT')
 
+# === COUNTRY ADMIN ===
 
-# === OTHER MODELS ===
+
+class FactInline(admin.TabularInline):
+    model = Fact
+    extra = 1
 
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
     list_display = ('name',)
-
 
 @admin.register(location)
 class LocationAdmin(admin.ModelAdmin):
     list_display = ('city', 'state', 'country')
     search_fields = ('city', 'state', 'country')
 
-
 @admin.register(WhyStudyInSection)
 class WhyStudyInSectionAdmin(admin.ModelAdmin):
     list_display = ('country',)
     search_fields = ('country__name', 'content')
-
 
 @admin.register(CostOfLiving)
 class CostOfLivingAdmin(admin.ModelAdmin):
     list_display = ('country', 'total_min', 'total_max')
     search_fields = ('country__name',)
 
-
 @admin.register(Partner_Agency)
 class PartnerAgencyAdmin(admin.ModelAdmin):
     list_display = ('name', 'partner_type')
     search_fields = ('name',)
-
 
 @admin.register(ranking_agency)
 class RankingAgencyAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name', 'description')
 
+# === STANDALONE REGISTRATIONS ===
 
-# Do not register: stats, videos_links, university_ranking, faqs, etc. separately
-# because they are already inlined into the university admin
+@admin.register(Fact)
+class FactAdmin(admin.ModelAdmin):
+    list_display = ('country', 'short_facts')
+    search_fields = ('name', 'country__name')
+    list_filter = ('country',)
 
+    def short_facts(self, obj):
+        facts = [f.strip() for f in obj.name.split(",") if f.strip()]
+        return ", ".join(facts[:3]) + ("..." if len(facts) > 3 else "")
+    short_facts.short_description = "Facts Preview"

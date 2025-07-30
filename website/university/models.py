@@ -158,6 +158,7 @@ class university(models.Model):
 class AdmissionStats(models.Model):
     university = models.ForeignKey(university, on_delete=models.CASCADE, help_text="University this Admission stats is assigned to")
     TYPE = (("UNDERGRADUATE","UNDERGRADUATE"), ("GRADUATE","GRADUATE"))
+    application_fee = models.PositiveIntegerField(help_text="Application fee for this university")
     admission_type = models.CharField(max_length=50, choices=TYPE)
     GPA_min = models.DecimalField(
         max_digits=9,  # Total digits (including decimal)
@@ -398,3 +399,10 @@ class faqs(models.Model):
 
     def __str__(self):
         return self.question
+
+class Fact(models.Model):
+    name = models.TextField()
+    country = models.ForeignKey('Country', on_delete=models.CASCADE, related_name='facts')
+
+    def __str__(self):
+        return self.country.name + ": " + self.name.split(",")[0]
