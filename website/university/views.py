@@ -1100,6 +1100,7 @@ def destination_page(request, country_name):
             SAT_min=Avg('SAT_min'), SAT_max=Avg('SAT_max'),
             ACT_min=Avg('ACT_min'), ACT_max=Avg('ACT_max'),
             IELTS_min=Avg('IELTS_min'), IELTS_max=Avg('IELTS_max'),
+            application_fee=Avg('application_fee'),
         )
         avg_stats = {k: float(v) if v is not None else None for k, v in avg_stats_raw.items()}
     else:
