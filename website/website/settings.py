@@ -107,7 +107,6 @@ else:
 # }
 
 
-
 if IS_PRODUCTION:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
