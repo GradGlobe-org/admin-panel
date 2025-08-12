@@ -1,26 +1,14 @@
-# export_countries.py
-import os
-import django
-import pandas as pd
+import csv
+from university.models import university
 
-# Set up Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'website.settings')  # <-- Change this
-django.setup()
+# Get universities with no AdmissionStats
+universities_without_stats = university.objects.filter(admissionstats__isnull=True)
 
-from university.models import Country  # <-- Change this
+# Export to CSV
+with open("universities_without_admission_stats.csv", mode="w", newline="", encoding="utf-8") as file:
+    writer = csv.writer(file)
+    writer.writerow(["ID", "Name"])  # header row
+    for uni in universities_without_stats:
+        writer.writerow([uni.id, uni.name])
 
-def export_countries_to_csv(output_file='countries.csv'):
-    # Get all country names ordered alphabetically
-    countries = Country.objects.values_list('name', flat=True).order_by('name')
-
-    # Create DataFrame
-    df = pd.DataFrame(list(countries), columns=['Country Name'])
-
-    # Save to CSV
-    df.to_csv(output_file, index=False)
-    print(f"✅ Exported {len(df)} countries to {output_file}")
-
-
-
-
-export_countries_to_csv()
+print(f"✅ Exported {universities_without_stats.count()} universities to universities_without_admission_stats.csv")

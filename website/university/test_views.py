@@ -51,3 +51,99 @@ class UpdateCostOfLivingView(View):
             return JsonResponse({"error": "Invalid JSON"}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+        
+
+
+
+
+@csrf_exempt
+def update_admission_stats(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        uni_name = data.get("university_name")
+        stats_data = data.get("stats", {})
+
+        if not uni_name or not stats_data:
+            return JsonResponse({"error": "university_name and stats are required"}, status=400)
+
+        try:
+            uni = university.objects.get(name=uni_name)
+        except university.DoesNotExist:
+            return JsonResponse({"error": "University not found"}, status=404)
+
+        for admission_type in ["UNDERGRADUATE", "GRADUATE"]:
+            stat_values = stats_data.get(admission_type)
+            if not stat_values:
+                continue  # Skip if not provided
+
+            AdmissionStats.objects.update_or_create(
+                university=uni,
+                admission_type=admission_type,
+                defaults={
+                    "application_fee": stat_values.get("application_fee", 0),
+                    "GPA_min": stat_values.get("GPA_min", 0),
+                    "GPA_max": stat_values.get("GPA_max", 0),
+                    "SAT_min": stat_values.get("SAT_min", 0),
+                    "SAT_max": stat_values.get("SAT_max", 0),
+                    "ACT_min": stat_values.get("ACT_min", 0),
+                    "ACT_max": stat_values.get("ACT_max", 0),
+                    "IELTS_min": stat_values.get("IELTS_min", 0),
+                    "IELTS_max": stat_values.get("IELTS_max", 0),
+                }
+            )
+
+        return JsonResponse({"status": "success"})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def update_admission_stats(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        uni_name = data.get("university_name")
+        stats_data = data.get("stats", {})
+
+        if not uni_name or not stats_data:
+            return JsonResponse({"error": "university_name and stats are required"}, status=400)
+
+        try:
+            uni = university.objects.get(name=uni_name)
+        except university.DoesNotExist:
+            return JsonResponse({"error": "University not found"}, status=404)
+
+        for admission_type in ["UNDERGRADUATE", "GRADUATE"]:
+            stat_values = stats_data.get(admission_type)
+            if not stat_values:
+                continue  # Skip if not provided
+
+            AdmissionStats.objects.update_or_create(
+                university=uni,
+                admission_type=admission_type,
+                defaults={
+                    "application_fee": stat_values.get("application_fee", 0),
+                    "GPA_min": stat_values.get("GPA_min", 0),
+                    "GPA_max": stat_values.get("GPA_max", 0),
+                    "SAT_min": stat_values.get("SAT_min", 0),
+                    "SAT_max": stat_values.get("SAT_max", 0),
+                    "ACT_min": stat_values.get("ACT_min", 0),
+                    "ACT_max": stat_values.get("ACT_max", 0),
+                    "IELTS_min": stat_values.get("IELTS_min", 0),
+                    "IELTS_max": stat_values.get("IELTS_max", 0),
+                }
+            )
+
+        return JsonResponse({"status": "success"})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

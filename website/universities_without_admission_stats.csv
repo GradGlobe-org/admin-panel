@@ -1,0 +1,427 @@
+ID,Name
+4,Academy of Art University
+7,Adler University
+8,Ajman University
+9,Bauhaus University
+15,Binghamton University
+11,Baylor University
+14,Bielefeld University
+16,BITS Pilani Dubai
+17,Bond University
+18,Bow Valley College
+19,Bradley University
+20,Brandeis University
+21,Brandon University
+22,British Columbia Institute of Technology
+23,Britts Imperial University College
+53,Athabasca University
+24,Brock University
+25,Brown University
+26,Bukovinian State Medical University
+27,Burgundy School of Business
+28,Algonquin College
+29,California Baptist University
+30,Alliant International University
+33,Amity University (Dubai)
+31,Alpha College of Business and Technology
+35,California Institute of The Arts
+36,Anhalt University of Applied Sciences (HS Anhalt)
+37,California Lutheran University
+38,California State University Dominguez Hills
+39,California State University East Bay
+40,California State University Fresno
+41,Arden University Berlin
+42,California State University Fullerton
+43,California State University Long Beach
+44,Arizona State University
+45,California State University Monterey Bay
+46,Arkansas State University
+52,Canadian Mennonite University
+47,California State University Northridge
+48,Cambrian College
+49,Aspire Business School Barcelona
+50,Assiniboine Community College
+51,Camosun College
+54,Canadore College
+55,Atlantis University
+56,Cape Breton University
+57,Capilano University
+59,Carnegie Mellon University
+60,CBS International Business School
+61,CCT College Dublin
+62,Cegep De La Gaspesie Et Des Iles
+63,Centennial College
+64,Central European University
+65,ATMC - Federation University
+66,Central Michigan University
+67,Chalmers University of Technology
+68,Chapman University
+69,Fachhochschule Dortmund - University of Applied Sciences and Arts
+70,Charles Darwin University
+71,Fachhochschule Kiel University of Applied Sciences
+72,Charles Darwin University International College
+73,ATMC - Western Sydney University
+74,Charles Sturt University
+81,City University in Canada
+75,Fairfield University
+76,Charleston Southern University
+77,Fairleigh Dickinson University
+78,Fanshawe College
+79,Chemnitz University of Technology
+80,Far Eastern Federal University
+82,Fashion Institute of Technology
+83,City University of New York
+84,Federation University
+85,Auburn University
+86,Felician University
+87,Ferris State University
+88,City University of Seattle
+89,Fisher College
+90,Clark University
+91,Fitchburg State University
+92,Clemson University
+93,Fleming College
+94,Cleveland State University
+105,Cologne Business School
+95,Flinders University
+96,Coast Mountain College
+97,Florida Atlantic University
+98,Florida International University
+99,College De Paris
+100,Florida Polytechnic University
+101,College National de science et technology
+102,Florida State University
+103,College of New Caledonia
+220,INTO - Oregon State University
+106,Colorado State University
+109,Concordia University of Edmonton
+110,Conestoga College
+111,Conestoga College Doon
+119,Franklin University
+112,Conestoga College Waterloo
+113,Confederation College
+114,Constructor University
+115,Copenhagen Business School
+116,Fordham University
+117,Frankfurt School of Finance and Management
+118,Frankfurt University of Applied Sciences
+199,Excelia Business School
+120,Fraser International College (NAVITAS)
+122,Full Sail University
+123,Gannon University
+124,Cornell University
+125,CQUniversity
+126,Crandall University
+127,Georg August University of Gottingen
+129,George Brown College
+130,Dakota State University
+131,George Washington University
+171,Humber College
+132,Georgia Institute of Technology
+133,Dalhousie University
+134,Dallas Baptist University
+135,Dartmouth College
+136,De Montfort University (Dubai Campus)
+137,Deakin University
+139,Georgia State University
+140,DePaul University
+141,Georgian College
+172,Humber International Graduate School
+173,Durham College
+142,Ghent University
+143,DeVry University
+144,Douglas College
+145,Drew University
+146,Drexel University
+186,EMLV Business School
+147,Dublin Business School
+148,Hamburg University of Applied Sciences
+149,Harrisburg University
+151,Harz University of Applied Sciences (HS Harz)
+152,Hawaii Pacific University
+153,HEC Montreal
+155,Gisma University of Applied Sciences
+156,Goethe University
+157,Duke University
+158,Golden Gate University
+159,Gonzaga University
+162,Heriot-Watt University (Dubai)
+163,Hochschule Bremen - International Graduate Center
+164,Duke University Educo
+165,Hochschule Fulda University of Applied Sciences
+166,Hochschule Furtwangen University
+167,Hochschule Schmalkalden - University of Applied Sciences
+168,Hochschule Worms University of Applied Sciences
+169,Hochscule Bielefeld University of Applied Sciences and Arts (HSBI)
+170,Hult International Business School
+217,INTO - Long Island University-Brooklyn
+175,Governors State University
+221,INTO - Saint Louis University
+176,Grand Valley State University
+104,Example
+222,INTO - Suffolk University Boston
+223,INTO - The University of Alabama at Birmingham
+177,Griffith University
+178,Eastern Michigan University
+179,Ecole Conte School
+183,Edith Cowan University
+185,Emily Carr University of Art and Design
+187,Engineering Institute of Technology
+188,EPITA - School of Engineering and Computer Science
+189,Esaip Engineer School
+191,ESDES Business School
+192,ESSCA School of Management
+198,Evergreen College
+194,Esslingen University of Applied Sciences
+195,ETH Zurich
+196,EU Business School
+197,European Institute of Management and Technology (EIMT)
+201,IE Business School
+202,IE University
+203,Illinois Institute of Technology
+204,Illinois State University
+205,Indiana State University
+206,Indiana University
+218,INTO - Montclair State University
+219,INTO - New England College
+209,International Business Academy (IBA)
+210,International College of Management Sydney
+211,INTO Colorado State University
+212,INTO - Drew University
+213,INTO - George Mason University
+214,INTO - Hofstra University
+215,INTO - Illinois State University
+216,INTO - Long Island University (Post)
+225,INTO - Thomas Jefferson University
+226,INTO - University of Massachusetts Amherst
+227,ISM - International School of Management
+228,IU University of Applied Sciences
+229,Jacksonville State University
+230,Jacobs University Bremen
+231,Jagiellonian University
+232,James Cook University
+233,Johannes Gutenberg University of Mainz
+234,Johns Hopkins University
+235,Johnson & Wales University
+236,Justice Institute of British Columbia
+237,Kansas State University
+239,Kazan State Medical University
+240,Kent State University
+241,Kharkiv National Medical University
+242,KTH Royal Institute of Technology
+243,KU Leuven
+244,Kwantlen Polytechnic University
+245,La Trobe University
+246,Lakeland College
+247,Lamar University
+248,Lambton College
+249,Langara College
+250,Laurentian University
+251,Lawrence Technological University
+252,Leibniz Universität
+254,Les Roches International School of Hotel Management
+255,Leuphana University
+256,Lewis University
+257,Linkoping University
+258,Linnaeus University
+259,Lomonosov Moscow State University
+262,Loyalist College
+263,Macromedia University of Applied Sciences
+264,Loyalist College - Toronto
+265,Manipal University (Dubai)
+266,Manitoba Institute of Trades and Technology
+267,Marist College
+268,Loyola Marymount University
+269,Marquette University
+270,Loyola University Chicago
+273,Marshall University
+274,Lundquist Business School
+303,Northeastern University
+276,Martin Luther University of Halle Wittenberg
+277,National University
+280,Matrix College
+341,Purdue University Northwest
+281,New England College
+282,New England Institute of Technology
+284,Mcgill University
+285,New European College
+286,New Jersey Institute of Technology
+287,MDH University of Applied Science
+288,New Mexico State University
+289,Medicine Hat College
+290,Melbourne Institute of Technology
+292,Niagara College
+293,Memorial University of Newfoundland
+294,Nipissing University
+295,Michigan Technological University
+296,Norquest College
+297,North Island College
+298,Middlesex University (Dubai)
+299,North Park University
+300,Midwestern State University
+301,Northeastern Illinois University
+302,Milwaukee School of Engineering
+304,Mississippi College
+305,Northeastern University - Toronto
+306,Northern Alberta Institute of Technology
+307,Missouri State University
+308,Northern Arizona University
+309,Missouri University of Science and Technology
+310,Northern College
+311,Northern College at Pures
+312,Mohawk College
+313,Northern Illinois University
+315,Montana State University
+316,Montclair State University
+317,Northern Lights College
+318,Mount Saint Vincent University
+319,Northern State Medical University
+320,Muma College of Business
+321,Northwest Missouri State University
+322,Munich Business School
+323,Northwestern Polytechnic University
+324,Northwestern University
+325,Nova Southeastern University
+340,Providence University College and Theological Seminary
+327,Novosibirsk State University
+328,Murdoch University
+329,Pace University
+330,Murray State University
+331,Pacific Lutheran University
+332,Paris College of Art
+333,Pennsylvania State University
+334,Pepperdine University
+335,Oakland University
+336,Polytechnic University of Valencia
+337,Portland State University
+338,Pratt Institute
+342,Queensland University of Technology
+343,Quinnipiac University
+344,OCAD University
+346,Red Deer Polytechnic
+347,Regent University
+348,Regis University
+349,Odessa National Medical University
+350,Ohio Dominican University
+351,Rensselaer Polytechnic Institute
+352,Ohio University
+353,Rhine Waal University of Applied Sciences
+354,Rhineland-Palatinate Technical University (RPTU)
+355,Rice University
+356,Okanagan College
+357,Richard J. Wehle School of Business
+358,Oklahoma City University
+359,Rider University
+360,Olds College
+361,Riga Technical University
+362,OMNES - ESCE Business School
+364,OMNES - INSEEC School of Business and Economics
+365,Oregon State University
+366,Saarland University
+393,Technische Hochschule Ingolstadt
+367,Sacred Heart University
+368,Robert Morris University
+369,Rochester Institute of Technology
+370,SAE Institute
+371,Saginaw Valley State University
+372,Saint Peter's University
+373,Roosevelt University
+374,San Diego State University
+376,San Francisco State University
+377,San Jose State University
+378,Santa Clara University
+394,Sapienza University
+440,Trine University
+379,Rowan University
+380,Royal Roads University
+381,Rutgers University
+383,Tallinn University
+384,Tampere University
+385,Taras Shevchenko National University of Kyiv
+386,Tbilisi State Medical University
+387,Technical University Dortmund
+388,Technical University of Braunschweig
+389,Technical University of Darmstadt
+390,Technical University of Denmark
+391,Technical University of Dresden
+395,Ted Rogers School of Management
+396,Saskatchewan Polytechnic
+397,Temple University
+398,Sault College
+399,Texas A & M University
+406,The Polytechnic University of Milan
+401,Texas A & M University Corpus Christi
+402,Texas Christian University
+403,Texas Tech University
+404,Texas Wesleyan University
+405,The Australian College of Applied Professions
+409,Selkirk College
+411,The University of Findlay
+412,Seneca College
+414,The University of Newcastle (Australia)
+416,Seton Hall University
+417,The University of Scranton
+418,Sheridan College Davis
+420,The University of Texas at Arlington
+421,Slippery Rock University
+422,The University of Texas at Austin
+423,South Dakota State University
+424,The University of Tulsa
+427,Southeast Missouri State University
+428,Thomas Jefferson University
+429,Thompson Rivers University
+431,Southern Alberta Institute of Technology
+432,Southern Cross University
+433,Torrens University
+434,Trent University
+435,Southern Illinois University Edwardsville
+436,Southern Methodist University
+437,Southern New Hampshire University
+438,Trier University
+439,SP Jain School of Global Management Dubai
+441,SRH - Hochschulen Heidelberg
+443,Trinity Western University Langley
+444,SRH - International College
+445,Troy University
+446,St. Lawrence College
+448,St. Thomas University
+449,Tufts University
+451,State University of New York
+452,Tulane University
+453,Steinbeis University
+459,Stevens Institute of Technology
+460,Universität Leipzig
+454,UCAM Catholic University of Murcia
+455,Stenberg College
+456,Ulm University
+457,Umea University
+458,Universita Di Padova
+475,University of Antwerp
+462,Stockholm University
+10,Algoma University
+464,Stony Brook University
+465,University of Alabama at Birmingham
+466,Suffolk University Usa
+476,Upper Iowa University
+467,University of Alaska - Fairbanks
+468,Sumy State University
+469,University of Albany
+470,SUNY New Paltz
+472,Swinburne University of Technology
+474,Uppsala University
+477,University of Arizona
+478,University of Arkansas
+479,University of Zurich
+480,University of Barcelona
+481,University of Bari Aldo Moro
+482,University of Wyoming
+483,University of Basel
+484,University of Bayreuth
+485,University of Wurzburg
+486,University of Bern
+487,University of Bologna
+488,University of Wroclaw
+489,University of Bonn
+490,University of Wollongong Dubai
+13,Berlin School of Business and Innovation (BSBI)
+224,INTO - The University of Western Australia

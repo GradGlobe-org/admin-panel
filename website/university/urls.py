@@ -24,5 +24,6 @@ urlpatterns = [
 ]
 
 urlpatterns += [
-    path("api/update-cost-of-living/", UpdateCostOfLivingView.as_view(), name="update_cost_of_living"),
+    # path("api/update-cost-of-living/", UpdateCostOfLivingView.as_view(), name="update_cost_of_living"),
+    path("api/update-university_admission_stats/", update_admission_stats, name="update_admission_stats"),
 ]
