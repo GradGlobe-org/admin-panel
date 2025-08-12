@@ -23,19 +23,6 @@ urlpatterns = [
     path('destination/', destination_page, name='destination_page'),
 ]
 
-
-
-
 urlpatterns += [
-    # API to get the name of a single university with DRAFT status
-    path('api/draft-university-name/', draft_university_name, name='draft-university-name'),
-
-    # API to update a university by name and set status to PUBLISH
-    path('api/update-university/', update_university, name='update-university'),
-
-    # API to get detailed information about a university by name
-    path('api/university-details/', university_details, name='university-details'),
-
-    # API to get all ranking agencies
-    path('api/ranking-agencies/', ranking_agencies, name='ranking-agencies'),
+    path("api/update-cost-of-living/", UpdateCostOfLivingView.as_view(), name="update_cost_of_living"),
 ]
