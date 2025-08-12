@@ -10,6 +10,7 @@ from django.db import connection
 from django.db import transaction
 from scholarship.models import Scholarship
 from django.db.models import Avg, Count, Min
+from psycopg2.extras import RealDictCursor
 # Create your views here.
 
 @csrf_exempt
@@ -296,78 +297,37 @@ def get_university_partner_agency(request):
 
 
 
+# just a utility function
+def dictfetchall(cursor):
+    """Return all rows from a cursor as a list of dicts."""
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+# Invoked by a Supbase function 'paginated_universities_fn'
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
 def paginated_universities(request):
     page = int(request.GET.get("page", 1))
-    limit = 25
-    offset = (page - 1) * limit
-
-    filters = ["u.status = 'PUBLISH'"]
-    params = {"limit": limit, "offset": offset}
-
-    
     city_param = request.GET.get("city")
     state_param = request.GET.get("state")
 
-    if city_param:
-        cities = [c.strip() for c in city_param.split(",") if c.strip()]
-        city_placeholders = ", ".join([f"%({f'city_{i}'})s" for i in range(len(cities))])
-        filters.append(f"l.city ILIKE ANY (ARRAY[{city_placeholders}])")
-        for i, city in enumerate(cities):
-            params[f"city_{i}"] = f"%{city}%"
-
-    if state_param:
-        states = [s.strip() for s in state_param.split(",") if s.strip()]
-        state_placeholders = ", ".join([f"%({f'state_{i}'})s" for i in range(len(states))])
-        filters.append(f"l.state ILIKE ANY (ARRAY[{state_placeholders}])")
-        for i, state in enumerate(states):
-            params[f"state_{i}"] = f"%{state}%"
-
-    where_clause = " AND ".join(filters)
-
-    query = f"""
-    SELECT u.id, u.cover_url, u.cover_origin, u.name, u.establish_year, 
-           l.city || ', ' || l.state AS location,
-           SUBSTR(u.about, 1, 1000) AS about
-    FROM university_university u
-    JOIN university_location l ON u.location_id = l.id
-    LEFT JOIN (
-        SELECT university_id,
-               MAX(COALESCE("inPercentage", 0)) AS perc,
-               MAX(COALESCE("inAmount", 0)) AS amt
-        FROM university_commission
-        GROUP BY university_id
-    ) c ON c.university_id = u.id
-    WHERE {where_clause}
-    ORDER BY 
-        CASE WHEN c.perc IS NOT NULL THEN c.perc ELSE -1 END DESC,
-        CASE WHEN c.perc IS NULL AND c.amt IS NOT NULL THEN c.amt ELSE -1 END DESC
-    LIMIT %(limit)s OFFSET %(offset)s;
-    """
+    cities = [c.strip() for c in city_param.split(",")] if city_param else []
+    states = [s.strip() for s in state_param.split(",")] if state_param else []
 
     with connection.cursor() as cursor:
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-
-    data = [
-        {   
-            "id": row[0],
-            "cover_url": row[1],
-            "cover_origin": row[2],
-            "name": row[3],
-            "establish_year": row[4],
-            "location": row[5],
-            "about": row[6],
-        }
-        for row in rows
-    ]
+        cursor.execute(
+            """
+            SELECT * FROM paginated_universities_fn(%s, %s, %s);
+            """,
+            [page, cities, states]
+        )
+        results = dictfetchall(cursor)
 
     return JsonResponse({
-        "results": data,
+        "results": results,
         "page": page,
-        "count": len(data)
+        "count": len(results)
     })
 
 @csrf_exempt
@@ -845,6 +805,29 @@ def university_detail(request, university_id):
             
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+# Invoked by a supabase Function 'get_university_detail_by_name'
+@csrf_exempt
+@api_key_required
+@require_http_methods(["GET"])
+def get_university_by_name(request):
+    university_name = request.GET.get("name")
+
+    if not university_name:
+        return JsonResponse({"error": "Missing 'name' query parameter"}, status=400)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT get_university_detail_by_name(%s);",
+            [university_name]
+        )
+        row = cursor.fetchone()
+
+    if not row or not row[0]:
+        return JsonResponse({"error": "University not found"}, status=404)
+
+    return JsonResponse(row[0], safe=False, status=200)
+
 
 
 @csrf_exempt
