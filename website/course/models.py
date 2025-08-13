@@ -27,9 +27,6 @@ class Course(models.Model):
     duration_in_years = models.PositiveIntegerField(
         help_text="Duration of the course in years."
     )
-    cost_of_living = models.PositiveIntegerField(
-        help_text="Estimated annual cost of living in USD."
-    )
     next_intake = models.DateField(
         help_text="The next intake date for the course."
     )
