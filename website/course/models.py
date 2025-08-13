@@ -17,6 +17,7 @@ class Course(models.Model):
         on_delete=models.PROTECT,
         help_text="The university offering this course."
     )
+    program_name = models.CharField(max_length=1000, unique=True)
     program_level = models.CharField(
         max_length=50,
         choices=PROGRAM_LEVEL_CHOICES,
