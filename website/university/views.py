@@ -116,7 +116,7 @@ def get_university_by_name(request):
 
 
 @csrf_exempt
-@api_key_required
+# @api_key_required
 @require_http_methods(["GET"])
 def destination_page(request):
     # Get country from query parameters
@@ -126,149 +126,13 @@ def destination_page(request):
     if not country_name:
         return JsonResponse({"error": "Country parameter is required"}, status=400)
 
-    # === Top 5 Universities by Rank ===
-    top_universities = (
-        university.objects.filter(location__country=country_name)  # This uses CharField
-        .annotate(best_rank=Min("rankings__rank"))
-        .select_related("location")
-        .prefetch_related("rankings", "faqs")
-        .order_by("best_rank")[:5]
-    )
-
-    top_universities_data = []
-    for uni in top_universities:
-        qs_rank = next((r.rank for r in uni.rankings.all()), None)
-        top_universities_data.append(
-            {
-                "name": uni.name,
-                "location": f"{uni.location.city}, {uni.location.state}, {uni.location.country}",
-                "type": uni.type,
-                "acceptance_rate": uni.avg_acceptance_rate,
-                "tuition_fee": uni.avg_tution_fee,
-                "qs_ranking": qs_rank,
-                "cover": uni.cover_url,
-            }
-        )
-
-    # === Average Admission Stats ===
-    stats_qs = AdmissionStats.objects.filter(university__location__country=country_name)
-    if stats_qs.exists():
-        avg_stats_raw = stats_qs.aggregate(
-            GPA_min=Avg("GPA_min"),
-            GPA_max=Avg("GPA_max"),
-            SAT_min=Avg("SAT_min"),
-            SAT_max=Avg("SAT_max"),
-            ACT_min=Avg("ACT_min"),
-            ACT_max=Avg("ACT_max"),
-            IELTS_min=Avg("IELTS_min"),
-            IELTS_max=Avg("IELTS_max"),
-            application_fee=Avg("application_fee"),
-        )
-        avg_stats = {
-            k: float(v) if v is not None else None for k, v in avg_stats_raw.items()
-        }
-    else:
-        avg_stats = {}
-
-    # === Unique Visas ===
-    visa_qs = Visa.objects.filter(university__location__country=country_name).order_by(
-        "name", "id"
-    )
-    visa_map = {}
-    for visa in visa_qs:
-        if visa.name not in visa_map:
-            visa_map[visa.name] = {
-                "name": visa.name,
-                "cost": visa.cost,
-                "type_of_visa": visa.type_of_visa,
-                "describe": visa.describe,
-            }
-    visa_data = list(visa_map.values())
-
-    # === Cost of Living ===
+    # Execute the get_destination_page function using a cursor
     try:
-        cost = CostOfLiving.objects.get(
-            country__name=country_name
-        )  # Fixed: use country__name
-        cost_of_living = {
-            "rent_min": float(cost.rent_min),
-            "rent_max": float(cost.rent_max),
-            "food_min": float(cost.food_min),
-            "food_max": float(cost.food_max),
-            "transport_min": float(cost.transport_min),
-            "transport_max": float(cost.transport_max),
-            "miscellaneous_min": float(cost.miscellaneous_min),
-            "miscellaneous_max": float(cost.miscellaneous_max),
-            "total_min": float(cost.total_min),
-            "total_max": float(cost.total_max),
-        }
-    except CostOfLiving.DoesNotExist:
-        cost_of_living = {}
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_destination_page(%s)", [country_name])
+            result = cursor.fetchone()[0]  # Fetch the JSON result
 
-    # === Top 10 Work Opportunities ===
-    work_qs = (
-        WorkOpportunity.objects.filter(university__location__country=country_name)
-        .values("name")
-        .annotate(count=Count("name"))
-        .order_by("-count")[:10]
-    )
-    work_opportunities = [item["name"] for item in work_qs]
-
-    # === One FAQ from Top Universities ===
-    faqs_data = []
-    for uni in top_universities:
-        faq = uni.faqs.first()
-        if faq:
-            faqs_data.append(
-                {
-                    "question": faq.question,
-                    "answer": faq.answer,
-                    "university": uni.name,
-                }
-            )
-
-    # === Popular Universities (Top 5 by rating + rank) ===
-    popular_universities = (
-        university.objects.filter(location__country=country_name)
-        .annotate(avg_rank=Min("rankings__rank"))
-        .select_related("location")
-        .prefetch_related("rankings")
-        .order_by("-review_rating", "avg_rank")[:5]
-    )
-
-    popular_unis_data = []
-    for uni in popular_universities:
-        rank = next((r.rank for r in uni.rankings.all()), None)
-        popular_unis_data.append(
-            {
-                "name": uni.name,
-                "location": f"{uni.location.city}, {uni.location.state}, {uni.location.country}",
-                "review_rating": float(uni.review_rating),
-                "qs_ranking": rank,
-            }
-        )
-
-    # === Why Study In Section ===
-    try:
-        why_study = WhyStudyInSection.objects.get(
-            country__name=country_name
-        )  # Fixed: use country__name
-        why_study_points = [
-            point.strip() for point in why_study.content.split(",") if point.strip()
-        ]
-    except WhyStudyInSection.DoesNotExist:
-        why_study_points = []
-
-    # === Final Response ===
-    return JsonResponse(
-        {
-            "top_universities": top_universities_data,
-            "average_admission_stats": avg_stats,
-            "visa_data": visa_data,
-            "cost_of_living": cost_of_living,
-            "work_opportunities": work_opportunities,
-            "faqs": faqs_data,
-            "popular_universities": popular_unis_data,
-            "why_study_in_country": why_study_points,
-        }
-    )
+        # Return the JSON response directly
+        return JsonResponse(result)
+    except Exception as e:
+        return JsonResponse({"error": f"Database error: {str(e)}"}, status=500)
