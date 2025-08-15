@@ -47,6 +47,10 @@ class Course(models.Model):
         help_text="Link to the course brochure."
     )
 
+    # New Added Field
+
+    tution_fees = models.PositiveIntegerField(help_text="Cost of the course in USD")
+
     class Meta:
         verbose_name = "Course"
         verbose_name_plural = "Courses"
