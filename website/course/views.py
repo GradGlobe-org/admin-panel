@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from website.utils import api_key_required
 from .models import *
+from psycopg2.extras import register_default_jsonb
 import json
 
 # Uses The Supabase Function SELECT * FROM search_course('New York University', 'Applied Physics');
@@ -68,27 +69,14 @@ def compare_course_search(request):
         )
 
     # SQL query to call the course_search function
-    query = "SELECT course_search(%s, %s) AS result"
+    query = "SELECT compare_course_search(%s, %s) AS result"
     params = [course_name, program_level]
 
     # Execute the query
     with connection.cursor() as cursor:
+        register_default_jsonb(connection.connection, loads=json.loads, globally=False)
         cursor.execute(query, params)
         result = cursor.fetchone()[0]  # Fetch the JSONB result
 
-    # Parse the JSONB result (string) into a Python object
-    try:
-        parsed_result = json.loads(result) if isinstance(result, str) else result
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {"error": "Invalid JSON response from database"},
-            status=500
-        )
-
-    # Handle error case from the function
-    if isinstance(parsed_result, dict) and "error" in parsed_result:
-        return JsonResponse(parsed_result, status=400)
-
-    # Return the result as JSON
-    return JsonResponse(parsed_result, safe=False)
-
+    # Return the result directly as JSON
+    return JsonResponse(result, safe=False)
