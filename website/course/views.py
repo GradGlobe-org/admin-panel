@@ -2,7 +2,7 @@ from django.db import connection
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from website.utils import api_key_required
-
+from .models import *
 
 
 # Uses The Supabase Function SELECT * FROM search_course('New York University', 'Applied Physics');
@@ -48,3 +48,33 @@ def search_course(request):
             status=500
         )
     
+
+# Uses The Supabase Function SELECT * FROM compare_course_search();
+@require_GET
+@api_key_required
+def compare_course_search(request):
+    # Get query parameters
+    course_name = request.GET.get('course_name', None)
+    program_level = request.GET.get('program_level', None)
+
+    # Validate program_level if provided
+    valid_program_levels = [choice[0] for choice in Course.PROGRAM_LEVEL_CHOICES]
+    if program_level and program_level not in valid_program_levels:
+        return JsonResponse(
+            {
+                "error": f"Invalid program_level. Must be one of: {', '.join(valid_program_levels)}"
+            },
+            status=400
+        )
+
+    # SQL query to call the course_search function
+    query = "SELECT compare_course_search(%s, %s) AS result"
+    params = [course_name, program_level]
+
+    # Execute the query
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        result = cursor.fetchone()[0]  # Fetch the JSONB result
+
+    # Return the result directly as JSON
+    return JsonResponse(result, safe=False)
