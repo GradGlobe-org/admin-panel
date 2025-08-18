@@ -2,6 +2,9 @@ from uuid import uuid4
 from django.db import models
 from django.utils import timezone
 from university.models import university
+from course.models import Course
+
+
 
 # Static variable for country choices using full country names
 COUNTRY_CHOICES = [
@@ -615,3 +618,24 @@ class ShortlistedUniversity(models.Model):
 
     def __str__(self):
         return f"{self.student.username} shortlisted {self.university.name}"
+    
+class ShortlistedCourse(models.Model):
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='shortlisted_courses'
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='shortlisted_by_students'
+    )
+    added_on = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('student', 'course')
+        verbose_name = "Shortlisted Course"
+        verbose_name_plural = "Shortlisted Courses"
+
+    def __str__(self):
+        return f"{self.student.username} shortlisted {self.course.program_name} at {self.course.university.name}"

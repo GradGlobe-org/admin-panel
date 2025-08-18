@@ -10,6 +10,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import *
+from course.models import *
 from website.utils import api_key_required, user_token_required
 from django.db import transaction
 import string
@@ -147,29 +148,23 @@ class LoginView(View):
 @api_key_required
 @user_token_required
 @require_http_methods(["POST"])
-def add_to_shortlist(request):
+def add_to_shortlist_university(request):
     try:
         data = json.loads(request.body.decode("utf-8"))
-        student_id = data.get("student_id")
-        university_id = data.get("university_id")
+        university_name = data.get("university_name")
 
-        if not student_id or not university_id:
-            return JsonResponse(
-                {"error": "student_id and university_id are required."},
-                status=400,
-            )
+        if not university_name:
+            return JsonResponse({"error": "University name is required."}, status=400)
 
-        # Fetch student and university objects
-        student = get_object_or_404(Student, id=student_id)
-        uni = get_object_or_404(university, id=university_id)
+        student = request.user
+        uni = get_object_or_404(university, name__iexact=university_name.strip())
 
-        # Check if this university is already shortlisted by this student
+        # Check if already shortlisted
         if ShortlistedUniversity.objects.filter(student=student, university=uni).exists():
             return JsonResponse(
                 {"message": "University is already shortlisted."}, status=400
             )
 
-        # Create shortlisted university
         shortlist = ShortlistedUniversity.objects.create(
             student=student, university=uni, added_on=timezone.now()
         )
@@ -189,6 +184,103 @@ def add_to_shortlist(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
+
+
+@csrf_exempt
+@api_key_required
+@user_token_required
+@require_http_methods(["POST"])
+def add_to_shortlist_course(request):
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        university_name = data.get("university_name")
+        course_name = data.get("course_name")
+
+        if not university_name or not course_name:
+            return JsonResponse({"error": "Both university_name and course_name are required."}, status=400)
+
+        student = request.user
+        uni = get_object_or_404(university, name__iexact=university_name.strip())
+        course = get_object_or_404(Course, university=uni, program_name__iexact=course_name.strip())
+
+        # Check if already shortlisted
+        if ShortlistedCourse.objects.filter(student=student, course=course).exists():
+            return JsonResponse(
+                {"message": "Course is already shortlisted."}, status=400
+            )
+
+        shortlist = ShortlistedCourse.objects.create(
+            student=student, course=course, added_on=timezone.now()
+        )
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "shortlist": {
+                    "id": shortlist.id,
+                    "student": shortlist.student.username,
+                    "course": shortlist.course.program_name,
+                    "university": shortlist.course.university.name,
+                    "added_on": shortlist.added_on.strftime("%Y-%m-%d %H:%M:%S"),
+                },
+            },
+            status=201,
+        )
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format."}, status=400)
+
+
+@csrf_exempt
+@api_key_required
+@user_token_required
+@require_http_methods(["GET"])
+def get_shortlisted_items(request):
+    student = request.user
+
+    # Get shortlisted universities
+    universities = ShortlistedUniversity.objects.filter(student=student).select_related("university__location")
+    uni_list = [
+        {
+            "id": su.id,
+            "university_id": su.university.id,
+            "university_name": su.university.name,
+            "cover_url": su.university.cover_url,
+            "location": {
+                "city": su.university.location.city,
+                "state": su.university.location.state,
+                "country": su.university.location.country,
+            },
+            "added_on": su.added_on.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        for su in universities
+    ]
+
+    # Get shortlisted courses
+    courses = ShortlistedCourse.objects.filter(student=student).select_related("course__university")
+    course_list = [
+        {
+            "id": sc.id,
+            "course_id": sc.course.id,
+            "program_name": sc.course.program_name,
+            "program_level": sc.course.program_level,
+            "tuition_fees": sc.course.tution_fees,  # Added tuition fee
+            "university_id": sc.course.university.id,
+            "university_name": sc.course.university.name,
+            "added_on": sc.added_on.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        for sc in courses
+    ]
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "universities": uni_list,
+            "courses": course_list,
+        },
+        status=200,
+    )
+
 
 @csrf_exempt
 @api_key_required
