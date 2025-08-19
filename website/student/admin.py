@@ -1,12 +1,25 @@
 from django.contrib import admin
-from .models import *
+from .models import (
+    Student,
+    Email,
+    PhoneNumber,
+    StudentDetails,
+    EducationDetails,
+    ExperienceDetails,
+    TestScores,
+    Preference,
+    ShortlistedUniversity,
+    ShortlistedCourse,
+)
 
-# Inlines for one-to-one relationships: use StackedInline with can_delete=False and max_num=1
+# ---------------- Inlines ----------------
+
 class StudentDetailsInline(admin.StackedInline):
     model = StudentDetails
     can_delete = False
     max_num = 1
     extra = 0
+
 
 class EmailInline(admin.StackedInline):
     model = Email
@@ -14,11 +27,13 @@ class EmailInline(admin.StackedInline):
     max_num = 1
     extra = 0
 
+
 class PhoneNumberInline(admin.StackedInline):
     model = PhoneNumber
     can_delete = False
     max_num = 1
     extra = 0
+
 
 class EducationDetailsInline(admin.StackedInline):
     model = EducationDetails
@@ -26,11 +41,13 @@ class EducationDetailsInline(admin.StackedInline):
     max_num = 1
     extra = 0
 
+
 class PreferenceInline(admin.StackedInline):
     model = Preference
     can_delete = False
     max_num = 1
     extra = 0
+
 
 class TestScoresInline(admin.StackedInline):
     model = TestScores
@@ -38,28 +55,43 @@ class TestScoresInline(admin.StackedInline):
     max_num = 1
     extra = 0
 
-# Inlines for multi-relations
+
 class ExperienceDetailsInline(admin.TabularInline):
     model = ExperienceDetails
     extra = 1
 
+
 class ShortlistedUniversityInline(admin.TabularInline):
     model = ShortlistedUniversity
     extra = 1
-    readonly_fields = ['added_on']
+    readonly_fields = ["added_on"]
+
+
+class ShortlistedCourseInline(admin.TabularInline):
+    model = ShortlistedCourse
+    extra = 1
+    readonly_fields = ["added_on"]
+
+
+# ---------------- ModelAdmins ----------------
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
     list_display = (
         "email_address",
-        "full_name",
+        "full_name_display",
         "mobile_number",
         "gender",
     )
-    search_fields = ("email__email", "full_name", "details__first_name", "details__last_name")  # Updated to include full_name
-    list_filter = ("details__gender", "details__country")  # Optional: Added for better filtering
-    fields = ("full_name", "password", "authToken")  # Fields to show in the edit form
-    readonly_fields = ("authToken",)  # authToken should not be editable
+    search_fields = (
+        "email__email",
+        "full_name",
+        "details__first_name",
+        "details__last_name",
+    )
+    list_filter = ("details__gender", "details__country")
+    fields = ("full_name", "password", "authToken")
+    readonly_fields = ("authToken",)
 
     inlines = [
         StudentDetailsInline,
@@ -70,30 +102,48 @@ class StudentAdmin(admin.ModelAdmin):
         TestScoresInline,
         ExperienceDetailsInline,
         ShortlistedUniversityInline,
+        ShortlistedCourseInline,
     ]
 
     def get_inline_instances(self, request, obj=None):
-        if obj is not None:
+        if obj:
             return super().get_inline_instances(request, obj)
         return []
 
-    # --- Display Methods ---
-    def full_name(self, obj):
-        # Use the full_name field from the Student model
+    # ---- Display Methods ----
+    def full_name_display(self, obj):
         return obj.full_name if obj.full_name else "-"
-    full_name.short_description = "Full Name"
+    full_name_display.short_description = "Full Name"
 
     def email_address(self, obj):
-        # Handles missing Email object gracefully
         return getattr(obj.email, "email", "-")
     email_address.short_description = "Email"
 
     def mobile_number(self, obj):
-        # Handles missing PhoneNumber object gracefully
         return getattr(obj.phone_number, "mobile_number", "-")
     mobile_number.short_description = "Mobile"
 
     def gender(self, obj):
-        # Handles missing StudentDetails object gracefully
         return getattr(obj.details, "gender", "-")
     gender.short_description = "Gender"
+
+
+@admin.register(ExperienceDetails)
+class ExperienceDetailsAdmin(admin.ModelAdmin):
+    list_display = ("student", "company_name", "title", "employment_type", "start_date", "currently_working")
+    search_fields = ("company_name", "title", "industry_type")
+    list_filter = ("employment_type", "industry_type", "country")
+
+
+@admin.register(ShortlistedUniversity)
+class ShortlistedUniversityAdmin(admin.ModelAdmin):
+    list_display = ("student", "university", "added_on")
+    search_fields = ("student__full_name", "university__name")
+    list_filter = ("added_on",)
+
+
+@admin.register(ShortlistedCourse)
+class ShortlistedCourseAdmin(admin.ModelAdmin):
+    list_display = ("student", "course", "added_on")
+    search_fields = ("student__full_name", "course__program_name", "course__university__name")
+    list_filter = ("added_on",)

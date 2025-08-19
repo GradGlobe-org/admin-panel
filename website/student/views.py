@@ -174,7 +174,7 @@ def add_to_shortlist_university(request):
                 "status": "success",
                 "shortlist": {
                     "id": shortlist.id,
-                    "student": shortlist.student.username,
+                    "student": shortlist.student.full_name,
                     "university": shortlist.university.name,
                     "added_on": shortlist.added_on.strftime("%Y-%m-%d %H:%M:%S"),
                 },
@@ -218,7 +218,7 @@ def add_to_shortlist_course(request):
                 "status": "success",
                 "shortlist": {
                     "id": shortlist.id,
-                    "student": shortlist.student.username,
+                    "student": shortlist.student.full_name,
                     "course": shortlist.course.program_name,
                     "university": shortlist.course.university.name,
                     "added_on": shortlist.added_on.strftime("%Y-%m-%d %H:%M:%S"),

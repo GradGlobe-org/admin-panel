@@ -276,8 +276,7 @@ class Email(models.Model):
         ordering = ["email"]
 
     def __str__(self):
-        return f"{self.student.username} - {self.email}"
-
+        return self.full_name
 
 class PhoneNumber(models.Model):
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name="phone_number")
@@ -289,7 +288,7 @@ class PhoneNumber(models.Model):
         ordering = ["mobile_number"]
 
     def __str__(self):
-        return f"{self.student.username} - {self.mobile_number}"
+        return f"{self.mobile_number}"
 
 
 class StudentDetails(models.Model):
@@ -311,7 +310,7 @@ class StudentDetails(models.Model):
     country = models.CharField(max_length=100, choices=COUNTRY_CHOICES)  # Updated to use COUNTRY_CHOICES with full names
 
     def __str__(self):
-        return f"{self.student.username} - {self.first_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}"
 
 
 class EducationDetails(models.Model):
@@ -359,7 +358,7 @@ class EducationDetails(models.Model):
     end_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.student.username} - {self.institution_name} ({self.degree})"
+        return f"{self.institution_name} ({self.degree})"
 
 
 class ExperienceDetails(models.Model):
@@ -438,7 +437,7 @@ class ExperienceDetails(models.Model):
         ordering = ['-start_date']
 
     def __str__(self):
-        return f"{self.student.username} - {self.company_name} ({self.title})"
+        return f"{self.company_name} ({self.title})"
 
 
 class TestScores(models.Model):
@@ -496,7 +495,7 @@ class TestScores(models.Model):
         verbose_name_plural = "Test Scores"
 
     def __str__(self):
-        return f"{self.student.username} - {self.exam_type} ({self.date})"
+        return f"{self.exam_type} ({self.date})"
 
 
 class Preference(models.Model):
@@ -567,7 +566,7 @@ class Preference(models.Model):
     budget = models.PositiveIntegerField()
 
     def __str__(self):
-        return f"{self.student.username} Preference"
+        return self.full_name
 
 
 # class Document(models.Model):
@@ -603,7 +602,7 @@ class Preference(models.Model):
 #         ordering = ["name"]
 
     def __str__(self):
-        return f"{self.name} ({self.doc_type}) - {self.student.username}"
+        return f"{self.name} ({self.doc_type}) "
 
 
 class ShortlistedUniversity(models.Model):
@@ -617,7 +616,7 @@ class ShortlistedUniversity(models.Model):
         verbose_name_plural = "Shortlisted Universities"
 
     def __str__(self):
-        return f"{self.student.username} shortlisted {self.university.name}"
+        return f"{self.student.full_name} shortlisted {self.university.name}"
     
 class ShortlistedCourse(models.Model):
     student = models.ForeignKey(
@@ -638,4 +637,4 @@ class ShortlistedCourse(models.Model):
         verbose_name_plural = "Shortlisted Courses"
 
     def __str__(self):
-        return f"{self.student.username} shortlisted {self.course.program_name} at {self.course.university.name}"
+        return f"{self.student.full_name} shortlisted {self.course.program_name} at {self.course.university.name}"
