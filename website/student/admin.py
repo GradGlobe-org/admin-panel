@@ -10,6 +10,7 @@ from .models import (
     Preference,
     ShortlistedUniversity,
     ShortlistedCourse,
+    StudentLogs
 )
 
 # ---------------- Inlines ----------------
@@ -147,3 +148,23 @@ class ShortlistedCourseAdmin(admin.ModelAdmin):
     list_display = ("student", "course", "added_on")
     search_fields = ("student__full_name", "course__program_name", "course__university__name")
     list_filter = ("added_on",)
+
+
+@admin.register(StudentLogs)
+class StudentLogsAdmin(admin.ModelAdmin):
+        list_display = (
+            "student",
+            "short_log",
+            "added_on",
+        )
+        search_fields = (
+            "student__full_name",
+            "logs",
+        )
+        list_filter = ("added_on",)
+
+        readonly_fields = ("added_on",)
+    
+        def short_log(self, obj):
+                return (obj.logs[:50] + "...") if len(obj.logs) > 50 else obj.logs
+        short_log.short_description = "Log"

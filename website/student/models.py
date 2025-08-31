@@ -638,3 +638,22 @@ class ShortlistedCourse(models.Model):
 
     def __str__(self):
         return f"{self.student.full_name} shortlisted {self.course.program_name} at {self.course.university.name}"
+
+class StudentLogs(models.Model):
+        student = models.ForeignKey(
+                "Student",   # safer to use string ref in case Student is defined later
+                    on_delete=models.CASCADE,
+                    related_name="shortlisted_courses"
+                )
+
+        logs = models.TextField()
+        added_on = models.DateTimeField(default=timezone.now)
+
+        class Meta:
+                db_table = "student_logs"   # custom table name
+                ordering = ["-added_on"]    # newest logs first
+                verbose_name = "Student Log"
+                verbose_name_plural = "Student Logs"
+
+        def __str__(self):
+            return f"Log for {self.student} on {self.added_on.strftime('%Y-%m-%d %H:%M:%S')}"
