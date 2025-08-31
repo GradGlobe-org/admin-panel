@@ -122,8 +122,6 @@ class LoginView(View):
             email = data.get("email")
             password = data.get("password")
             
-            create_student_log(request, "Logged In via Email")
-            
             if not email or not password:
                 return JsonResponse(
                     {"error": "Both email and password are required."}, status=400
@@ -132,6 +130,11 @@ class LoginView(View):
             try:
                 email_obj = Email.objects.get(email=email)
                 user = email_obj.student
+                StudentLogs.objects.create(
+                    student = student,
+                    logs = "Logged in Via Email"
+                )
+
             except Email.DoesNotExist:
                 return JsonResponse({"error": "Invalid credentials."}, status=400)
 
@@ -162,13 +165,13 @@ def add_to_shortlist_university(request):
         data = json.loads(request.body.decode("utf-8"))
         university_name = data.get("university_name")
 
-        create_student_log(request, "Logged In via Email")
         
         if not university_name:
             return JsonResponse({"error": "University name is required."}, status=400)
 
         student = request.user
         uni = get_object_or_404(university, name__iexact=university_name.strip())
+
 
         # Check if already shortlisted
         if ShortlistedUniversity.objects.filter(student=student, university=uni).exists():
@@ -180,6 +183,7 @@ def add_to_shortlist_university(request):
             student=student, university=uni, added_on=timezone.now()
         )
 
+        create_student_log(request, f"Shortlisted University {university_name}")
         return JsonResponse(
             {
                 "status": "success",
@@ -223,7 +227,7 @@ def add_to_shortlist_course(request):
         shortlist = ShortlistedCourse.objects.create(
             student=student, course=course, added_on=timezone.now()
         )
-
+        create_student_log(request, f"Shortlisted Course {course_name}")
         return JsonResponse(
             {
                 "status": "success",
@@ -282,7 +286,8 @@ def get_shortlisted_items(request):
         }
         for sc in courses
     ]
-
+    
+    create_student_log(request, f"Opened Shortlisted Page")
     return JsonResponse(
         {
             "status": "success",
@@ -390,6 +395,7 @@ def get_student_details(request):
             'country_choices': [v for v, _ in COUNTRY_CHOICES],
         }
 
+        create_student_log(request, f"Opened Profile Page")
         return JsonResponse({
             'student': student_data,
             'email': email_data,
@@ -578,6 +584,7 @@ def update_student_profile(request):
             except Exception as e:
                 results[section] = f"error: {str(e)}"
 
+        create_student_log(request, f"Update Profile")
         return JsonResponse({"status": "success", "results": results}, status=200)
 
     except Exception as e:
