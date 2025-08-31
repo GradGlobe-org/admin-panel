@@ -15,8 +15,8 @@ from website.utils import api_key_required, user_token_required
 from django.db import transaction
 import string
 import random
-
-
+from .utils import create_student_log
+from .models import StudentLogs
 
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(require_http_methods(["POST"]), name="dispatch")
@@ -75,6 +75,13 @@ class RegisterView(View):
                     authToken=uuid4(),
                 )
 
+                # Student Log
+
+                StudentLogs.objects.create(
+                    student = student,
+                    logs = "Registered Via Email"
+                )
+                 
                 # Link email
                 Email.objects.create(
                     student=student,
@@ -114,7 +121,9 @@ class LoginView(View):
             data = json.loads(request.body.decode("utf-8"))
             email = data.get("email")
             password = data.get("password")
-
+            
+            create_student_log(request, "Logged In via Email")
+            
             if not email or not password:
                 return JsonResponse(
                     {"error": "Both email and password are required."}, status=400
@@ -153,6 +162,8 @@ def add_to_shortlist_university(request):
         data = json.loads(request.body.decode("utf-8"))
         university_name = data.get("university_name")
 
+        create_student_log(request, "Logged In via Email")
+        
         if not university_name:
             return JsonResponse({"error": "University name is required."}, status=400)
 
@@ -626,6 +637,12 @@ class GoogleSignInView(View):
             try:
                 email_obj = Email.objects.get(email=email)
                 student = email_obj.student
+
+                StudentLogs.objects.create(
+                    student = student,
+                    logs = "Logged in via"
+                )
+
                 # Update authToken for existing user
                 student.authToken = uuid4()
                 student.save()
@@ -653,11 +670,19 @@ class GoogleSignInView(View):
                             authToken=uuid4(),
                             password=make_password(random_password),  # Hash the random password
                         )
+
+                        # Student Log
+                        StudentLogs.objects.create(
+                            student = student,
+                            logs = "Registered Via Email"
+                        )
+
                         # Link email
                         Email.objects.create(
                             student=student,
                             email=email,
                         )
+                        
                         # Skip phone_number for Google Sign-In
                 except Exception as e:
                     import logging
