@@ -11,12 +11,15 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import *
 from course.models import *
-from website.utils import api_key_required, user_token_required
+from website.utils import api_key_required, user_token_required, has_perms, token_required
 from django.db import transaction
 import string
 import random
 from .utils import create_student_log
 from .models import StudentLogs
+from django.db import connection
+
+
 
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(require_http_methods(["POST"]), name="dispatch")
@@ -721,3 +724,55 @@ class GoogleSignInView(View):
                 {"error": "Internal server error.", "details": str(e)},
                 status=500,
             )
+
+@token_required
+def get_all_students(request):
+    employee = request.user  # comes from @token_required
+
+    # Permission check
+    if not has_perms(employee.id, ["student_logs_view"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
+    
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id, full_name FROM student_student;")
+        rows = cursor.fetchall()
+
+    # Convert rows -> list of dicts
+    students = [{"id": row[0], "full_name": row[1]} for row in rows]
+
+    return JsonResponse(students, safe=False, status=200)
+
+
+@token_required
+def get_student_logs(request, student_id):
+    employee = request.user  # comes from @token_required
+
+    # Permission check
+    if not has_perms(employee.id, ["student_logs_view"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
+    
+    """
+    Fetch all logs (id, logs, added_on, student_id) from logs table.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT logs, added_on FROM student_logs WHERE student_id = %s;",
+            [student_id],
+        )
+        rows = cursor.fetchall()
+
+    logs = [
+    {
+        "log": row[0],
+        "added_on": row[1].strftime("%Y-%m-%d %H:%M") if row[1] else None,
+    }
+    for row in rows
+    ]
+
+    return JsonResponse(logs, safe=False, status=200)
