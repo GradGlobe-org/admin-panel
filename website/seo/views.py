@@ -3,6 +3,10 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import yake
 from website.utils import api_key_required, token_required
+from django.http import JsonResponse
+from .models import InstaEmbed
+from django.views.decorators.http import require_http_methods
+
 
 def get_yake_keywords(text, ratio=0.04, max_keywords=20):
     """
@@ -69,3 +73,16 @@ def extract_keywords(request):
         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@api_key_required
+@require_http_methods(['GET'])
+def get_active_instagram_embeds(request):
+    """
+    Return all active Instagram embeds with count.
+    """
+    embeds = InstaEmbed.objects.filter(is_active=True).values("id", "embed_text")
+    data = {
+        "count": embeds.count(),
+        "results": list(embeds),
+    }
+    return JsonResponse(data, safe=False)

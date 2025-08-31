@@ -643,7 +643,7 @@ class StudentLogs(models.Model):
         student = models.ForeignKey(
                 "Student",   # safer to use string ref in case Student is defined later
                     on_delete=models.CASCADE,
-                    related_name="shortlisted_courses"
+                    related_name="StudentLogs"
                 )
 
         logs = models.TextField()
