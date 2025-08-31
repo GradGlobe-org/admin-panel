@@ -8,6 +8,7 @@ from psycopg2.extras import register_default_jsonb
 import json
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 
 # Uses The Supabase Function SELECT * FROM search_course('New York University', 'Applied Physics');
 
@@ -82,13 +83,19 @@ def compare_course_search(request):
     # Return the result directly as JSON
     return JsonResponse(result, safe=False)
 
-
-@require_POST
-@api_key_required
 @csrf_exempt
+@require_http_methods(['GET'])
+@api_key_required
 def filter_search(request):
     # Get the search query from GET parameters
-    search_query = request.GET.get("search_query", "")
+    search_query = request.GET.get('search_query', '').strip()
+
+    # Require at least 3 characters
+    if len(search_query) < 3:
+        return JsonResponse(
+            {"error": "Search query must be at least 3 characters long."},
+            status=400
+        )
 
     # Use a cursor to call the Supabase function
     with connection.cursor() as cursor:
