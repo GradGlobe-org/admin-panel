@@ -6,7 +6,7 @@ from website.utils import api_key_required
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
-
+from student.utils import create_student_log
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
@@ -120,7 +120,7 @@ def scholarship_details(request):
         
         # Convert scholarships dict to list
         scholarships_list = list(scholarships.values())
-    
+    create_student_log(request, "Opened Scholarship Page") 
     return JsonResponse({
         'status': 'success',
         'count': len(scholarships_list),

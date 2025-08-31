@@ -9,7 +9,7 @@ import json
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-
+from student.utils import create_student_log
 # Uses The Supabase Function SELECT * FROM search_course('New York University', 'Applied Physics');
 
 @require_GET
@@ -18,7 +18,7 @@ def search_course(request):
     # Get and validate parameters
     university_name = request.GET.get("university", "").strip()
     course_name = request.GET.get("course", "").strip()
-
+    create_student_log(request, f"Opened Course Page for '{course_name}'")
     if not university_name or not course_name:
         return JsonResponse(
             {"error": "Both university and course parameters are required"}, status=400
@@ -73,7 +73,7 @@ def compare_course_search(request):
     # SQL query to call the course_search function
     query = "SELECT compare_course_search(%s, %s) AS result"
     params = [course_name, program_level]
-
+    create_student_log(request, f"Compared Course '{course_name}'")
     # Execute the query
     with connection.cursor() as cursor:
         register_default_jsonb(connection.connection, loads=json.loads, globally=False)
@@ -96,7 +96,7 @@ def filter_search(request):
             {"error": "Search query must be at least 3 characters long."},
             status=400
         )
-
+    create_student_log(request, f"Smart Searched '{search_query}'")
     # Use a cursor to call the Supabase function
     with connection.cursor() as cursor:
         cursor.execute("SELECT public.filter_search(%s)", [search_query])

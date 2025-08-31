@@ -11,7 +11,7 @@ from django.db import transaction
 from scholarship.models import Scholarship
 from django.db.models import Avg, Count, Min
 from psycopg2.extras import RealDictCursor
-
+from student.utils import create_student_log
 
 @csrf_exempt
 @api_key_required
@@ -107,7 +107,7 @@ def get_university_by_name(request):
 
     if not row or not row[0]:
         return JsonResponse({"error": "University not found"}, status=404)
-
+    create_student_log(request, f"Oppened University Page for '{university_name}'")
     return JsonResponse(row[0], safe=False, status=200)
 
 
@@ -128,6 +128,7 @@ def destination_page(request):
             cursor.execute("SELECT get_destination_page(%s)", [country_name])
             result = cursor.fetchone()[0]  # Fetch the JSON result
 
+        create_student_log(request, f"Oppened Destination Page for '{country_name}'")
         # Return the JSON response directly
         return JsonResponse(result)
     except Exception as e:

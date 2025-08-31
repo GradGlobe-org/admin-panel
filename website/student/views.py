@@ -183,7 +183,7 @@ def add_to_shortlist_university(request):
             student=student, university=uni, added_on=timezone.now()
         )
 
-        create_student_log(request, f"Shortlisted University {university_name}")
+        create_student_log(request, f"Shortlisted University '{university_name}'")
         return JsonResponse(
             {
                 "status": "success",
@@ -227,7 +227,7 @@ def add_to_shortlist_course(request):
         shortlist = ShortlistedCourse.objects.create(
             student=student, course=course, added_on=timezone.now()
         )
-        create_student_log(request, f"Shortlisted Course {course_name}")
+        create_student_log(request, f"Shortlisted Course '{course_name}'")
         return JsonResponse(
             {
                 "status": "success",
@@ -584,7 +584,7 @@ def update_student_profile(request):
             except Exception as e:
                 results[section] = f"error: {str(e)}"
 
-        create_student_log(request, f"Update Profile")
+        create_student_log(request, f"Updated Profile")
         return JsonResponse({"status": "success", "results": results}, status=200)
 
     except Exception as e:
