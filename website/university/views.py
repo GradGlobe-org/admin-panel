@@ -13,7 +13,6 @@ from django.db.models import Avg, Count, Min
 from psycopg2.extras import RealDictCursor
 
 
-
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
@@ -32,7 +31,8 @@ def get_university_location(request):
 @require_http_methods(["GET"])
 def get_university_ranking_agency(request):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, name, description, logo FROM university_ranking_agency")
+        cursor.execute(
+            "SELECT id, name, description, logo FROM university_ranking_agency")
         columns = [col[0] for col in cursor.description]
         agencies = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -52,7 +52,6 @@ def get_university_partner_agency(request):
     return JsonResponse({"Partner Agencies": agencies}, status=200)
 
 
-
 # just a utility function
 def dictfetchall(cursor):
     """Return all rows from a cursor as a list of dicts."""
@@ -60,6 +59,8 @@ def dictfetchall(cursor):
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 # Invoked by a Supbase function 'paginated_universities_fn'
+
+
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
@@ -87,7 +88,6 @@ def paginated_universities(request):
     })
 
 
-
 # Invoked by a supabase Function 'get_university_with_courses'
 @csrf_exempt
 @api_key_required
@@ -109,10 +109,6 @@ def get_university_by_name(request):
         return JsonResponse({"error": "University not found"}, status=404)
 
     return JsonResponse(row[0], safe=False, status=200)
-
-
-
-
 
 
 @csrf_exempt

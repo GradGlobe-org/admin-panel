@@ -1,54 +1,60 @@
 from django.db import connection
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from website.utils import api_key_required
 from .models import *
+from university.models import *
 from psycopg2.extras import register_default_jsonb
 import json
+from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
 
 # Uses The Supabase Function SELECT * FROM search_course('New York University', 'Applied Physics');
+
+
 @require_GET
 @api_key_required
 def search_course(request):
     # Get and validate parameters
     university_name = request.GET.get('university', '').strip()
     course_name = request.GET.get('course', '').strip()
-    
+
     if not university_name or not course_name:
         return JsonResponse(
             {'error': 'Both university and course parameters are required'},
             status=400
         )
-    
+
     try:
         with connection.cursor() as cursor:
             # Execute the function call
-            cursor.execute("SELECT * FROM search_course(%s, %s)", [university_name, course_name])
+            cursor.execute("SELECT * FROM search_course(%s, %s)",
+                           [university_name, course_name])
             result = cursor.fetchone()
-            
+
             if not result:
                 return JsonResponse(
-                    {'error': 'Course not found'}, 
+                    {'error': 'Course not found'},
                     status=404
                 )
-            
+
             # The function returns a single JSON column which becomes the first item in the tuple
             response_data = result[0]
-            
+
             # If the response already contains an error, return it with appropriate status
             if isinstance(response_data, dict) and 'error' in response_data:
                 status_code = 404 if response_data['error'] == 'Course not found' else 400
                 return JsonResponse(response_data, status=status_code)
-            
+
             # Otherwise return the successful response
             return JsonResponse(response_data)
-    
+
     except Exception as e:
         return JsonResponse(
             {'error': f'Database error: {str(e)}'},
             status=500
         )
-    
+
 
 # Uses The Supabase Function SELECT * FROM compare_course_search();
 @require_GET
@@ -59,7 +65,8 @@ def compare_course_search(request):
     program_level = request.GET.get('program_level', None)
 
     # Validate program_level if provided
-    valid_program_levels = [choice[0] for choice in Course.PROGRAM_LEVEL_CHOICES]
+    valid_program_levels = [choice[0]
+                            for choice in Course.PROGRAM_LEVEL_CHOICES]
     if program_level and program_level not in valid_program_levels:
         return JsonResponse(
             {
@@ -74,9 +81,25 @@ def compare_course_search(request):
 
     # Execute the query
     with connection.cursor() as cursor:
-        register_default_jsonb(connection.connection, loads=json.loads, globally=False)
+        register_default_jsonb(connection.connection,
+                               loads=json.loads, globally=False)
         cursor.execute(query, params)
         result = cursor.fetchone()[0]  # Fetch the JSONB result
 
     # Return the result directly as JSON
     return JsonResponse(result, safe=False)
+
+
+@require_POST
+@api_key_required
+@csrf_exempt
+def filter_search(request):
+    # Get the search query from GET parameters
+    search_query = request.GET.get('search_query', '')
+
+    # Use a cursor to call the Supabase function
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT public.filter_search(%s)', [search_query])
+        result = cursor.fetchone()[0]  # Fetch the JSON result
+
+    return JsonResponse({'courses': result}, status=200)

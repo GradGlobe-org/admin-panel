@@ -1,11 +1,11 @@
+import os
+from pathlib import Path
+import dj_database_url
 from dotenv import load_dotenv
 
 # Load .env
 load_dotenv()
 
-import dj_database_url
-from pathlib import Path
-import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -80,21 +80,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'website.wsgi.application'
 
 
-if IS_PRODUCTION:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=os.getenv('DATABASE_URL'),
-            conn_max_age=600,
-            ssl_require=True
-        )
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+# if IS_PRODUCTION:
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=600,
+        ssl_require=True
+    )
+}
+# else:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.sqlite3',
+#             'NAME': BASE_DIR / 'db.sqlite3',
+#         }
+#     }
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
@@ -122,8 +122,6 @@ else:
     SECURE_HSTS_SECONDS = 0
     SECURE_HSTS_PRELOAD = False
     SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-
-
 
 
 # Password validation
@@ -160,7 +158,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
+STATICFILES_DIRS = [BASE_DIR /
+                    "static"] if (BASE_DIR / "static").exists() else []
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
@@ -175,7 +174,7 @@ CACHES = {
     }
 }
 
-#Cors Settings
+# Cors Settings
 CORS_ALLOW_HEADERS = ["*"]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
@@ -208,7 +207,7 @@ JAZZMIN_SETTINGS = {
     "navigation_expanded": True,
     "hide_apps": [],
     "hide_models": [],
-    
+
     # Custom links in the user menu
     "user_menu_links": [
         {
@@ -222,15 +221,17 @@ JAZZMIN_SETTINGS = {
 
 
 SCHEMA_VIEWER = {
-    
+
     'exclude': {
         'auth': ['User'],
     },
 }
 
-PROMETHEUS_LATENCY_BUCKETS = (0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 25.0, 50.0, 75.0, float("inf"),)
+PROMETHEUS_LATENCY_BUCKETS = (0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5,
+                              0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 25.0, 50.0, 75.0, float("inf"),)
 
-LOG_LEVEL = "DEBUG" if os.getenv("PRODUCTION", "False").lower() != "true" else "INFO"
+LOG_LEVEL = "DEBUG" if os.getenv(
+    "PRODUCTION", "False").lower() != "true" else "INFO"
 
 LOGGING = {
     'version': 1,
