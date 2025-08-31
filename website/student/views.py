@@ -640,7 +640,7 @@ class GoogleSignInView(View):
 
                 StudentLogs.objects.create(
                     student = student,
-                    logs = "Logged in via"
+                    logs = "Logged in via google"
                 )
 
                 # Update authToken for existing user
@@ -674,7 +674,7 @@ class GoogleSignInView(View):
                         # Student Log
                         StudentLogs.objects.create(
                             student = student,
-                            logs = "Registered Via Email"
+                            logs = "Registered Via Google"
                         )
 
                         # Link email
