@@ -8,7 +8,7 @@ def create_student_log(request, log_text = "Empty Action"):
     
     if not auth_token:
         return False
-    
+   
     try:
         # Find student by authToken
         student = Student.objects.get(authToken=auth_token)
@@ -18,9 +18,8 @@ def create_student_log(request, log_text = "Empty Action"):
             student=student,
             logs=log_text
         )
-        return HttpResponse("Log created successfully", status=201)
     
     except ObjectDoesNotExist:
-        return HttpResponse("Invalid auth token", status=401)
+        return False
     except Exception as e:
-        return HttpResponse(f"Error creating log: {str(e)}", status=500)
+        return False
