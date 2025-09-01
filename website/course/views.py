@@ -18,7 +18,7 @@ def search_course(request):
     # Get and validate parameters
     university_name = request.GET.get("university", "").strip()
     course_name = request.GET.get("course", "").strip()
-    create_student_log(request, f"Opened Course Page for '{course_name}'")
+    create_student_log(request, f"Looked for Course Named '{course_name}' of university '{university_name}'")
     if not university_name or not course_name:
         return JsonResponse(
             {"error": "Both university and course parameters are required"}, status=400
