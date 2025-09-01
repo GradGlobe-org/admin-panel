@@ -10,4 +10,6 @@ urlpatterns = [
     path("student_details/", get_student_details),
     path("update/", update_student_profile),
     path("choices_in_db/", get_all_choices),
+    path("students_list/", get_all_students),
+    path("logs/<int:student_id>/", get_student_logs, name="student-logs"),
 ]
