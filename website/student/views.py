@@ -1,5 +1,5 @@
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.hashers import make_password, check_password
@@ -18,6 +18,8 @@ import random
 from .utils import create_student_log
 from .models import StudentLogs
 from django.db import connection
+from google import genai
+import os
 
 
 
@@ -776,3 +778,70 @@ def get_student_logs(request, student_id):
     ]
 
     return JsonResponse(logs, safe=False, status=200)
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+@token_required
+def summarize_student_interest(request):
+    try:
+        student_id = request.GET.get("student_id") or request.POST.get("student_id")
+        if not student_id:
+            return JsonResponse({
+                "status": "error",
+                "message": "student_id is required"
+            }, status=400)
+
+        student_id = int(student_id)
+
+        # --- Fetch student data from Postgres ---
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_student_details_summary(%s);", [student_id])
+            row = cursor.fetchone()
+
+        if not row or not row[0]:
+            return JsonResponse({
+                "status": "error",
+                "message": "Student not found"
+            }, status=404)
+
+        student_data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+
+        # --- Initialize Gemini client ---
+        if not GEMINI_API_KEY:
+            return JsonResponse({
+                "status": "error",
+                "message": "GEMINI_API_KEY is not set"
+            }, status=500)
+
+        client = genai.Client(api_key=GEMINI_API_KEY)
+
+        # Prepare prompt for Gemini
+        prompt = f"""
+        Analyze this student's profile and summarize their interests,
+        educational background, and possible study/career recommendations
+        in 5-6 sentences.
+
+        Student data (JSON): {json.dumps(student_data)}
+        """
+
+        # Create a generator that yields Gemini response chunks
+        def gemini_stream():
+            response = client.models.generate_content_stream(
+                model="gemini-2.5-flash",
+                contents=[prompt]
+            )
+            for chunk in response:
+                if hasattr(chunk, "text") and chunk.text:
+                    yield chunk.text
+
+        # Return a streaming response
+        return StreamingHttpResponse(
+            gemini_stream(),
+            content_type="text/plain"
+        )
+
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=500)

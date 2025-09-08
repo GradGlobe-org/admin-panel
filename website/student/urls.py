@@ -12,4 +12,6 @@ urlpatterns = [
     path("choices_in_db/", get_all_choices),
     path("students_list/", get_all_students),
     path("logs/<int:student_id>/", get_student_logs, name="student-logs"),
+    path("summarize_interest/", summarize_student_interest)
+
 ]
