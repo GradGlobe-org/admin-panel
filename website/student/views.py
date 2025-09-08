@@ -809,15 +809,51 @@ def get_student_logs(request, student_id):
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+def stream_gemini_response(prompt):
+    """
+    Stream Gemini response using the API key from .env.
+    """
+    if not GEMINI_API_KEY:
+        return JsonResponse({"error": "GEMINI_API_KEY is not set"}, status=500)
+
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        stream = client.models.generate_content_stream(
+            model="gemini-2.5-flash",
+            contents=[prompt]
+        )
+
+        def event_stream():
+            for chunk in stream:
+                if hasattr(chunk, "text") and chunk.text:
+                    yield chunk.text
+
+        return StreamingHttpResponse(event_stream(), content_type='text/plain')
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@require_http_methods(['POST'])
+@csrf_exempt
 @token_required
 def summarize_student_interest(request):
+    """
+    Fetch student data from Postgres, send to Gemini for summarization,
+    and return a streaming response.
+    """
     try:
-        student_id = request.GET.get("student_id") or request.POST.get("student_id")
+        if request.method != "POST":
+            return JsonResponse({"status": "error", "message": "POST method required"}, status=405)
+
+        # Read student_id from POST JSON body
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+            student_id = body.get("student_id")
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "error", "message": "Invalid JSON body"}, status=400)
+
         if not student_id:
-            return JsonResponse({
-                "status": "error",
-                "message": "student_id is required"
-            }, status=400)
+            return JsonResponse({"status": "error", "message": "student_id is required"}, status=400)
 
         student_id = int(student_id)
 
@@ -834,39 +870,25 @@ def summarize_student_interest(request):
 
         student_data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
 
-        # --- Initialize Gemini client ---
-        if not GEMINI_API_KEY:
-            return JsonResponse({
-                "status": "error",
-                "message": "GEMINI_API_KEY is not set"
-            }, status=500)
-
-        client = genai.Client(api_key=GEMINI_API_KEY)
-
-        # Prepare prompt for Gemini
+        # --- Prepare prompt for Gemini ---
         prompt = f"""
-        Analyze this student's profile and summarize their interests,
-        educational background, and possible study/career recommendations
-        in 5-6 sentences.
+        Analyze this student's profile and generate a detailed, structured summary including the following:
+
+        1. **Interested Universities & Courses:** List the actual names of the universities and courses the student has shortlisted. Include location, degree type, and field of study. If there are multiple universities or courses, summarize the main focus areas and priorities.
+
+        2. **Educational Background:** Include degree, field of study, CGPA, key achievements, and language proficiency (e.g., IELTS scores).
+
+        3. **Professional Experience:** Summarize relevant work experience, job titles, companies, locations, employment type, duration, and notable achievements.
+
+        4. **Personal Details:** Include nationality and current country of residence.
+
+        Keep the summary clear, structured and detailed, so a counselor can quickly understand the student’s profile and interests.
 
         Student data (JSON): {json.dumps(student_data)}
+
         """
 
-        # Create a generator that yields Gemini response chunks
-        def gemini_stream():
-            response = client.models.generate_content_stream(
-                model="gemini-2.5-flash",
-                contents=[prompt]
-            )
-            for chunk in response:
-                if hasattr(chunk, "text") and chunk.text:
-                    yield chunk.text
-
-        # Return a streaming response
-        return StreamingHttpResponse(
-            gemini_stream(),
-            content_type="text/plain"
-        )
+        return stream_gemini_response(prompt)
 
     except Exception as e:
         return JsonResponse({
