@@ -841,6 +841,15 @@ def summarize_student_interest(request):
     Fetch student data from Postgres, send to Gemini for summarization,
     and return a streaming response.
     """
+    employee = request.user
+
+    # Permission check
+    if not has_perms(employee.id, ["student_logs_view"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
+
     try:
         if request.method != "POST":
             return JsonResponse({"status": "error", "message": "POST method required"}, status=405)
