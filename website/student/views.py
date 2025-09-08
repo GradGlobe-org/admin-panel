@@ -745,6 +745,34 @@ def get_all_students(request):
 
     return JsonResponse(students, safe=False, status=200)
 
+@csrf_exempt
+@token_required
+def get_student_details_with_student_id(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    try:
+        body = json.loads(request.body)
+        student_id = body.get("student_id")
+        
+        if not student_id:
+            return JsonResponse({"error": "Student ID not provided"}, status=400)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT get_student_full_details_by_id(%s);", [int(student_id)]
+            )
+            row = cursor.fetchone()
+        
+        if not row or not row[0]:
+            return JsonResponse({"error": "No student details found"}, status=404)
+
+        student_data = json.loads(row[0])
+        return JsonResponse(student_data, safe=False)
+    
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 @token_required
 def get_student_logs(request, student_id):
