@@ -3,6 +3,7 @@ from .models import Employee, LoginLog
 import json
 from django.http import JsonResponse
 import uuid
+import json
 from django.views.decorators.csrf import csrf_exempt
 from website.utils import api_key_required
 
@@ -33,7 +34,7 @@ def login(request):
                 [username, password]
             )
             # Fetch the JSON result
-            result = cursor.fetchone()[0]
+            result = json.loads(cursor.fetchone()[0])
 
             if result:
                 return JsonResponse(result, status=200)
