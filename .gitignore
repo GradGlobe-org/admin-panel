@@ -3,3 +3,10 @@ env2
 website/db.sqlite3
 website/.env
 website/data.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
