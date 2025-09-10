@@ -1,7 +1,6 @@
 from django.contrib import admin
 from .models import JobRole, Employee, LoginLog, Permission
 
-# Register your models here.
 
 @admin.register(JobRole)
 class JobRoleAdmin(admin.ModelAdmin):
