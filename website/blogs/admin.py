@@ -19,11 +19,15 @@ class StatusListFilter(admin.SimpleListFilter):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'slug', 'status', 'created_at', 'view_count')
+    list_display = ('id', 'title', 'slug', 'status', 'author_name', 'created_at', 'view_count')
     search_fields = ('title', 'content', 'author__first_name', 'author__last_name')
     list_filter = (StatusListFilter, 'created_at', 'author')
     date_hierarchy = 'created_at'
     ordering = ('-created_at',)
+
+    def author_name(self, obj):
+        return f"{obj.author.name}"
+    author_name.short_description = 'Author'
 
     fieldsets = (
         ('Basic Information', {
@@ -41,5 +45,3 @@ class PostAdmin(admin.ModelAdmin):
         }),
     )
     readonly_fields = ('created_at', 'modified_at')
-
-
