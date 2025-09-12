@@ -10,34 +10,63 @@ from django.views.decorators.http import require_http_methods
 from authentication.models import Employee
 from slugify import slugify  # using `python-slugify`
 from django.views.decorators.csrf import csrf_exempt
+import uuid
 
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
 def blog_post_summary_view(request):
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                p.id,
-                p.title,
-                p.slug,
-                p.view_count,
-                p.featured_image,
-                SUBSTR(p.content, 1, 1000) AS content_snippet,
-                e.name AS author_name
-            FROM 
-                blogs_post p
-            JOIN 
-                authentication_employee e ON p.author_id = e.id
-            ORDER BY
-                p.created_at DESC
-        """)
-        columns = [col[0] for col in cursor.description]
-        results = [
-            dict(zip(columns, row))
-            for row in cursor.fetchall()
-        ]
-    return JsonResponse(results, safe=False)
+    auth_token = request.headers.get("Authorization")
+
+    try:
+        with connection.cursor() as cursor:
+            if not auth_token:
+                cursor.execute("""
+                    SELECT 
+                        p.id,
+                        p.title,
+                        p.slug,
+                        p.view_count,
+                        p.featured_image,
+                        SUBSTR(p.content, 1, 1000) AS content_snippet,
+                        e.name AS author_name
+                    FROM blogs_post p
+                    JOIN authentication_employee e ON p.author_id = e.id
+                    WHERE p.status = 'PUBLISHED'
+                    ORDER BY p.created_at DESC
+                """)
+            else:
+                try:
+                    uuid_token = uuid.UUID(auth_token)
+                    request.user = Employee.objects.get(authToken=uuid_token)
+                except (ValueError, Employee.DoesNotExist):
+                    return JsonResponse({"error": "Invalid or expired token"}, status=403)
+
+                cursor.execute("""
+                    SELECT 
+                        p.id,
+                        p.title,
+                        p.slug,
+                        p.view_count,
+                        p.featured_image,
+                        p.status,
+                        SUBSTR(p.content, 1, 1000) AS content_snippet,
+                        e.name AS author_name
+                    FROM blogs_post p
+                    JOIN authentication_employee e ON p.author_id = e.id
+                    ORDER BY p.created_at DESC
+                """)
+
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        return JsonResponse(results, safe=False)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"error": "An unexpected error occurred."}, status=500)
+        
 
 @api_key_required
 def blog_post_detail_view(request, identifier):
