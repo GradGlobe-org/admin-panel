@@ -126,7 +126,7 @@ class RegisterView(View):
             return JsonResponse({"error": "Internal server error.",}, status=500)
             # return JsonResponse({"error": str(e),}, status=500)
 
-
+#This view uses django password hashing which is difficult to do in postgres function, so leave it as it is
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(require_http_methods(["POST"]), name="dispatch")
 class LoginView(View):
@@ -213,71 +213,38 @@ def add_to_shortlist_university(request):
         with transaction.atomic():
             with connection.cursor() as cursor:
                 cursor.execute(
-                    """
-                    SELECT id, name
-                    FROM university_university
-                    WHERE LOWER(name) = LOWER(%s)
-                    LIMIT 1
-                    """,
-                    [university_name.strip()],
+                    "SELECT * FROM add_shortlist_university(%s::BIGINT, %s::TEXT)",
+                    [student_id, university_name.strip()]
                 )
-                uni_row = cursor.fetchone()
-                if not uni_row:
-                    return JsonResponse({"error": "University not found."}, status=404)
+                result = cursor.fetchone()
 
-                uni_id, uni_name = uni_row
+        status, shortlist_id, student_name, uni_name, added_on = result
 
-                cursor.execute(
-                    """
-                    SELECT 1
-                    FROM student_shortlisteduniversity
-                    WHERE student_id = %s AND university_id = %s
-                    LIMIT 1
-                    """,
-                    [student_id, uni_id],
-                )
-                if cursor.fetchone():
-                    return JsonResponse(
-                        {"message": "University is already shortlisted."}, status=400
-                    )
-
-                added_on = timezone.now()
-                cursor.execute(
-                    """
-                    INSERT INTO student_shortlisteduniversity (student_id, university_id, added_on)
-                    VALUES (%s, %s, %s)
-                    RETURNING id
-                    """,
-                    [student_id, uni_id, added_on],
-                )
-                shortlist_id = cursor.fetchone()[0]
-
-                cursor.execute(
-                    """
-                    INSERT INTO student_logs (student_id, logs)
-                    VALUES (%s, %s)
-                    """,
-                    [student_id, f"Shortlisted University '{uni_name}'"],
-                )
-
-        return JsonResponse(
-            {
-                "status": "success",
-                "shortlist": {
-                    "id": shortlist_id,
-                    "student": request.user.full_name,
-                    "university": uni_name,
-                    "added_on": added_on.strftime("%Y-%m-%d %H:%M:%S"),
+        if status == "not_found":
+            return JsonResponse({"error": "University not found."}, status=404)
+        elif status == "duplicate":
+            return JsonResponse({"message": "University is already shortlisted."}, status=400)
+        elif status == "success":
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "shortlist": {
+                        "id": shortlist_id,
+                        "student": student_name,
+                        "university": uni_name,
+                        "added_on": added_on.strftime("%Y-%m-%d %H:%M:%S"),
+                    },
                 },
-            },
-            status=201,
-        )
+                status=201,
+            )
+        else:
+            return JsonResponse({"error": "Internal server error."}, status=500)
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
-    except Exception:
-        return JsonResponse({"error": "Internal server error."}, status=500)
 
 
 @csrf_exempt
@@ -300,94 +267,48 @@ def add_to_shortlist_course(request):
 
         with transaction.atomic():
             with connection.cursor() as cursor:
-                #Get university
                 cursor.execute(
-                    """
-                    SELECT id, name
-                    FROM university_university
-                    WHERE LOWER(name) = LOWER(%s)
-                    LIMIT 1
-                    """,
-                    [university_name.strip()],
+                    "SELECT * FROM add_shortlist_course(%s::BIGINT, %s::TEXT, %s::TEXT)",
+                    [student_id, university_name.strip(), course_name.strip()]
                 )
-                uni_row = cursor.fetchone()
-                if not uni_row:
-                    return JsonResponse({"error": "University not found."}, status=404)
+                result = cursor.fetchone()
 
-                uni_id, uni_name = uni_row
+        if not result:
+            return JsonResponse({"error": "Function returned no data."}, status=500)
 
-                #Get course
-                cursor.execute(
-                    """
-                    SELECT id, program_name
-                    FROM course_course
-                    WHERE university_id = %s
-                      AND LOWER(program_name) = LOWER(%s)
-                    LIMIT 1
-                    """,
-                    [uni_id, course_name.strip()],
-                )
-                course_row = cursor.fetchone()
-                if not course_row:
-                    return JsonResponse({"error": "Course not found."}, status=404)
+        status, shortlist_id, student_name, uni_name, program_name, added_on = result
+        added_on_str = added_on.strftime("%Y-%m-%d %H:%M:%S") if added_on else None
 
-                course_id, program_name = course_row
-
-                #Check if already shortlisted
-                cursor.execute(
-                    """
-                    SELECT 1
-                    FROM student_shortlistedcourse
-                    WHERE student_id = %s AND course_id = %s
-                    LIMIT 1
-                    """,
-                    [student_id, course_id],
-                )
-                if cursor.fetchone():
-                    return JsonResponse(
-                        {"message": "Course is already shortlisted."}, status=400
-                    )
-
-                #Insert shortlist
-                added_on = timezone.now()
-                cursor.execute(
-                    """
-                    INSERT INTO student_shortlistedcourse (student_id, course_id, added_on)
-                    VALUES (%s, %s, %s)
-                    RETURNING id
-                    """,
-                    [student_id, course_id, added_on],
-                )
-                shortlist_id = cursor.fetchone()[0]
-
-                #Insert student log
-                cursor.execute(
-                    """
-                    INSERT INTO student_logs (student_id, logs)
-                    VALUES (%s, %s)
-                    """,
-                    [student_id, f"Shortlisted Course '{program_name}'"],
-                )
-
-        return JsonResponse(
-            {
-                "status": "success",
-                "shortlist": {
-                    "id": shortlist_id,
-                    "student": request.user.full_name,
-                    "course": program_name,
-                    "university": uni_name,
-                    "added_on": added_on.strftime("%Y-%m-%d %H:%M:%S"),
+        if status == "university_not_found":
+            return JsonResponse({"error": "University not found."}, status=404)
+        elif status == "course_not_found":
+            return JsonResponse({"error": "Course not found."}, status=404)
+        elif status == "duplicate":
+            return JsonResponse({"message": "Course is already shortlisted."}, status=400)
+        elif status == "success":
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "shortlist": {
+                        "id": shortlist_id,
+                        "student": student_name,
+                        "university": uni_name,
+                        "course": program_name,
+                        "added_on": added_on_str,
+                    },
                 },
-            },
-            status=201,
-        )
+                status=201,
+            )
+        else:
+            return JsonResponse({"error": "Internal server error."}, status=500)
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
-
-    except Exception:
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({"error": "Internal server error."}, status=500)
+
 
 
 @csrf_exempt
@@ -400,68 +321,39 @@ def get_shortlisted_items(request):
     try:
         with transaction.atomic():
             with connection.cursor() as cursor:
-                # Call the Postgres function for universities
-                cursor.execute("SELECT get_shortlisted_universities(%s)", [student_id])
-                uni_result = cursor.fetchone()[0]  # JSON result from function
-                uni_list = uni_result if uni_result is not None else []
-
-                # Fetch shortlisted courses directly
+                # Call the Postgres function using student_id
                 cursor.execute(
-                    """
-                    SELECT sc.id,
-                           c.id AS course_id,
-                           c.program_name,
-                           c.program_level,
-                           c.tution_fees,
-                           u.id AS university_id,
-                           u.name AS university_name,
-                           sc.added_on
-                    FROM student_shortlistedcourse sc
-                    JOIN course_course c ON sc.course_id = c.id
-                    JOIN university_university u ON c.university_id = u.id
-                    WHERE sc.student_id = %s
-                    ORDER BY sc.added_on DESC
-                    """,
-                    [student_id],
+                    "SELECT get_shortlisted_items(%s::BIGINT)", [student_id]
                 )
-                course_rows = cursor.fetchall()
+                result = cursor.fetchone()
+                if not result:
+                    return JsonResponse({"error": "No data returned."}, status=500)
 
-                course_list = [
-                    {
-                        "id": row[0],
-                        "course_id": row[1],
-                        "program_name": row[2],
-                        "program_level": row[3],
-                        "tuition_fees": row[4],
-                        "university_id": row[5],
-                        "university_name": row[6],
-                        "added_on": row[7].strftime("%Y-%m-%d %H:%M:%S"),
-                    }
-                    for row in course_rows
-                ]
+                result_json = result[0]
+                # Ensure it's a dict
+                if isinstance(result_json, str):
+                    import json
+                    result_json = json.loads(result_json)
 
-                # Log the action (kept in Django for flexibility)
-                cursor.execute(
-                    """
-                    INSERT INTO student_logs (student_id, logs, added_on)
-                    VALUES (%s, %s, NOW())
-                    """,
-                    [student_id, "Opened Shortlisted Page"],
-                )
+        # Log action in Django for flexibility
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO student_logs (student_id, logs, added_on)
+                VALUES (%s, %s, NOW())
+                """,
+                [student_id, "Opened Shortlisted Page"],
+            )
 
-        return JsonResponse(
-            {
-                "status": "success",
-                "universities": uni_list,
-                "courses": course_list,
-            },
-            status=200,
-        )
+        return JsonResponse(result_json, status=200)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse(
             {"error": "An unexpected error occurred."}, status=500
         )
+
     
 @csrf_exempt
 @api_key_required
@@ -688,86 +580,105 @@ class GoogleSignInView(View):
                     status=400,
                 )
 
-            # Check if email already exists
-            try:
-                email_obj = Email.objects.get(email=email)
-                student = email_obj.student
-
-                StudentLogs.objects.create(
-                    student = student,
-                    logs = "Logged in via google"
-                )
-
-                # Update authToken for existing user
-                student.authToken = uuid4()
-                student.save()
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": "User already exists, logged in successfully.",
-                        "email": email,
-                        "full_name": student.full_name,
-                        "authToken": str(student.authToken),
-                    },
-                    status=200,
-                )
-            except Email.DoesNotExist:
-                # Generate a random password
-                random_password = ''.join(random.choices(
-                    string.ascii_letters + string.digits, k=12
-                ))
-                # Create new user within a transaction
-                try:
-                    with transaction.atomic():
-                        # Create student with full_name and random password
-                        student = Student.objects.create(
-                            full_name=full_name.strip(),
-                            authToken=uuid4(),
-                            password=make_password(random_password),  # Hash the random password
-                        )
-
-                        # Student Log
-                        StudentLogs.objects.create(
-                            student = student,
-                            logs = "Registered Via Google"
-                        )
-
-                        # Link email
-                        Email.objects.create(
-                            student=student,
-                            email=email,
-                        )
-                        
-                        # Skip phone_number for Google Sign-In
-                except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f"Failed to create user: {str(e)}", exc_info=True)
-                    return JsonResponse(
-                        {"error": "Failed to create user.", "details": str(e)},
-                        status=500,
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    # Check if email already exists
+                    cursor.execute(
+                        """
+                        SELECT s.id, s.full_name
+                        FROM student_student s
+                        JOIN student_email e ON e.student_id = s.id
+                        WHERE e.email = %s
+                        LIMIT 1
+                        """,
+                        [email],
                     )
+                    row = cursor.fetchone()
 
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": "User registered successfully via Google Sign-In.",
-                        "email": email,
-                        "full_name": full_name,
-                        "authToken": str(student.authToken),
-                    },
-                    status=201,
-                )
+                    if row:
+                        # Existing student
+                        student_id, student_name = row
+                        new_token = str(uuid4())
+
+                        # Update authToken
+                        cursor.execute(
+                            "UPDATE student_student SET authtoken = %s WHERE id = %s",
+                            [new_token, student_id],
+                        )
+
+                        # Log login
+                        cursor.execute(
+                            """
+                            INSERT INTO student_logs (student_id, logs, created_at)
+                            VALUES (%s, %s, NOW())
+                            """,
+                            [student_id, "Logged in via Google"],
+                        )
+
+                        return JsonResponse(
+                            {
+                                "status": "success",
+                                "message": "User already exists, logged in successfully.",
+                                "email": email,
+                                "full_name": student_name,
+                                "authToken": new_token,
+                            },
+                            status=200,
+                        )
+
+                    else:
+                        # New student → register
+                        random_password = ''.join(
+                            random.choices(string.ascii_letters + string.digits, k=12)
+                        )
+                        hashed_password = make_password(random_password)
+                        new_token = str(uuid4())
+
+                        # Insert into student_student
+                        cursor.execute(
+                            """
+                            INSERT INTO student_student (full_name, password, authtoken, created_at)
+                            VALUES (%s, %s, %s, NOW())
+                            RETURNING id
+                            """,
+                            [full_name.strip(), hashed_password, new_token],
+                        )
+                        student_id = cursor.fetchone()[0]
+
+                        # Log registration
+                        cursor.execute(
+                            """
+                            INSERT INTO student_logs (student_id, logs, created_at)
+                            VALUES (%s, %s, NOW())
+                            """,
+                            [student_id, "Registered via Google"],
+                        )
+
+                        # Insert email
+                        cursor.execute(
+                            """
+                            INSERT INTO student_email (student_id, email, created_at)
+                            VALUES (%s, %s, NOW())
+                            """,
+                            [student_id, email],
+                        )
+
+                        return JsonResponse(
+                            {
+                                "status": "success",
+                                "message": "User registered successfully via Google Sign-In.",
+                                "email": email,
+                                "full_name": full_name,
+                                "authToken": new_token,
+                            },
+                            status=201,
+                        )
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Google Sign-In Error: {str(e)}", exc_info=True)
             return JsonResponse(
-                {"error": "Internal server error.", "details": str(e)},
-                status=500,
+                {"error": "Internal server error.", "details": str(e)}, status=500
             )
 
 @token_required
