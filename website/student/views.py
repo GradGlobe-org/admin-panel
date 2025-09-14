@@ -243,7 +243,8 @@ def add_to_shortlist_university(request):
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        # return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "An error occured"}, status=500)
 
 
 
@@ -602,14 +603,14 @@ class GoogleSignInView(View):
 
                         # Update authToken
                         cursor.execute(
-                            "UPDATE student_student SET authtoken = %s WHERE id = %s",
+                            'UPDATE student_student SET "authToken" = %s WHERE id = %s',
                             [new_token, student_id],
                         )
 
                         # Log login
                         cursor.execute(
                             """
-                            INSERT INTO student_logs (student_id, logs, created_at)
+                            INSERT INTO student_logs (student_id, logs, added_on)
                             VALUES (%s, %s, NOW())
                             """,
                             [student_id, "Logged in via Google"],
@@ -637,7 +638,7 @@ class GoogleSignInView(View):
                         # Insert into student_student
                         cursor.execute(
                             """
-                            INSERT INTO student_student (full_name, password, authtoken, created_at)
+                            INSERT INTO student_student (full_name, password, "authToken", added_on)
                             VALUES (%s, %s, %s, NOW())
                             RETURNING id
                             """,
@@ -648,7 +649,7 @@ class GoogleSignInView(View):
                         # Log registration
                         cursor.execute(
                             """
-                            INSERT INTO student_logs (student_id, logs, created_at)
+                            INSERT INTO student_logs (student_id, logs, added_on)
                             VALUES (%s, %s, NOW())
                             """,
                             [student_id, "Registered via Google"],
@@ -657,7 +658,7 @@ class GoogleSignInView(View):
                         # Insert email
                         cursor.execute(
                             """
-                            INSERT INTO student_email (student_id, email, created_at)
+                            INSERT INTO student_email (student_id, email, added_on)
                             VALUES (%s, %s, NOW())
                             """,
                             [student_id, email],
@@ -677,9 +678,12 @@ class GoogleSignInView(View):
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
         except Exception as e:
+            # return JsonResponse(
+            #     {"error": "Internal server error.", "details": str(e)}, status=500
+            # )
             return JsonResponse(
-                {"error": "Internal server error.", "details": str(e)}, status=500
-            )
+                    {"error": "Internal server error."}, status=500
+                )
 
 @token_required
 def get_all_students(request):
@@ -939,4 +943,5 @@ def set_student_bucket(request):
         }, status=200)
 
     except Exception as e:
-        return JsonResponse({"status": "error", "error": f"Unexpected error: {str(e)}"}, status=500)
+        # return JsonResponse({"status": "error", "error": f"Unexpected error: {str(e)}"}, status=500)
+        return JsonResponse({"status": "error", "error": f"Unexpected error"}, status=500)
