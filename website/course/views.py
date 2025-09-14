@@ -296,7 +296,7 @@ class FilterSearchView(View):
             # print("[DEBUG] Raw DB Result:", result)
 
             # Step 3: Send raw DB JSON back
-            return JsonResponse(result, status=200, safe=False)
+            return JsonResponse({"courses": result}, status=200, safe=False)
 
         except Exception as e:
             print("[ERROR] Exception occurred:", str(e))
