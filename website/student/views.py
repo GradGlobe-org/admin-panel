@@ -789,26 +789,28 @@ class GoogleSignInView(View):
                 )
 
 
+@require_http_methods(['GET'])
 @token_required
 def get_all_students(request):
     employee = request.user  # comes from @token_required
 
     # Permission check
     if not has_perms(employee.id, ["student_logs_view"]):
-        return JsonResponse(
-            {
-                "status": "error",
-                "message": "You do not have permission to perform this task",
-            },
-            status=403,
-        )
-
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
+    
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, full_name FROM student_student;")
+        cursor.execute("""
+            SELECT s.id, s.full_name, b.name AS bucket_name
+            FROM student_student AS s
+            LEFT JOIN student_bucket AS b ON s.category_id = b.id;
+        """)
         rows = cursor.fetchall()
 
     # Convert rows -> list of dicts
-    students = [{"id": row[0], "full_name": row[1]} for row in rows]
+    students = [{"id": row[0], "full_name": row[1], "bucket":row[2]} for row in rows]
 
     return JsonResponse(students, safe=False, status=200)
 
