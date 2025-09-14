@@ -11,7 +11,12 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import *
 from course.models import *
-from website.utils import api_key_required, user_token_required, has_perms, token_required
+from website.utils import (
+    api_key_required,
+    user_token_required,
+    has_perms,
+    token_required,
+)
 from django.db import transaction
 import string
 import random
@@ -20,7 +25,6 @@ from .models import StudentLogs
 from django.db import connection
 from google import genai
 import os
-
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -39,7 +43,9 @@ class RegisterView(View):
             # Validate presence of required fields
             if not email or not password or not mobile_number or not full_name:
                 return JsonResponse(
-                    {"error": "Email, password, mobile number, and full name are required."},
+                    {
+                        "error": "Email, password, mobile number, and full name are required."
+                    },
                     status=400,
                 )
 
@@ -107,7 +113,6 @@ class RegisterView(View):
                         [student_id, mobile_number],
                     )
 
-
             return JsonResponse(
                 {
                     "status": "success",
@@ -123,10 +128,16 @@ class RegisterView(View):
             return JsonResponse({"error": "Invalid JSON."}, status=400)
         except Exception as e:
             # Log the error in production
-            return JsonResponse({"error": "Internal server error.",}, status=500)
+            return JsonResponse(
+                {
+                    "error": "Internal server error.",
+                },
+                status=500,
+            )
             # return JsonResponse({"error": str(e),}, status=500)
 
-#This view uses django password hashing which is difficult to do in postgres function, so leave it as it is
+
+# This view uses django password hashing which is difficult to do in postgres function, so leave it as it is
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(require_http_methods(["POST"]), name="dispatch")
 class LoginView(View):
@@ -150,7 +161,9 @@ class LoginView(View):
                     )
                     row = cursor.fetchone()
                     if not row:
-                        return JsonResponse({"error": "Invalid credentials."}, status=400)
+                        return JsonResponse(
+                            {"error": "Invalid credentials."}, status=400
+                        )
 
                     student_id = row[0]
 
@@ -160,12 +173,16 @@ class LoginView(View):
                     )
                     row = cursor.fetchone()
                     if not row:
-                        return JsonResponse({"error": "Invalid credentials."}, status=400)
+                        return JsonResponse(
+                            {"error": "Invalid credentials."}, status=400
+                        )
 
                     db_password = row[0]
 
                     if not check_password(password, db_password):
-                        return JsonResponse({"error": "Invalid credentials."}, status=400)
+                        return JsonResponse(
+                            {"error": "Invalid credentials."}, status=400
+                        )
 
                     auth_token = str(uuid4())
                     cursor.execute(
@@ -196,6 +213,7 @@ class LoginView(View):
         except Exception:
             return JsonResponse({"error": "Internal server error."}, status=500)
 
+
 @csrf_exempt
 @api_key_required
 @user_token_required
@@ -214,7 +232,7 @@ def add_to_shortlist_university(request):
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT * FROM add_shortlist_university(%s::BIGINT, %s::TEXT)",
-                    [student_id, university_name.strip()]
+                    [student_id, university_name.strip()],
                 )
                 result = cursor.fetchone()
 
@@ -223,7 +241,9 @@ def add_to_shortlist_university(request):
         if status == "not_found":
             return JsonResponse({"error": "University not found."}, status=404)
         elif status == "duplicate":
-            return JsonResponse({"message": "University is already shortlisted."}, status=400)
+            return JsonResponse(
+                {"message": "University is already shortlisted."}, status=400
+            )
         elif status == "success":
             return JsonResponse(
                 {
@@ -244,7 +264,6 @@ def add_to_shortlist_university(request):
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
 
 
 @csrf_exempt
@@ -269,7 +288,7 @@ def add_to_shortlist_course(request):
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT * FROM add_shortlist_course(%s::BIGINT, %s::TEXT, %s::TEXT)",
-                    [student_id, university_name.strip(), course_name.strip()]
+                    [student_id, university_name.strip(), course_name.strip()],
                 )
                 result = cursor.fetchone()
 
@@ -284,7 +303,9 @@ def add_to_shortlist_course(request):
         elif status == "course_not_found":
             return JsonResponse({"error": "Course not found."}, status=404)
         elif status == "duplicate":
-            return JsonResponse({"message": "Course is already shortlisted."}, status=400)
+            return JsonResponse(
+                {"message": "Course is already shortlisted."}, status=400
+            )
         elif status == "success":
             return JsonResponse(
                 {
@@ -306,9 +327,9 @@ def add_to_shortlist_course(request):
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         return JsonResponse({"error": "Internal server error."}, status=500)
-
 
 
 @csrf_exempt
@@ -322,9 +343,7 @@ def get_shortlisted_items(request):
         with transaction.atomic():
             with connection.cursor() as cursor:
                 # Call the Postgres function using student_id
-                cursor.execute(
-                    "SELECT get_shortlisted_items(%s::BIGINT)", [student_id]
-                )
+                cursor.execute("SELECT get_shortlisted_items(%s::BIGINT)", [student_id])
                 result = cursor.fetchone()
                 if not result:
                     return JsonResponse({"error": "No data returned."}, status=500)
@@ -333,6 +352,7 @@ def get_shortlisted_items(request):
                 # Ensure it's a dict
                 if isinstance(result_json, str):
                     import json
+
                     result_json = json.loads(result_json)
 
         # Log action in Django for flexibility
@@ -349,12 +369,11 @@ def get_shortlisted_items(request):
 
     except Exception as e:
         import traceback
-        traceback.print_exc()
-        return JsonResponse(
-            {"error": "An unexpected error occurred."}, status=500
-        )
 
-    
+        traceback.print_exc()
+        return JsonResponse({"error": "An unexpected error occurred."}, status=500)
+
+
 @csrf_exempt
 @api_key_required
 @user_token_required
@@ -363,9 +382,11 @@ def get_student_details(request):
     try:
         student = request.user
         student_id = student.id
-    
+
     except Exception as e:
-        return JsonResponse({'error': 'Error, kindly enter correct student id or try again'})
+        return JsonResponse(
+            {"error": "Error, kindly enter correct student id or try again"}
+        )
 
     try:
         with connection.cursor() as cursor:
@@ -376,7 +397,7 @@ def get_student_details(request):
         return JsonResponse(result_json)
 
     except Exception as e:
-        return JsonResponse({'error': "An error occured, try again later"}, status=500)
+        return JsonResponse({"error": "An error occured, try again later"}, status=500)
 
 
 def validate_required_fields(data, required_fields):
@@ -394,10 +415,14 @@ def update_student_profile(request):
     try:
         data = json.loads(request.body.decode("utf-8"))
     except json.JSONDecodeError:
-        return JsonResponse({"status": "error", "message": "Invalid JSON body"}, status=400)
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON body"}, status=400
+        )
 
     if not data:
-        return JsonResponse({"status": "error", "message": "Empty JSON body"}, status=400)
+        return JsonResponse(
+            {"status": "error", "message": "Empty JSON body"}, status=400
+        )
 
     results = {}
     allowed_sections = {
@@ -411,25 +436,33 @@ def update_student_profile(request):
 
     unknown_keys = set(data.keys()) - allowed_sections
     if unknown_keys:
-        return JsonResponse({
-            "status": "error",
-            "message": f"Unknown sections provided: {', '.join(unknown_keys)}. Only these are allowed: {', '.join(allowed_sections)}"
-        }, status=400)
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": f"Unknown sections provided: {', '.join(unknown_keys)}. Only these are allowed: {', '.join(allowed_sections)}",
+            },
+            status=400,
+        )
 
     try:
         with transaction.atomic():
             with connection.cursor() as cursor:
-
                 # 1️⃣ Student (update full_name)
                 if "student" in data:
                     section = "student"
                     full_name = data[section].get("full_name", "").strip()
                     if not (1 <= len(full_name) <= 200):
-                        return JsonResponse({"status": "error", "message": "Full name must be between 1 and 200 characters."}, status=400)
+                        return JsonResponse(
+                            {
+                                "status": "error",
+                                "message": "Full name must be between 1 and 200 characters.",
+                            },
+                            status=400,
+                        )
 
                     cursor.execute(
                         "UPDATE student_student SET full_name = %s WHERE id = %s",
-                        [full_name, student_id]
+                        [full_name, student_id],
                     )
                     results[section] = "updated"
 
@@ -437,7 +470,8 @@ def update_student_profile(request):
                 if "student_details" in data:
                     section = "student_details"
                     sd = data[section]
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO student_studentdetails(student_id, first_name, last_name, gender, dob, nationality, address, state, city, zip_code, country)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (student_id) 
@@ -445,62 +479,96 @@ def update_student_profile(request):
                                       gender=EXCLUDED.gender, dob=EXCLUDED.dob, nationality=EXCLUDED.nationality,
                                       address=EXCLUDED.address, state=EXCLUDED.state, city=EXCLUDED.city,
                                       zip_code=EXCLUDED.zip_code, country=EXCLUDED.country
-                    """, [
-                        student_id, sd.get("first_name"), sd.get("last_name"), sd.get("gender"), sd.get("dob"),
-                        sd.get("nationality"), sd.get("address"), sd.get("state"), sd.get("city"),
-                        sd.get("zip_code"), sd.get("country")
-                    ])
+                    """,
+                        [
+                            student_id,
+                            sd.get("first_name"),
+                            sd.get("last_name"),
+                            sd.get("gender"),
+                            sd.get("dob"),
+                            sd.get("nationality"),
+                            sd.get("address"),
+                            sd.get("state"),
+                            sd.get("city"),
+                            sd.get("zip_code"),
+                            sd.get("country"),
+                        ],
+                    )
                     results[section] = "updated"
 
                 # 3️⃣ EducationDetails
                 if "education_details" in data:
                     section = "education_details"
                     ed = data[section]
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO student_educationdetails(student_id, institution_name, degree, study_field, cgpa, start_date, end_date)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (student_id)
                         DO UPDATE SET institution_name=EXCLUDED.institution_name, degree=EXCLUDED.degree,
                                       study_field=EXCLUDED.study_field, cgpa=EXCLUDED.cgpa,
                                       start_date=EXCLUDED.start_date, end_date=EXCLUDED.end_date
-                    """, [
-                        student_id, ed.get("institution_name"), ed.get("degree"), ed.get("study_field"),
-                        ed.get("cgpa"), ed.get("start_date"), ed.get("end_date")
-                    ])
+                    """,
+                        [
+                            student_id,
+                            ed.get("institution_name"),
+                            ed.get("degree"),
+                            ed.get("study_field"),
+                            ed.get("cgpa"),
+                            ed.get("start_date"),
+                            ed.get("end_date"),
+                        ],
+                    )
                     results[section] = "updated"
 
                 # 4️⃣ TestScores
                 if "test_scores" in data:
                     section = "test_scores"
                     ts = data[section]
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO student_testscores(student_id, exam_type, english_exam_type, date, listening_score, reading_score, writing_score)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (student_id)
                         DO UPDATE SET exam_type=EXCLUDED.exam_type, english_exam_type=EXCLUDED.english_exam_type,
                                       date=EXCLUDED.date, listening_score=EXCLUDED.listening_score,
                                       reading_score=EXCLUDED.reading_score, writing_score=EXCLUDED.writing_score
-                    """, [
-                        student_id, ts.get("exam_type"), ts.get("english_exam_type"), ts.get("date"),
-                        ts.get("listening_score"), ts.get("reading_score"), ts.get("writing_score")
-                    ])
+                    """,
+                        [
+                            student_id,
+                            ts.get("exam_type"),
+                            ts.get("english_exam_type"),
+                            ts.get("date"),
+                            ts.get("listening_score"),
+                            ts.get("reading_score"),
+                            ts.get("writing_score"),
+                        ],
+                    )
                     results[section] = "updated"
 
                 # 5️⃣ Preference
                 if "preference" in data:
                     section = "preference"
                     pref = data[section]
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO student_preference(student_id, country, degree, discipline, sub_discipline, date, budget)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (student_id)
                         DO UPDATE SET country=EXCLUDED.country, degree=EXCLUDED.degree,
                                       discipline=EXCLUDED.discipline, sub_discipline=EXCLUDED.sub_discipline,
                                       date=EXCLUDED.date, budget=EXCLUDED.budget
-                    """, [
-                        student_id, pref.get("country"), pref.get("degree"), pref.get("discipline"),
-                        pref.get("sub_discipline"), pref.get("date"), pref.get("budget")
-                    ])
+                    """,
+                        [
+                            student_id,
+                            pref.get("country"),
+                            pref.get("degree"),
+                            pref.get("discipline"),
+                            pref.get("sub_discipline"),
+                            pref.get("date"),
+                            pref.get("budget"),
+                        ],
+                    )
                     results[section] = "updated"
 
                 # 6️⃣ ExperienceDetails (list)
@@ -508,18 +576,37 @@ def update_student_profile(request):
                     section = "experience_details"
                     exp_list = data[section]
                     if not isinstance(exp_list, list):
-                        return JsonResponse({"status": "error", "message": f"{section} should be a list"}, status=400)
+                        return JsonResponse(
+                            {
+                                "status": "error",
+                                "message": f"{section} should be a list",
+                            },
+                            status=400,
+                        )
 
-                    cursor.execute("DELETE FROM student_experiencedetails WHERE student_id = %s", [student_id])
+                    cursor.execute(
+                        "DELETE FROM student_experiencedetails WHERE student_id = %s",
+                        [student_id],
+                    )
                     for exp in exp_list:
-                        cursor.execute("""
+                        cursor.execute(
+                            """
                             INSERT INTO student_experiencedetails(student_id, company_name, title, city, country, employment_type, industry_type, start_date, end_date, currently_working)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, [
-                            student_id, exp.get("company_name"), exp.get("title"), exp.get("city"), exp.get("country"),
-                            exp.get("employment_type"), exp.get("industry_type"), exp.get("start_date"), exp.get("end_date"),
-                            exp.get("currently_working", False)
-                        ])
+                        """,
+                            [
+                                student_id,
+                                exp.get("company_name"),
+                                exp.get("title"),
+                                exp.get("city"),
+                                exp.get("country"),
+                                exp.get("employment_type"),
+                                exp.get("industry_type"),
+                                exp.get("start_date"),
+                                exp.get("end_date"),
+                                exp.get("currently_working", False),
+                            ],
+                        )
                     results[section] = "updated"
 
         # Log action (keep your existing function)
@@ -527,27 +614,43 @@ def update_student_profile(request):
         return JsonResponse({"status": "success", "results": results}, status=200)
 
     except Exception as e:
-        return JsonResponse({"status": "error", "message": "Oh! Uh! Some error happended, try again later"}, status=500)
-  
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "Oh! Uh! Some error happended, try again later",
+            },
+            status=500,
+        )
 
-@require_http_methods(['GET'])
+
+@require_http_methods(["GET"])
 def get_all_choices(request):
     choices = {
         "countries": [country for country, _ in COUNTRY_CHOICES],
-        "genders": [gender for gender, _ in [('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')]],
+        "genders": [
+            gender
+            for gender, _ in [
+                ("Male", "Male"),
+                ("Female", "Female"),
+                ("Other", "Other"),
+            ]
+        ],
         "degree_choices": [deg for deg, _ in EducationDetails.DEGREE_CHOICES],
         "study_fields": [field for field, _ in EducationDetails.FIELD_CHOICES],
-        "employment_types": [emp for emp, _ in ExperienceDetails.EMPLOYMENT_TYPE_CHOICES],
+        "employment_types": [
+            emp for emp, _ in ExperienceDetails.EMPLOYMENT_TYPE_CHOICES
+        ],
         "industry_types": [ind for ind, _ in ExperienceDetails.INDUSTRY_TYPE_CHOICES],
         "exam_types": [exam for exam, _ in TestScores.EXAM_TYPE_CHOICES],
         "english_exam_types": [exam for exam, _ in TestScores.ENGLISH_EXAM_CHOICES],
         "preference_degrees": [deg for deg, _ in Preference.DEGREE_CHOICES],
         "preference_disciplines": [disc for disc, _ in Preference.DISCIPLINE_CHOICES],
-        "preference_sub_disciplines": [sub for sub, _ in Preference.SUB_DISCIPLINE_CHOICES],
+        "preference_sub_disciplines": [
+            sub for sub, _ in Preference.SUB_DISCIPLINE_CHOICES
+        ],
     }
 
     return JsonResponse(choices, status=200)
-
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -628,7 +731,7 @@ class GoogleSignInView(View):
 
                     else:
                         # New student → register
-                        random_password = ''.join(
+                        random_password = "".join(
                             random.choices(string.ascii_letters + string.digits, k=12)
                         )
                         hashed_password = make_password(random_password)
@@ -681,17 +784,21 @@ class GoogleSignInView(View):
                 {"error": "Internal server error.", "details": str(e)}, status=500
             )
 
+
 @token_required
 def get_all_students(request):
     employee = request.user  # comes from @token_required
 
     # Permission check
     if not has_perms(employee.id, ["student_logs_view"]):
-        return JsonResponse({
-            'status': 'error',
-            'message': 'You do not have permission to perform this task'
-        }, status=403)
-    
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "You do not have permission to perform this task",
+            },
+            status=403,
+        )
+
     with connection.cursor() as cursor:
         cursor.execute("SELECT id, full_name FROM student_student;")
         rows = cursor.fetchall()
@@ -701,16 +808,17 @@ def get_all_students(request):
 
     return JsonResponse(students, safe=False, status=200)
 
+
 @csrf_exempt
 @token_required
 def get_student_details_with_student_id(request):
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
-    
+
     try:
         body = json.loads(request.body)
         student_id = body.get("student_id")
-        
+
         if not student_id:
             return JsonResponse({"error": "Student ID not provided"}, status=400)
 
@@ -719,13 +827,13 @@ def get_student_details_with_student_id(request):
                 "SELECT get_student_full_details_by_id(%s);", [int(student_id)]
             )
             row = cursor.fetchone()
-        
+
         if not row or not row[0]:
             return JsonResponse({"error": "No student details found"}, status=404)
 
         student_data = json.loads(row[0])
         return JsonResponse(student_data, safe=False)
-    
+
     except Exception as e:
         return JsonResponse({"error": "an error occured"}, status=500)
 
@@ -736,11 +844,14 @@ def get_student_logs(request, student_id):
 
     # Permission check
     if not has_perms(employee.id, ["student_logs_view"]):
-        return JsonResponse({
-            'status': 'error',
-            'message': 'You do not have permission to perform this task'
-        }, status=403)
-    
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "You do not have permission to perform this task",
+            },
+            status=403,
+        )
+
     """
     Fetch all logs (id, logs, added_on, student_id) from logs table.
     """
@@ -752,16 +863,18 @@ def get_student_logs(request, student_id):
         rows = cursor.fetchall()
 
     logs = [
-    {
-        "log": row[0],
-        "added_on": row[1].strftime("%Y-%m-%d %H:%M") if row[1] else None,
-    }
-    for row in rows
+        {
+            "log": row[0],
+            "added_on": row[1].strftime("%Y-%m-%d %H:%M") if row[1] else None,
+        }
+        for row in rows
     ]
 
     return JsonResponse(logs, safe=False, status=200)
 
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 
 def stream_gemini_response(prompt):
     """
@@ -773,8 +886,7 @@ def stream_gemini_response(prompt):
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)
         stream = client.models.generate_content_stream(
-            model="gemini-2.5-flash",
-            contents=[prompt]
+            model="gemini-2.5-flash", contents=[prompt]
         )
 
         def event_stream():
@@ -782,12 +894,13 @@ def stream_gemini_response(prompt):
                 if hasattr(chunk, "text") and chunk.text:
                     yield chunk.text
 
-        return StreamingHttpResponse(event_stream(), content_type='text/plain')
+        return StreamingHttpResponse(event_stream(), content_type="text/plain")
 
     except Exception as e:
         return JsonResponse({"error": "An error occured, try again later"}, status=500)
 
-@require_http_methods(['POST'])
+
+@require_http_methods(["POST"])
 @csrf_exempt
 @token_required
 def summarize_student_interest(request):
@@ -799,24 +912,33 @@ def summarize_student_interest(request):
 
     # Permission check
     if not has_perms(employee.id, ["student_logs_view"]):
-        return JsonResponse({
-            'status': 'error',
-            'message': 'You do not have permission to perform this task'
-        }, status=403)
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "You do not have permission to perform this task",
+            },
+            status=403,
+        )
 
     try:
         if request.method != "POST":
-            return JsonResponse({"status": "error", "message": "POST method required"}, status=405)
+            return JsonResponse(
+                {"status": "error", "message": "POST method required"}, status=405
+            )
 
         # Read student_id from POST JSON body
         try:
             body = json.loads(request.body.decode("utf-8"))
             student_id = body.get("student_id")
         except json.JSONDecodeError:
-            return JsonResponse({"status": "error", "message": "Invalid JSON body"}, status=400)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid JSON body"}, status=400
+            )
 
         if not student_id:
-            return JsonResponse({"status": "error", "message": "student_id is required"}, status=400)
+            return JsonResponse(
+                {"status": "error", "message": "student_id is required"}, status=400
+            )
 
         student_id = int(student_id)
 
@@ -826,10 +948,9 @@ def summarize_student_interest(request):
             row = cursor.fetchone()
 
         if not row or not row[0]:
-            return JsonResponse({
-                "status": "error",
-                "message": "Student not found"
-            }, status=404)
+            return JsonResponse(
+                {"status": "error", "message": "Student not found"}, status=404
+            )
 
         student_data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
 
@@ -854,7 +975,7 @@ def summarize_student_interest(request):
         return stream_gemini_response(prompt)
 
     except Exception as e:
-        return JsonResponse({
-            "status": "error",
-            "message": "An error occured"
-        }, status=500)
+        return JsonResponse(
+            {"status": "error", "message": "An error occured"}, status=500
+        )
+
