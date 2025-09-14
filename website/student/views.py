@@ -63,41 +63,50 @@ class RegisterView(View):
                     status=400,
                 )
 
-            # Check for existing email
-            if Email.objects.filter(email=email).exists():
-                return JsonResponse({"error": "Email already registered."}, status=400)
-
-            # Check for existing mobile number
-            if PhoneNumber.objects.filter(mobile_number=mobile_number).exists():
-                return JsonResponse({"error": "Mobile number already registered."}, status=400)
-
             # Create student and associated records within a transaction
             with transaction.atomic():
-                # Create student with full_name
-                student = Student.objects.create(
-                    full_name=full_name.strip(),  # Save full_name
-                    password=make_password(password),
-                    authToken=uuid4(),
-                )
+                with connection.cursor() as cursor:
+                    hashed_password = make_password(password)
+                    auth_token = str(uuid4())
 
-                # Student Log
+                    # Insert student
+                    cursor.execute(
+                        """
+                        INSERT INTO student_student (full_name, password, "authToken")
+                        VALUES (%s, %s, %s)
+                        RETURNING id
+                        """,
+                        [full_name.strip(), hashed_password, auth_token],
+                    )
+                    student_id = cursor.fetchone()[0]
 
-                StudentLogs.objects.create(
-                    student = student,
-                    logs = "Registered Via Email"
-                )
-                 
-                # Link email
-                Email.objects.create(
-                    student=student,
-                    email=email,
-                )
+                    # Insert student log
+                    cursor.execute(
+                        """
+                        INSERT INTO student_logs (student_id, logs)
+                        VALUES (%s, %s)
+                        """,
+                        [student_id, "Registered Via Email"],
+                    )
 
-                # Link phone number
-                PhoneNumber.objects.create(
-                    student=student,
-                    mobile_number=mobile_number,
-                )
+                    # Insert email
+                    cursor.execute(
+                        """
+                        INSERT INTO student_email (student_id, email)
+                        VALUES (%s, %s)
+                        """,
+                        [student_id, email],
+                    )
+
+                    # Insert phone number
+                    cursor.execute(
+                        """
+                        INSERT INTO student_phonenumber (student_id, mobile_number)
+                        VALUES (%s, %s)
+                        """,
+                        [student_id, mobile_number],
+                    )
+
 
             return JsonResponse(
                 {
@@ -105,7 +114,7 @@ class RegisterView(View):
                     "email": email,
                     "mobile_number": mobile_number,
                     "full_name": full_name,  # Include full_name in response
-                    "authToken": str(student.authToken),
+                    "authToken": auth_token,
                 },
                 status=201,
             )
@@ -114,9 +123,10 @@ class RegisterView(View):
             return JsonResponse({"error": "Invalid JSON."}, status=400)
         except Exception as e:
             # Log the error in production
-            return JsonResponse({"error": "Internal server error."}, status=500)
+            return JsonResponse({"error": "Internal server error.",}, status=500)
+            # return JsonResponse({"error": str(e),}, status=500)
 
-
+#This view uses django password hashing which is difficult to do in postgres function, so leave it as it is
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(require_http_methods(["POST"]), name="dispatch")
 class LoginView(View):
@@ -126,40 +136,65 @@ class LoginView(View):
             data = json.loads(request.body.decode("utf-8"))
             email = data.get("email")
             password = data.get("password")
-            
+
             if not email or not password:
                 return JsonResponse(
                     {"error": "Both email and password are required."}, status=400
                 )
 
-            try:
-                email_obj = Email.objects.get(email=email)
-                user = email_obj.student
-                StudentLogs.objects.create(
-                    student = student,
-                    logs = "Logged in Via Email"
-                )
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT student_id FROM student_email WHERE email = %s LIMIT 1",
+                        [email],
+                    )
+                    row = cursor.fetchone()
+                    if not row:
+                        return JsonResponse({"error": "Invalid credentials."}, status=400)
 
-            except Email.DoesNotExist:
-                return JsonResponse({"error": "Invalid credentials."}, status=400)
+                    student_id = row[0]
 
-            if not check_password(password, user.password):
-                return JsonResponse({"error": "Invalid credentials."}, status=400)
-            
-            user.authToken = uuid4()
-            user.save()
+                    cursor.execute(
+                        "SELECT password FROM student_student WHERE id = %s",
+                        [student_id],
+                    )
+                    row = cursor.fetchone()
+                    if not row:
+                        return JsonResponse({"error": "Invalid credentials."}, status=400)
+
+                    db_password = row[0]
+
+                    if not check_password(password, db_password):
+                        return JsonResponse({"error": "Invalid credentials."}, status=400)
+
+                    auth_token = str(uuid4())
+                    cursor.execute(
+                        'UPDATE student_student SET "authToken" = %s WHERE id = %s',
+                        [auth_token, student_id],
+                    )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO student_logs (student_id, logs)
+                        VALUES (%s, %s)
+                        """,
+                        [student_id, "Logged in Via Email"],
+                    )
 
             return JsonResponse(
                 {
                     "status": "success",
                     "email": email,
-                    "authToken": str(user.authToken),
+                    "authToken": auth_token,
                 },
                 status=200,
             )
+
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
 
+        except Exception:
+            return JsonResponse({"error": "Internal server error."}, status=500)
 
 @csrf_exempt
 @api_key_required
@@ -170,40 +205,46 @@ def add_to_shortlist_university(request):
         data = json.loads(request.body.decode("utf-8"))
         university_name = data.get("university_name")
 
-        
         if not university_name:
             return JsonResponse({"error": "University name is required."}, status=400)
 
-        student = request.user
-        uni = get_object_or_404(university, name__iexact=university_name.strip())
+        student_id = request.user.id  # logged in student
 
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM add_shortlist_university(%s::BIGINT, %s::TEXT)",
+                    [student_id, university_name.strip()]
+                )
+                result = cursor.fetchone()
 
-        # Check if already shortlisted
-        if ShortlistedUniversity.objects.filter(student=student, university=uni).exists():
+        status, shortlist_id, student_name, uni_name, added_on = result
+
+        if status == "not_found":
+            return JsonResponse({"error": "University not found."}, status=404)
+        elif status == "duplicate":
+            return JsonResponse({"message": "University is already shortlisted."}, status=400)
+        elif status == "success":
             return JsonResponse(
-                {"message": "University is already shortlisted."}, status=400
-            )
-
-        shortlist = ShortlistedUniversity.objects.create(
-            student=student, university=uni, added_on=timezone.now()
-        )
-
-        create_student_log(request, f"Shortlisted University '{university_name}'")
-        return JsonResponse(
-            {
-                "status": "success",
-                "shortlist": {
-                    "id": shortlist.id,
-                    "student": shortlist.student.full_name,
-                    "university": shortlist.university.name,
-                    "added_on": shortlist.added_on.strftime("%Y-%m-%d %H:%M:%S"),
+                {
+                    "status": "success",
+                    "shortlist": {
+                        "id": shortlist_id,
+                        "student": student_name,
+                        "university": uni_name,
+                        "added_on": added_on.strftime("%Y-%m-%d %H:%M:%S"),
+                    },
                 },
-            },
-            status=201,
-        )
+                status=201,
+            )
+        else:
+            return JsonResponse({"error": "Internal server error."}, status=500)
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 
 @csrf_exempt
@@ -217,38 +258,57 @@ def add_to_shortlist_course(request):
         course_name = data.get("course_name")
 
         if not university_name or not course_name:
-            return JsonResponse({"error": "Both university_name and course_name are required."}, status=400)
-
-        student = request.user
-        uni = get_object_or_404(university, name__iexact=university_name.strip())
-        course = get_object_or_404(Course, university=uni, program_name__iexact=course_name.strip())
-
-        # Check if already shortlisted
-        if ShortlistedCourse.objects.filter(student=student, course=course).exists():
             return JsonResponse(
-                {"message": "Course is already shortlisted."}, status=400
+                {"error": "Both university_name and course_name are required."},
+                status=400,
             )
 
-        shortlist = ShortlistedCourse.objects.create(
-            student=student, course=course, added_on=timezone.now()
-        )
-        create_student_log(request, f"Shortlisted Course '{course_name}'")
-        return JsonResponse(
-            {
-                "status": "success",
-                "shortlist": {
-                    "id": shortlist.id,
-                    "student": shortlist.student.full_name,
-                    "course": shortlist.course.program_name,
-                    "university": shortlist.course.university.name,
-                    "added_on": shortlist.added_on.strftime("%Y-%m-%d %H:%M:%S"),
+        student_id = request.user.id  # logged-in student
+
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM add_shortlist_course(%s::BIGINT, %s::TEXT, %s::TEXT)",
+                    [student_id, university_name.strip(), course_name.strip()]
+                )
+                result = cursor.fetchone()
+
+        if not result:
+            return JsonResponse({"error": "Function returned no data."}, status=500)
+
+        status, shortlist_id, student_name, uni_name, program_name, added_on = result
+        added_on_str = added_on.strftime("%Y-%m-%d %H:%M:%S") if added_on else None
+
+        if status == "university_not_found":
+            return JsonResponse({"error": "University not found."}, status=404)
+        elif status == "course_not_found":
+            return JsonResponse({"error": "Course not found."}, status=404)
+        elif status == "duplicate":
+            return JsonResponse({"message": "Course is already shortlisted."}, status=400)
+        elif status == "success":
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "shortlist": {
+                        "id": shortlist_id,
+                        "student": student_name,
+                        "university": uni_name,
+                        "course": program_name,
+                        "added_on": added_on_str,
+                    },
                 },
-            },
-            status=201,
-        )
+                status=201,
+            )
+        else:
+            return JsonResponse({"error": "Internal server error."}, status=500)
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"error": "Internal server error."}, status=500)
+
 
 
 @csrf_exempt
@@ -256,53 +316,45 @@ def add_to_shortlist_course(request):
 @user_token_required
 @require_http_methods(["GET"])
 def get_shortlisted_items(request):
-    student = request.user
+    student_id = request.user.id
 
-    # Get shortlisted universities
-    universities = ShortlistedUniversity.objects.filter(student=student).select_related("university__location")
-    uni_list = [
-        {
-            "id": su.id,
-            "university_id": su.university.id,
-            "university_name": su.university.name,
-            "cover_url": su.university.cover_url,
-            "location": {
-                "city": su.university.location.city,
-                "state": su.university.location.state,
-                "country": su.university.location.country,
-            },
-            "added_on": su.added_on.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        for su in universities
-    ]
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                # Call the Postgres function using student_id
+                cursor.execute(
+                    "SELECT get_shortlisted_items(%s::BIGINT)", [student_id]
+                )
+                result = cursor.fetchone()
+                if not result:
+                    return JsonResponse({"error": "No data returned."}, status=500)
 
-    # Get shortlisted courses
-    courses = ShortlistedCourse.objects.filter(student=student).select_related("course__university")
-    course_list = [
-        {
-            "id": sc.id,
-            "course_id": sc.course.id,
-            "program_name": sc.course.program_name,
-            "program_level": sc.course.program_level,
-            "tuition_fees": sc.course.tution_fees,  # Added tuition fee
-            "university_id": sc.course.university.id,
-            "university_name": sc.course.university.name,
-            "added_on": sc.added_on.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        for sc in courses
-    ]
+                result_json = result[0]
+                # Ensure it's a dict
+                if isinstance(result_json, str):
+                    import json
+                    result_json = json.loads(result_json)
+
+        # Log action in Django for flexibility
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO student_logs (student_id, logs, added_on)
+                VALUES (%s, %s, NOW())
+                """,
+                [student_id, "Opened Shortlisted Page"],
+            )
+
+        return JsonResponse(result_json, status=200)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse(
+            {"error": "An unexpected error occurred."}, status=500
+        )
+
     
-    create_student_log(request, f"Opened Shortlisted Page")
-    return JsonResponse(
-        {
-            "status": "success",
-            "universities": uni_list,
-            "courses": course_list,
-        },
-        status=200,
-    )
-
-
 @csrf_exempt
 @api_key_required
 @user_token_required
@@ -311,111 +363,20 @@ def get_student_details(request):
     try:
         student = request.user
         student_id = student.id
+    
+    except Exception as e:
+        return JsonResponse({'error': 'Error, kindly enter correct student id or try again'})
 
-        student_data = {
-            'full_name': student.full_name,  # Add full_name
-        }
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_student_full_details(%s);", [student_id])
+            row = cursor.fetchone()
+            result_json = row[0] if row else {}
 
-        email_obj = getattr(student, 'email', None)
-        email_data = {
-            'email': getattr(email_obj, 'email', ''),
-        }
-
-        phone_obj = getattr(student, 'phone_number', None)
-        phone_number_data = {
-            'mobile_number': getattr(phone_obj, 'mobile_number', ''),
-        }
-
-        student_details_obj = getattr(student, 'details', None)
-        student_details_data = {
-            'first_name': getattr(student_details_obj, 'first_name', ''),
-            'last_name': getattr(student_details_obj, 'last_name', ''),
-            'gender': getattr(student_details_obj, 'gender', ''),
-            'dob': student_details_obj.dob.isoformat() if student_details_obj and student_details_obj.dob else '',
-            'nationality': getattr(student_details_obj, 'nationality', ''),
-            'address': getattr(student_details_obj, 'address', ''),
-            'state': getattr(student_details_obj, 'state', ''),
-            'city': getattr(student_details_obj, 'city', ''),
-            'zip_code': getattr(student_details_obj, 'zip_code', ''),
-            'country': getattr(student_details_obj, 'country', ''),
-        }
-
-        edu_obj = getattr(student, 'education_details', None)
-        education_details_data = {
-            'institution_name': getattr(edu_obj, 'institution_name', ''),
-            'degree': getattr(edu_obj, 'degree', ''),
-            'study_field': getattr(edu_obj, 'study_field', ''),
-            'cgpa': str(edu_obj.cgpa) if edu_obj and edu_obj.cgpa is not None else None,
-            'start_date': edu_obj.start_date.isoformat() if edu_obj and edu_obj.start_date else '',
-            'end_date': edu_obj.end_date.isoformat() if edu_obj and edu_obj.end_date else None,
-        }
-
-        experience_details_data = [
-            {
-                'company_name': exp.company_name,
-                'title': exp.title,
-                'city': exp.city,
-                'country': exp.country,
-                'employment_type': exp.employment_type,
-                'industry_type': exp.industry_type,
-                'start_date': exp.start_date.isoformat(),
-                'end_date': exp.end_date.isoformat() if exp.end_date else '',
-                'currently_working': exp.currently_working,
-            }
-            for exp in student.experiences.all()
-        ]
-
-        test_obj = getattr(student, 'test_scores', None)
-        test_scores_data = {
-            'exam_type': getattr(test_obj, 'exam_type', ''),
-            'english_exam_type': getattr(test_obj, 'english_exam_type', ''),
-            'date': test_obj.date.isoformat() if test_obj and test_obj.date else '',
-            'listening_score': getattr(test_obj, 'listening_score', ''),
-            'reading_score': getattr(test_obj, 'reading_score', ''),
-            'writing_score': getattr(test_obj, 'writing_score', ''),
-        }
-
-        pref_obj = getattr(student, 'preference', None)
-        preference_data = {
-            'country': getattr(pref_obj, 'country', ''),
-            'degree': getattr(pref_obj, 'degree', ''),
-            'discipline': getattr(pref_obj, 'discipline', ''),
-            'sub_discipline': getattr(pref_obj, 'sub_discipline', ''),
-            'date': pref_obj.date.isoformat() if pref_obj and pref_obj.date else '',
-            'budget': getattr(pref_obj, 'budget', ''),
-        }
-
-        shortlisted_universities_data = [
-            {
-                'university': su.university_id,
-                'added_on': su.added_on.isoformat(),
-            }
-            for su in student.shortlisted_universities.all()
-        ]
-
-        choices_data = {
-            'gender_choices': [{'value': v, 'label': l} for v, l in StudentDetails.GENDERS],
-            'degree_choices': [{'value': v, 'label': l} for v, l in Preference.DEGREE_CHOICES],
-            'exam_type_choices': [{'value': v, 'label': l} for v, l in TestScores.EXAM_TYPE_CHOICES],
-            'country_choices': [v for v, _ in COUNTRY_CHOICES],
-        }
-
-        create_student_log(request, f"Opened Profile Page")
-        return JsonResponse({
-            'student': student_data,
-            'email': email_data,
-            'phone_number': phone_number_data,
-            'student_details': student_details_data,
-            'education_details': education_details_data,
-            'experience_details': experience_details_data,
-            'test_scores': test_scores_data,
-            'preference': preference_data,
-            'shortlisted_universities': shortlisted_universities_data,
-            'choices': choices_data
-        })
+        return JsonResponse(result_json)
 
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': "An error occured, try again later"}, status=500)
 
 
 def validate_required_fields(data, required_fields):
@@ -428,7 +389,8 @@ def validate_required_fields(data, required_fields):
 @user_token_required
 @require_http_methods(["POST"])
 def update_student_profile(request):
-    student = request.user
+    student_id = request.user.id
+
     try:
         data = json.loads(request.body.decode("utf-8"))
     except json.JSONDecodeError:
@@ -439,7 +401,7 @@ def update_student_profile(request):
 
     results = {}
     allowed_sections = {
-        "student",  # Add student section for updating full_name
+        "student",
         "student_details",
         "education_details",
         "test_scores",
@@ -447,7 +409,6 @@ def update_student_profile(request):
         "experience_details",
     }
 
-    # Check for invalid/unknown keys
     unknown_keys = set(data.keys()) - allowed_sections
     if unknown_keys:
         return JsonResponse({
@@ -456,144 +417,118 @@ def update_student_profile(request):
         }, status=400)
 
     try:
-        # 1. Student (for updating full_name)
-        if "student" in data:
-            section = "student"
-            student_data = data[section]
-            required_fields = ["full_name"]
-            missing = validate_required_fields(student_data, required_fields)
-            if missing:
-                return JsonResponse({"status": "error", "message": f"Missing required fields in {section}: {', '.join(missing)}"}, status=400)
+        with transaction.atomic():
+            with connection.cursor() as cursor:
 
-            full_name = student_data.get("full_name").strip()
-            # Validate full_name
-            if not (1 <= len(full_name) <= 200):
-                return JsonResponse(
-                    {"status": "error", "message": "Full name must be between 1 and 200 characters."},
-                    status=400,
-                )
+                # 1️⃣ Student (update full_name)
+                if "student" in data:
+                    section = "student"
+                    full_name = data[section].get("full_name", "").strip()
+                    if not (1 <= len(full_name) <= 200):
+                        return JsonResponse({"status": "error", "message": "Full name must be between 1 and 200 characters."}, status=400)
 
-            try:
-                with transaction.atomic():
-                    student.full_name = full_name
-                    student.save()
-                    results[section] = "updated"
-            except Exception as e:
-                results[section] = f"error: {str(e)}"
-
-        # 2. StudentDetails
-        if "student_details" in data:
-            section = "student_details"
-            details_data = data[section]
-            required_fields = [
-                "first_name", "last_name", "gender", "dob", "nationality",
-                "address", "state", "city", "zip_code", "country"
-            ]
-            missing = validate_required_fields(details_data, required_fields)
-            if missing:
-                return JsonResponse({"status": "error", "message": f"Missing required fields in {section}: {', '.join(missing)}"}, status=400)
-
-            try:
-                with transaction.atomic():
-                    StudentDetails.objects.update_or_create(
-                        student=student,
-                        defaults=details_data
+                    cursor.execute(
+                        "UPDATE student_student SET full_name = %s WHERE id = %s",
+                        [full_name, student_id]
                     )
                     results[section] = "updated"
-            except Exception as e:
-                results[section] = f"error: {str(e)}"
 
-        # 3. EducationDetails
-        if "education_details" in data:
-            section = "education_details"
-            edu_data = data[section]
-            required_fields = ["institution_name", "degree", "study_field", "cgpa", "start_date", "end_date"]
-            missing = validate_required_fields(edu_data, required_fields)
-            if missing:
-                return JsonResponse({"status": "error", "message": f"Missing required fields in {section}: {', '.join(missing)}"}, status=400)
-
-            try:
-                with transaction.atomic():
-                    EducationDetails.objects.update_or_create(
-                        student=student,
-                        defaults=edu_data
-                    )
+                # 2️⃣ StudentDetails
+                if "student_details" in data:
+                    section = "student_details"
+                    sd = data[section]
+                    cursor.execute("""
+                        INSERT INTO student_studentdetails(student_id, first_name, last_name, gender, dob, nationality, address, state, city, zip_code, country)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (student_id) 
+                        DO UPDATE SET first_name=EXCLUDED.first_name, last_name=EXCLUDED.last_name,
+                                      gender=EXCLUDED.gender, dob=EXCLUDED.dob, nationality=EXCLUDED.nationality,
+                                      address=EXCLUDED.address, state=EXCLUDED.state, city=EXCLUDED.city,
+                                      zip_code=EXCLUDED.zip_code, country=EXCLUDED.country
+                    """, [
+                        student_id, sd.get("first_name"), sd.get("last_name"), sd.get("gender"), sd.get("dob"),
+                        sd.get("nationality"), sd.get("address"), sd.get("state"), sd.get("city"),
+                        sd.get("zip_code"), sd.get("country")
+                    ])
                     results[section] = "updated"
-            except Exception as e:
-                results[section] = f"error: {str(e)}"
 
-        # 4. TestScores
-        if "test_scores" in data:
-            section = "test_scores"
-            ts_data = data[section]
-            required_fields = ["exam_type", "english_exam_type", "date", "listening_score", "reading_score", "writing_score"]
-            missing = validate_required_fields(ts_data, required_fields)
-            if missing:
-                return JsonResponse({"status": "error", "message": f"Missing required fields in {section}: {', '.join(missing)}"}, status=400)
-
-            try:
-                with transaction.atomic():
-                    TestScores.objects.update_or_create(
-                        student=student,
-                        defaults=ts_data
-                    )
+                # 3️⃣ EducationDetails
+                if "education_details" in data:
+                    section = "education_details"
+                    ed = data[section]
+                    cursor.execute("""
+                        INSERT INTO student_educationdetails(student_id, institution_name, degree, study_field, cgpa, start_date, end_date)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (student_id)
+                        DO UPDATE SET institution_name=EXCLUDED.institution_name, degree=EXCLUDED.degree,
+                                      study_field=EXCLUDED.study_field, cgpa=EXCLUDED.cgpa,
+                                      start_date=EXCLUDED.start_date, end_date=EXCLUDED.end_date
+                    """, [
+                        student_id, ed.get("institution_name"), ed.get("degree"), ed.get("study_field"),
+                        ed.get("cgpa"), ed.get("start_date"), ed.get("end_date")
+                    ])
                     results[section] = "updated"
-            except Exception as e:
-                results[section] = f"error: {str(e)}"
 
-        # 5. Preference
-        if "preference" in data:
-            section = "preference"
-            pref_data = data[section]
-            required_fields = ["country", "degree", "discipline", "sub_discipline", "date", "budget"]
-            missing = validate_required_fields(pref_data, required_fields)
-            if missing:
-                return JsonResponse({"status": "error", "message": f"Missing required fields in {section}: {', '.join(missing)}"}, status=400)
-
-            try:
-                with transaction.atomic():
-                    Preference.objects.update_or_create(
-                        student=student,
-                        defaults=pref_data
-                    )
+                # 4️⃣ TestScores
+                if "test_scores" in data:
+                    section = "test_scores"
+                    ts = data[section]
+                    cursor.execute("""
+                        INSERT INTO student_testscores(student_id, exam_type, english_exam_type, date, listening_score, reading_score, writing_score)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (student_id)
+                        DO UPDATE SET exam_type=EXCLUDED.exam_type, english_exam_type=EXCLUDED.english_exam_type,
+                                      date=EXCLUDED.date, listening_score=EXCLUDED.listening_score,
+                                      reading_score=EXCLUDED.reading_score, writing_score=EXCLUDED.writing_score
+                    """, [
+                        student_id, ts.get("exam_type"), ts.get("english_exam_type"), ts.get("date"),
+                        ts.get("listening_score"), ts.get("reading_score"), ts.get("writing_score")
+                    ])
                     results[section] = "updated"
-            except Exception as e:
-                results[section] = f"error: {str(e)}"
 
-        # 6. ExperienceDetails (List)
-        if "experience_details" in data:
-            section = "experience_details"
-            exp_list = data[section]
-            if not isinstance(exp_list, list):
-                return JsonResponse({"status": "error", "message": f"{section} should be a list"}, status=400)
+                # 5️⃣ Preference
+                if "preference" in data:
+                    section = "preference"
+                    pref = data[section]
+                    cursor.execute("""
+                        INSERT INTO student_preference(student_id, country, degree, discipline, sub_discipline, date, budget)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (student_id)
+                        DO UPDATE SET country=EXCLUDED.country, degree=EXCLUDED.degree,
+                                      discipline=EXCLUDED.discipline, sub_discipline=EXCLUDED.sub_discipline,
+                                      date=EXCLUDED.date, budget=EXCLUDED.budget
+                    """, [
+                        student_id, pref.get("country"), pref.get("degree"), pref.get("discipline"),
+                        pref.get("sub_discipline"), pref.get("date"), pref.get("budget")
+                    ])
+                    results[section] = "updated"
 
-            required_fields = [
-                "company_name", "title", "city", "country",
-                "employment_type", "industry_type", "start_date"
-            ]
+                # 6️⃣ ExperienceDetails (list)
+                if "experience_details" in data:
+                    section = "experience_details"
+                    exp_list = data[section]
+                    if not isinstance(exp_list, list):
+                        return JsonResponse({"status": "error", "message": f"{section} should be a list"}, status=400)
 
-            for idx, exp in enumerate(exp_list):
-                missing = validate_required_fields(exp, required_fields)
-                if missing:
-                    return JsonResponse({"status": "error", "message": f"Missing required fields in {section}[{idx}]: {', '.join(missing)}"}, status=400)
-
-            try:
-                with transaction.atomic():
-                    student.experiences.all().delete()
+                    cursor.execute("DELETE FROM student_experiencedetails WHERE student_id = %s", [student_id])
                     for exp in exp_list:
-                        ExperienceDetails.objects.create(
-                            student=student,
-                            **exp
-                        )
+                        cursor.execute("""
+                            INSERT INTO student_experiencedetails(student_id, company_name, title, city, country, employment_type, industry_type, start_date, end_date, currently_working)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, [
+                            student_id, exp.get("company_name"), exp.get("title"), exp.get("city"), exp.get("country"),
+                            exp.get("employment_type"), exp.get("industry_type"), exp.get("start_date"), exp.get("end_date"),
+                            exp.get("currently_working", False)
+                        ])
                     results[section] = "updated"
-            except Exception as e:
-                results[section] = f"error: {str(e)}"
 
+        # Log action (keep your existing function)
         create_student_log(request, f"Updated Profile")
         return JsonResponse({"status": "success", "results": results}, status=200)
 
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)    
+        return JsonResponse({"status": "error", "message": "Oh! Uh! Some error happended, try again later"}, status=500)
+  
 
 @require_http_methods(['GET'])
 def get_all_choices(request):
@@ -645,86 +580,105 @@ class GoogleSignInView(View):
                     status=400,
                 )
 
-            # Check if email already exists
-            try:
-                email_obj = Email.objects.get(email=email)
-                student = email_obj.student
-
-                StudentLogs.objects.create(
-                    student = student,
-                    logs = "Logged in via google"
-                )
-
-                # Update authToken for existing user
-                student.authToken = uuid4()
-                student.save()
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": "User already exists, logged in successfully.",
-                        "email": email,
-                        "full_name": student.full_name,
-                        "authToken": str(student.authToken),
-                    },
-                    status=200,
-                )
-            except Email.DoesNotExist:
-                # Generate a random password
-                random_password = ''.join(random.choices(
-                    string.ascii_letters + string.digits, k=12
-                ))
-                # Create new user within a transaction
-                try:
-                    with transaction.atomic():
-                        # Create student with full_name and random password
-                        student = Student.objects.create(
-                            full_name=full_name.strip(),
-                            authToken=uuid4(),
-                            password=make_password(random_password),  # Hash the random password
-                        )
-
-                        # Student Log
-                        StudentLogs.objects.create(
-                            student = student,
-                            logs = "Registered Via Google"
-                        )
-
-                        # Link email
-                        Email.objects.create(
-                            student=student,
-                            email=email,
-                        )
-                        
-                        # Skip phone_number for Google Sign-In
-                except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f"Failed to create user: {str(e)}", exc_info=True)
-                    return JsonResponse(
-                        {"error": "Failed to create user.", "details": str(e)},
-                        status=500,
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    # Check if email already exists
+                    cursor.execute(
+                        """
+                        SELECT s.id, s.full_name
+                        FROM student_student s
+                        JOIN student_email e ON e.student_id = s.id
+                        WHERE e.email = %s
+                        LIMIT 1
+                        """,
+                        [email],
                     )
+                    row = cursor.fetchone()
 
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": "User registered successfully via Google Sign-In.",
-                        "email": email,
-                        "full_name": full_name,
-                        "authToken": str(student.authToken),
-                    },
-                    status=201,
-                )
+                    if row:
+                        # Existing student
+                        student_id, student_name = row
+                        new_token = str(uuid4())
+
+                        # Update authToken
+                        cursor.execute(
+                            "UPDATE student_student SET authtoken = %s WHERE id = %s",
+                            [new_token, student_id],
+                        )
+
+                        # Log login
+                        cursor.execute(
+                            """
+                            INSERT INTO student_logs (student_id, logs, created_at)
+                            VALUES (%s, %s, NOW())
+                            """,
+                            [student_id, "Logged in via Google"],
+                        )
+
+                        return JsonResponse(
+                            {
+                                "status": "success",
+                                "message": "User already exists, logged in successfully.",
+                                "email": email,
+                                "full_name": student_name,
+                                "authToken": new_token,
+                            },
+                            status=200,
+                        )
+
+                    else:
+                        # New student → register
+                        random_password = ''.join(
+                            random.choices(string.ascii_letters + string.digits, k=12)
+                        )
+                        hashed_password = make_password(random_password)
+                        new_token = str(uuid4())
+
+                        # Insert into student_student
+                        cursor.execute(
+                            """
+                            INSERT INTO student_student (full_name, password, authtoken, created_at)
+                            VALUES (%s, %s, %s, NOW())
+                            RETURNING id
+                            """,
+                            [full_name.strip(), hashed_password, new_token],
+                        )
+                        student_id = cursor.fetchone()[0]
+
+                        # Log registration
+                        cursor.execute(
+                            """
+                            INSERT INTO student_logs (student_id, logs, created_at)
+                            VALUES (%s, %s, NOW())
+                            """,
+                            [student_id, "Registered via Google"],
+                        )
+
+                        # Insert email
+                        cursor.execute(
+                            """
+                            INSERT INTO student_email (student_id, email, created_at)
+                            VALUES (%s, %s, NOW())
+                            """,
+                            [student_id, email],
+                        )
+
+                        return JsonResponse(
+                            {
+                                "status": "success",
+                                "message": "User registered successfully via Google Sign-In.",
+                                "email": email,
+                                "full_name": full_name,
+                                "authToken": new_token,
+                            },
+                            status=201,
+                        )
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Google Sign-In Error: {str(e)}", exc_info=True)
             return JsonResponse(
-                {"error": "Internal server error.", "details": str(e)},
-                status=500,
+                {"error": "Internal server error.", "details": str(e)}, status=500
             )
 
 @token_required
@@ -773,7 +727,7 @@ def get_student_details_with_student_id(request):
         return JsonResponse(student_data, safe=False)
     
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "an error occured"}, status=500)
 
 
 @token_required
@@ -831,7 +785,7 @@ def stream_gemini_response(prompt):
         return StreamingHttpResponse(event_stream(), content_type='text/plain')
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "An error occured, try again later"}, status=500)
 
 @require_http_methods(['POST'])
 @csrf_exempt
@@ -902,5 +856,5 @@ def summarize_student_interest(request):
     except Exception as e:
         return JsonResponse({
             "status": "error",
-            "message": str(e)
+            "message": "An error occured"
         }, status=500)

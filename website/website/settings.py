@@ -14,6 +14,13 @@ IS_PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REFRESH_TOKEN = os.getenv("GOOGLE_REFRESH_TOKEN")
+GOOGLE_DRIVE_FOLDER_ID_PUBLIC = os.getenv("GOOGLE_DRIVE_FOLDER_ID_PUBLIC")
+GOOGLE_DRIVE_FOLDER_ID_PRIVATE = os.getenv("GOOGLE_DRIVE_FOLDER_ID_PRIVATE")
+GOOGLE_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
@@ -65,7 +72,7 @@ ROOT_URLCONF = "website.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
