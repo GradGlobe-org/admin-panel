@@ -863,3 +863,31 @@ def summarize_student_interest(request):
             "status": "error",
             "message": "An error occured"
         }, status=500)
+    
+@require_http_methods(['GET'])
+@csrf_exempt
+@token_required
+def bucket_list(request):
+    employee = request.user
+
+    # Permission check
+    if not has_perms(employee.id, ["manage_buckets"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT id, name FROM student_bucket ORDER BY id;")
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return JsonResponse({"error": "No buckets found"}, status=404)
+
+            buckets = [{"id": row[0], "name": row[1]} for row in rows]
+
+        return JsonResponse(buckets, safe=False, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": f"Unexpected error {str(e)}"}, status=500)

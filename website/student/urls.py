@@ -14,4 +14,5 @@ urlpatterns = [
     path("logs/<int:student_id>/", get_student_logs, name="student-logs"),
     path("summarize_interest/", summarize_student_interest),
     path("student_details_employee/", get_student_details_with_student_id, name="complete_student_details"),
+    path("get_all_buckets/", bucket_list)
 ]
