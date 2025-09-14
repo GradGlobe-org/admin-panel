@@ -835,20 +835,25 @@ def summarize_student_interest(request):
 
         # --- Prepare prompt for Gemini ---
         prompt = f"""
-        Analyze this student's profile and generate a detailed, structured summary including the following:
+            Analyze this student's profile and generate a clear, structured summary with the following:
 
-        1. **Interested Universities & Courses:** List the actual names of the universities and courses the student has shortlisted. Include location, degree type, and field of study. If there are multiple universities or courses, summarize the main focus areas and priorities.
+            1. **Lead Conversion Likelihood:** Based on the student’s background, interests, shortlisted universities/courses, and preferences, assess the likelihood that the student can be successfully converted into a lead. Give a clear probability (e.g., High, Medium, Low) with reasoning.
 
-        2. **Educational Background:** Include degree, field of study, CGPA, key achievements, and language proficiency (e.g., IELTS scores).
+            2. **Shortlisted Universities & Courses:** List the names of the universities and courses the student has shortlisted or shown interest in. Include university location, degree type, and field of study. If there are multiple, summarize the focus areas and priorities.
 
-        3. **Professional Experience:** Summarize relevant work experience, job titles, companies, locations, employment type, duration, and notable achievements.
+            3. **Preferred Countries & Degree Preferences:** Summarize the countries and degree levels the student is most interested in pursuing, based on preferences and shortlisted options.
 
-        4. **Personal Details:** Include nationality and current country of residence.
+            4. **Educational Background:** Provide details such as degree, field of study, CGPA, key academic achievements, and language proficiency (including test scores like IELTS, TOEFL, etc.).
 
-        Keep the summary clear, structured and detailed, so a counselor can quickly understand the student’s profile and interests.
+            5. **Professional Experience:** Summarize the student’s relevant work experience, including job titles, companies, locations, employment type, duration, and any key accomplishments.
 
-        Student data (JSON): {json.dumps(student_data)}
+            6. **Personal Details:** Mention nationality and current country of residence.
 
+            Keep the output detailed and structured so that a counselor can quickly understand the student’s academic and professional profile, interests, and chances of conversion.
+
+            Dont share any programmatically error or code. Just keep it general.
+                
+            Student data (JSON): {json.dumps(student_data)}
         """
 
         return stream_gemini_response(prompt)
