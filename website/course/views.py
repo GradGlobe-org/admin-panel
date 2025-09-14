@@ -210,7 +210,9 @@ class SearchParams(BaseModel):
         use_enum_values = True
 
 
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY)
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY, max_output_tokens=500
+)
 parser = PydanticOutputParser(pydantic_object=SearchParams)
 
 prompt = ChatPromptTemplate.from_messages(
@@ -241,7 +243,7 @@ class FilterSearchView(View):
         if not query:
             return JsonResponse({"error": "Missing query"}, status=400)
 
-        print(f"[DEBUG] Incoming query: {query}")
+        # print(f"[DEBUG] Incoming query: {query}")
 
         try:
             # Step 1: Use Gemini to parse query → structured params
@@ -252,12 +254,12 @@ class FilterSearchView(View):
                 }
             )
 
-            print("[DEBUG] Extracted Params:", params.dict())
+            # print("[DEBUG] Extracted Params:", params.dict())
 
             # Step 2: Call Postgres function
             with connection.cursor() as cursor:
-                print("[DEBUG] Executing filter_search_advance with args:")
-                print(params.dict())
+                # print("[DEBUG] Executing filter_search_advance with args:")
+                # print(params.dict())
 
                 cursor.execute(
                     """
