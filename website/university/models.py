@@ -23,6 +23,14 @@ class Country(models.Model):
 
     def __str__(self):
         return self.name
+    
+class CountryFAQ(models.Model):
+    country = models.ForeignKey(Country, on_delete=models.PROTECT, related_name="faqs")
+    question = models.TextField()
+    answer = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.country.name}: {self.question[:50]}..."
 
 class WhyStudyInSection(models.Model):
     country = models.ForeignKey(
