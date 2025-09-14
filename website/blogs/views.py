@@ -12,6 +12,8 @@ from slugify import slugify  # using `python-slugify`
 from django.views.decorators.csrf import csrf_exempt
 import uuid
 
+STREAM_IMAGE_URL = "/blog/images"
+
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
@@ -22,17 +24,11 @@ def blog_post_summary_view(request):
         with connection.cursor() as cursor:
             if not auth_token:
                 cursor.execute("""
-                    SELECT 
-                        p.id,
-                        p.title,
-                        p.slug,
-                        p.view_count,
-                        p.featured_image,
-                        SUBSTR(p.content, 1, 1000) AS content_snippet,
-                        e.name AS author_name
+                    SELECT p.id, p.title, p.slug, p.view_count, p.featured_image, p.image_uuid, p.google_file_id,
+                           SUBSTR(p.content,1,1000) AS content_snippet, e.name AS author_name
                     FROM blogs_post p
                     JOIN authentication_employee e ON p.author_id = e.id
-                    WHERE p.status = 'PUBLISHED'
+                    WHERE p.status='PUBLISHED'
                     ORDER BY p.created_at DESC
                 """)
             else:
@@ -43,26 +39,41 @@ def blog_post_summary_view(request):
                     return JsonResponse({"error": "Invalid or expired token"}, status=403)
 
                 cursor.execute("""
-                    SELECT 
-                        p.id,
-                        p.title,
-                        p.slug,
-                        p.view_count,
-                        p.featured_image,
-                        p.status,
-                        SUBSTR(p.content, 1, 1000) AS content_snippet,
-                        e.name AS author_name
+                    SELECT p.id, p.title, p.slug, p.view_count, p.featured_image, p.image_uuid, p.google_file_id, p.status,
+                           SUBSTR(p.content,1,1000) AS content_snippet, e.name AS author_name
                     FROM blogs_post p
                     JOIN authentication_employee e ON p.author_id = e.id
                     ORDER BY p.created_at DESC
                 """)
 
             columns = [col[0] for col in cursor.description]
-            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        results = []
+        for row in rows:
+            # Determine featured_image link
+            if row.get("featured_image"):
+                featured_link = row["featured_image"]
+            elif row.get("google_file_id") and row.get("image_uuid"):
+                featured_link = f"{STREAM_IMAGE_URL}?uuid={row['image_uuid']}&w=1200&h=1200"
+            else:
+                featured_link = ""
+
+            # Only keep the fields you want to expose
+            results.append({
+                "id": row["id"],
+                "title": row["title"],
+                "slug": row["slug"],
+                "view_count": row["view_count"],
+                "featured_image": featured_link,
+                "content_snippet": row["content_snippet"],
+                "author_name": row["author_name"],
+                "status": row.get("status", "PUBLISHED")
+            })
 
         return JsonResponse(results, safe=False)
 
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
         return JsonResponse({"error": "An unexpected error occurred."}, status=500)
@@ -371,3 +382,29 @@ def posts_by_author_view(request):
             'status': 'error',
             'message': str(e)
         }, status=400)
+    
+
+from django.http import HttpResponse
+from .models import Post
+from .utils import stream_google_drive_image
+
+def stream_post_image(request):
+    file_id = request.GET.get("id")
+    uuid_val = request.GET.get("uuid")
+
+    width = request.GET.get("w")
+    height = request.GET.get("h")
+
+    # resolve uuid → google_file_id
+    if uuid_val:
+        try:
+            post = Post.objects.get(image_uuid=uuid_val)
+            file_id = post.google_file_id
+        except Post.DoesNotExist:
+            return HttpResponse("Image not found", status=404)
+
+    # convert width/height safely
+    width = int(width) if width else None
+    height = int(height) if height else None
+
+    return stream_google_drive_image(file_id, width, height)

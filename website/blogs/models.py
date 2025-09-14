@@ -12,8 +12,9 @@ class Post(models.Model):
 
     title = models.CharField(max_length=1000)
     content = models.TextField()
+    featured_image = models.TextField(default="", null=True, blank=True)
     image_uuid = models.UUIDField(editable=False, unique=True, null=True, blank=True)
-    google_file_id = models.CharField(max_length=255, blank=True, default="")
+    google_file_id = models.CharField(max_length=255, blank=True, default="", null=True)
     author = models.ForeignKey(EMPLOYEE_MODEL, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     modified_at = models.DateTimeField(auto_now=True, verbose_name="Last Modified At")
