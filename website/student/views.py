@@ -890,4 +890,53 @@ def bucket_list(request):
         return JsonResponse(buckets, safe=False, status=200)
 
     except Exception as e:
-        return JsonResponse({"error": f"Unexpected error {str(e)}"}, status=500)
+        # return JsonResponse({"error": f"Unexpected error {str(e)}"}, status=500)
+        return JsonResponse({"error": f"Unexpected error"}, status=500)
+    
+
+@require_http_methods(['POST'])
+@csrf_exempt
+@token_required
+def set_student_bucket(request):
+    employee = request.user
+
+    # Permission check
+    if not has_perms(employee.id, ["manage_buckets"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'You do not have permission to perform this task'
+        }, status=403)
+
+    try:
+        payload = json.loads(request.body)
+        student_id = payload.get("student_id")
+        bucket_id = payload.get("bucket_id")
+
+        if not student_id or not bucket_id:
+            return JsonResponse({"status": "error", "error": "student_id and bucket_id are required"}, status=400)
+
+        # Call the Postgres function using cursor
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM set_student_bucket(%s, %s);",
+                [student_id, bucket_id]
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return JsonResponse({"status": "error", "error": "No response from database"}, status=500)
+
+        result_student_id, result_bucket_id, error_message = row
+
+        if error_message:
+            return JsonResponse({"status": "error", "error": error_message}, status=400)
+
+        return JsonResponse({
+            "status": "success",
+            "message": "Student bucket updated successfully",
+            "student_id": result_student_id,
+            "bucket_id": result_bucket_id
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({"status": "error", "error": f"Unexpected error: {str(e)}"}, status=500)
