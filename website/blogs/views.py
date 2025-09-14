@@ -12,7 +12,31 @@ from slugify import slugify  # using `python-slugify`
 from django.views.decorators.csrf import csrf_exempt
 import uuid
 
-STREAM_IMAGE_URL = "admin.gradglobe.org/blog/images"
+STREAM_IMAGE_URL = "https://admin.gradglobe.org/blog/images"
+
+def normalize_blog_posts(rows):
+    """Convert raw DB rows (dicts) into normalized response payload"""
+    results = []
+    for row in rows:
+        # Priority: image_uuid → featured_image → empty
+        if row.get("image_uuid"):
+            featured_link = f"{STREAM_IMAGE_URL}?uuid={row['image_uuid']}&w=1200&h=1200"
+        elif row.get("featured_image"):
+            featured_link = row["featured_image"]
+        else:
+            featured_link = ""
+
+        results.append({
+            "id": row["id"],
+            "title": row["title"],
+            "slug": row["slug"],
+            "view_count": row["view_count"],
+            "featured_image": featured_link,
+            "content_snippet": row["content_snippet"],
+            "author_name": row["author_name"],
+            "status": row.get("status", "PUBLISHED")
+        })
+    return results
 
 @csrf_exempt
 @api_key_required
@@ -23,54 +47,19 @@ def blog_post_summary_view(request):
     try:
         with connection.cursor() as cursor:
             if not auth_token:
-                cursor.execute("""
-                    SELECT p.id, p.title, p.slug, p.view_count, p.featured_image, p.image_uuid, p.google_file_id,
-                           SUBSTR(p.content,1,1000) AS content_snippet, e.name AS author_name
-                    FROM blogs_post p
-                    JOIN authentication_employee e ON p.author_id = e.id
-                    WHERE p.status='PUBLISHED'
-                    ORDER BY p.created_at DESC
-                """)
+                cursor.execute("SELECT supabase_blog_posts(NULL)")
             else:
                 try:
                     uuid_token = uuid.UUID(auth_token)
                     request.user = Employee.objects.get(authToken=uuid_token)
+                    cursor.execute("SELECT supabase_blog_posts(%s)", [str(uuid_token)])
                 except (ValueError, Employee.DoesNotExist):
                     return JsonResponse({"error": "Invalid or expired token"}, status=403)
 
-                cursor.execute("""
-                    SELECT p.id, p.title, p.slug, p.view_count, p.featured_image, p.image_uuid, p.google_file_id, p.status,
-                           SUBSTR(p.content,1,1000) AS content_snippet, e.name AS author_name
-                    FROM blogs_post p
-                    JOIN authentication_employee e ON p.author_id = e.id
-                    ORDER BY p.created_at DESC
-                """)
+            supabase_result = cursor.fetchone()[0]  # JSON from Supabase function
+            rows = json.loads(supabase_result) if supabase_result else []
 
-            columns = [col[0] for col in cursor.description]
-            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-        results = []
-        for row in rows:
-            # Determine featured_image link
-            if row.get("featured_image"):
-                featured_link = row["featured_image"]
-            elif row.get("google_file_id") and row.get("image_uuid"):
-                featured_link = f"{STREAM_IMAGE_URL}?uuid={row['image_uuid']}&w=1200&h=1200"
-            else:
-                featured_link = ""
-
-            # Only keep the fields you want to expose
-            results.append({
-                "id": row["id"],
-                "title": row["title"],
-                "slug": row["slug"],
-                "view_count": row["view_count"],
-                "featured_image": featured_link,
-                "content_snippet": row["content_snippet"],
-                "author_name": row["author_name"],
-                "status": row.get("status", "PUBLISHED")
-            })
-
+        results = normalize_blog_posts(rows)
         return JsonResponse(results, safe=False)
 
     except Exception:
