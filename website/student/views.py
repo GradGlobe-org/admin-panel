@@ -956,24 +956,21 @@ def summarize_student_interest(request):
 
         # --- Prepare prompt for Gemini ---
         prompt = f"""
-            Analyze this student's profile and generate a clear, structured summary with the following:
+            Analyze this student profile and give me a clear, easy-to-read summary with:
 
-            1. **Lead Conversion Likelihood:** Based on the student’s background, interests, shortlisted universities/courses, and preferences, assess the likelihood that the student can be successfully converted into a lead. Give a clear probability (e.g., High, Medium, Low) with reasoning.
+            Conversion Chance: High / Medium / Low → explain briefly why.
 
-            2. **Shortlisted Universities & Courses:** List the names of the universities and courses the student has shortlisted or shown interest in. Include university location, degree type, and field of study. If there are multiple, summarize the focus areas and priorities.
+            Universities & Courses: List shortlisted universities + courses (with country, degree type, field).
 
-            3. **Preferred Countries & Degree Preferences:** Summarize the countries and degree levels the student is most interested in pursuing, based on preferences and shortlisted options.
+            Country & Degree Preferences: Where and what degree they mainly want to study.
 
-            4. **Educational Background:** Provide details such as degree, field of study, CGPA, key academic achievements, and language proficiency (including test scores like IELTS, TOEFL, etc.).
+            Education: Degree, field, grades/CGPA, and any test scores (IELTS/TOEFL, etc.).
 
-            5. **Professional Experience:** Summarize the student’s relevant work experience, including job titles, companies, locations, employment type, duration, and any key accomplishments.
+            Work Experience: Roles, companies, duration, key highlights.
 
-            6. **Personal Details:** Mention nationality and current country of residence.
+            Personal Info: Nationality + current residence.
 
-            Keep the output detailed and structured so that a counselor can quickly understand the student’s academic and professional profile, interests, and chances of conversion.
-
-            Dont share any programmatically error or code. Just keep it general.
-                
+            Keep it structured but simple — something a counselor can quickly scan and understand.    
             Student data (JSON): {json.dumps(student_data)}
         """
 
@@ -984,3 +981,95 @@ def summarize_student_interest(request):
             {"status": "error", "message": "An error occured"}, status=500
         )
 
+
+@require_http_methods(["GET"])
+@csrf_exempt
+@token_required
+def bucket_list(request):
+    employee = request.user
+
+    # Permission check
+    if not has_perms(employee.id, ["manage_buckets"]):
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "You do not have permission to perform this task",
+            },
+            status=403,
+        )
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT id, name FROM student_bucket ORDER BY id;")
+            rows = cursor.fetchall()
+
+            if not rows:
+                return JsonResponse({"error": "No buckets found"}, status=404)
+
+            buckets = [{"id": row[0], "name": row[1]} for row in rows]
+
+        return JsonResponse(buckets, safe=False, status=200)
+
+    except Exception as e:
+        # return JsonResponse({"error": f"Unexpected error {str(e)}"}, status=500)
+        return JsonResponse({"error": f"Unexpected error"}, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+@token_required
+def set_student_bucket(request):
+    employee = request.user
+
+    # Permission check
+    if not has_perms(employee.id, ["manage_buckets"]):
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "You do not have permission to perform this task",
+            },
+            status=403,
+        )
+
+    try:
+        payload = json.loads(request.body)
+        student_id = payload.get("student_id")
+        bucket_id = payload.get("bucket_id")
+
+        if not student_id or not bucket_id:
+            return JsonResponse(
+                {"status": "error", "error": "student_id and bucket_id are required"},
+                status=400,
+            )
+
+        # Call the Postgres function using cursor
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM set_student_bucket(%s, %s);", [student_id, bucket_id]
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return JsonResponse(
+                {"status": "error", "error": "No response from database"}, status=500
+            )
+
+        result_student_id, result_bucket_id, error_message = row
+
+        if error_message:
+            return JsonResponse({"status": "error", "error": error_message}, status=400)
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "message": "Student bucket updated successfully",
+                "student_id": result_student_id,
+                "bucket_id": result_bucket_id,
+            },
+            status=200,
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {"status": "error", "error": f"Unexpected error: {str(e)}"}, status=500
+        )

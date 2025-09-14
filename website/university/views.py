@@ -13,6 +13,7 @@ from django.db.models import Avg, Count, Min
 from psycopg2.extras import RealDictCursor
 from student.utils import create_student_log
 
+
 @csrf_exempt
 @api_key_required
 @require_http_methods(["GET"])
@@ -32,7 +33,8 @@ def get_university_location(request):
 def get_university_ranking_agency(request):
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT id, name, description, logo FROM university_ranking_agency")
+            "SELECT id, name, description, logo FROM university_ranking_agency"
+        )
         columns = [col[0] for col in cursor.description]
         agencies = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -58,6 +60,7 @@ def dictfetchall(cursor):
     columns = [col[0] for col in cursor.description]
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
+
 # Invoked by a Supbase function 'paginated_universities_fn'
 
 
@@ -77,15 +80,11 @@ def paginated_universities(request):
             """
             SELECT * FROM paginated_universities_fn(%s, %s, %s);
             """,
-            [page, cities, states]
+            [page, cities, states],
         )
         results = dictfetchall(cursor)
 
-    return JsonResponse({
-        "results": results,
-        "page": page,
-        "count": len(results)
-    })
+    return JsonResponse({"results": results, "page": page, "count": len(results)})
 
 
 # Invoked by a supabase Function 'get_university_with_courses'
@@ -99,10 +98,7 @@ def get_university_by_name(request):
         return JsonResponse({"error": "Missing 'name' query parameter"}, status=400)
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT get_university_with_courses(%s);",
-            [university_name]
-        )
+        cursor.execute("SELECT get_university_with_courses(%s);", [university_name])
         row = cursor.fetchone()
 
     if not row or not row[0]:
