@@ -12,7 +12,7 @@ from slugify import slugify  # using `python-slugify`
 from django.views.decorators.csrf import csrf_exempt
 import uuid
 
-STREAM_IMAGE_URL = "/blog/images"
+STREAM_IMAGE_URL = "admin.gradglobe.org/blog/images"
 
 @csrf_exempt
 @api_key_required
