@@ -60,11 +60,13 @@ class PostAdminForm(forms.ModelForm):
             drive_file_id, generated_uuid = upload_file_to_drive_public(upload_file)
             obj.image_uuid = generated_uuid
             obj.google_file_id = drive_file_id
-            # Featured image will always use the proxy or Google thumbnail
-            obj.featured_image = f"/blog/images?uuid={generated_uuid}&w=400&h=400"
+            # Just save base URL without w/h
+            obj.featured_image = f"/blog/images?id={drive_file_id}"
 
-        # If user only provided a link, keep it as-is
-        if not upload_file and self.cleaned_data.get("featured_image"):
+        # If user provided only a link, leave it as-is
+        elif self.cleaned_data.get("featured_image") and obj.google_file_id:
+            obj.featured_image = f"/blog/images?id={obj.google_file_id}"
+        else:
             obj.image_uuid = None
             obj.google_file_id = None
 
@@ -144,15 +146,29 @@ class PostAdmin(admin.ModelAdmin):
     author_name.short_description = 'Author'
 
     def list_image_thumbnail(self, obj):
-        url = obj.featured_image or (f"/blog/images?uuid={obj.image_uuid}&w=250&h=250" if obj.image_uuid else None)
-        if url:
-            return format_html('<img src="{}" width="100" height="100" style="object-fit:cover; border-radius:6px;" />', url)
+        url = obj.featured_image
+        if url and url.startswith("/blog/images?id="):
+            url = f"{url}&w=250&h=250"
+            return format_html(
+                '<img src="{}" width="100" height="100" style="object-fit:cover; border-radius:6px;" />', url
+            )
+        elif url:
+            return format_html(
+                '<img src="{}" width="100" height="100" style="object-fit:cover; border-radius:6px;" />', url
+            )
         return "(No image)"
     list_image_thumbnail.short_description = "Preview"
 
     def image_thumbnail(self, obj):
-        url = obj.featured_image or (f"/blog/images?uuid={obj.image_uuid}&w=400&h=400" if obj.image_uuid else None)
-        if url:
-            return format_html('<img src="{}" style="max-width:400px; height:auto; border-radius:6px;" />', url)
+        url = obj.featured_image
+        if url and url.startswith("/blog/images?id="):
+            url = f"{url}&w=250&h=250"
+            return format_html(
+                '<img src="{}" style="max-width:250px; height:auto; border-radius:6px;" />', url
+            )
+        elif url:
+            return format_html(
+                '<img src="{}" style="max-width:250px; height:auto; border-radius:6px;" />', url
+            )
         return "(No image)"
     image_thumbnail.short_description = "Preview"

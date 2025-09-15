@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import connection
 import json
 from website.utils import api_key_required, has_perms, token_required
@@ -11,6 +11,8 @@ from authentication.models import Employee
 from slugify import slugify  # using `python-slugify`
 from django.views.decorators.csrf import csrf_exempt
 import uuid
+from django.core.files.uploadedfile import UploadedFile
+from website.utils import upload_file_to_drive_public
 
 STREAM_IMAGE_URL = "https://admin.gradglobe.org/blog/images"
 
@@ -397,3 +399,66 @@ def stream_post_image(request):
     height = int(height) if height else None
 
     return stream_google_drive_image(file_id, width, height)
+
+MAX_FILE_SIZE_MB = 5
+
+@require_http_methods(['POST'])
+@csrf_exempt
+# @api_key_required 
+@token_required
+def upload_featured_image_for_post(request):
+    """
+    Upload an image to Google Drive for a specific Post (by blog_id),
+    update the Post, and return the featured_image URL.
+    Only the post author with permissions can update.
+    """
+    blog_id = request.POST.get("blog_id")
+    upload_file: UploadedFile = request.FILES.get("image")
+    author = request.user
+
+    if not blog_id:
+        return JsonResponse({"error": "Missing blog_id."}, status=400)
+
+    if not upload_file:
+        return JsonResponse({"error": "No image provided."}, status=400)
+
+    if upload_file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+        return JsonResponse({
+            "error": f"Image size must be under {MAX_FILE_SIZE_MB} MB."
+        }, status=400)
+
+    # Fetch the Post instance
+    post = get_object_or_404(Post, id=blog_id)
+
+    # Permission checks
+    if not has_perms(author.id, ["Blog_update"]):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Employee does not have permissions to perform this task'
+        }, status=403)
+
+    if post.author.id != author.id:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Only the post author can update this post'
+        }, status=403)
+
+    try:
+        # Upload image in-memory to Google Drive
+        drive_file_id, generated_uuid = upload_file_to_drive_public(upload_file)
+
+        # Update Post instance
+        post.google_file_id = drive_file_id
+        post.image_uuid = generated_uuid
+        post.featured_image = f"/blog/images?id={drive_file_id}"
+        post.save()
+
+        return JsonResponse({
+            "success": True,
+            "featured_image": post.featured_image,
+            "google_file_id": drive_file_id,
+            "image_uuid": generated_uuid
+        })
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
