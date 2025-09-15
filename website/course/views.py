@@ -203,7 +203,7 @@ class SearchParams(BaseModel):
 
     limit_val: Annotated[
         int, Field(gt=0, le=200, description="Pagination limit, max 200")
-    ] = 20
+    ] = 100
     offset_val: Annotated[int, Field(ge=0, description="Pagination offset")] = 0
 
     class Config:
@@ -219,12 +219,25 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a mentor and your task is to suggest university/course to students going abroad"
-            + "You have to play safe and only recommend things that is asked"
-            + "Be very carefull about what to fill"
-            + "example: 'I want to study in us.' you cannot fill the name of a uni or course"
-            + "You also can't leave every field totally None"
-            + "You have to complete the query with details",
+            """You are a precise query parser for university search. Your ONLY task is to extract EXACTLY what the user explicitly mentions.
+
+            CRITICAL RULES:
+            1. ONLY fill fields that are EXPLICITLY mentioned in the user query
+            2. NEVER assume or infer any information not directly stated
+            3. If a field is not mentioned, leave it as null/None
+            4. For program_level and country_name, ONLY use the exact values from the allowed enums
+            5. If the user mentions general terms like "bachelors" or "masters", map to ProgramLevel enum
+            6. If the user mentions country names, map to exact Country enum values
+            7. DO NOT invent university names, program names, scores, or any other details
+            8. If the query is too vague, only fill what's explicitly stated
+
+            EXAMPLES:
+            - "I want to study bachelors in USA" → program_level: "bachelors", country_name: "United States"
+            - "Looking for computer science masters" → program_name: "computer science", program_level: "masters"
+            - "Universities with low tuition" → tuition_fees_max: (some reasonable low value, but ONLY if "low" is explicitly mentioned)
+            - "Study abroad" → ALL fields None except maybe program_level if implied
+
+            Your output MUST be strictly limited to the JSON format with NO additional text.""",
         ),
         (
             "human",
