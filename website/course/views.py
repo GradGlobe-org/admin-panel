@@ -13,6 +13,8 @@ from django.views.decorators.http import require_http_methods
 from student.utils import create_student_log
 from django.views import View
 import logging
+from search.utils import save_unsanitized_query
+import threading
 # Uses The Supabase Function SELECT * FROM search_course('New York University', 'Applied Physics');
 
 
@@ -267,38 +269,7 @@ class FilterSearchView(View):
                 status=400,
             )
 
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    UPDATE unsanitized_searches
-                    SET count = count + 1
-                    WHERE query = %s
-                    RETURNING id, count
-                    """,
-                    [query],
-                )
-                row = cursor.fetchone()
-
-                if row:
-                    obj_id, count = row
-                else:
-                    cursor.execute(
-                        """
-                        INSERT INTO unsanitized_searches (query, count)
-                        VALUES (%s, 1)
-                        RETURNING id, count
-                        """,
-                        [query],
-                    )
-                    obj_id, count = cursor.fetchone()
-
-        except Exception as e:
-            logging.exception(
-                "If you can see this that means there has been an error. Error Details: %s",
-                e,
-            )
-            return JsonResponse({"error": "DB logging failed"})
+        threading.Thread(target=save_unsanitized_query, args=(query,), daemon=True).start()
 
         try:
             params: SearchParams = get_chain.invoke(
