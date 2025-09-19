@@ -98,6 +98,7 @@ from pydantic import BaseModel
 from typing import Optional, Annotated
 from enum import Enum
 from pydantic import Field
+from functools import lru_cache
 
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -210,16 +211,21 @@ class SearchParams(BaseModel):
         use_enum_values = True
 
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY, max_output_tokens=500
-)
 parser = PydanticOutputParser(pydantic_object=SearchParams)
 
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """You are a precise query parser for university search. Your ONLY task is to extract EXACTLY what the user explicitly mentions.
+
+@lru_cache(maxsize=1)
+def get_chain():
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-flash",
+        google_api_key=os.getenv("GEMINI_API_KEY"),
+        max_output_tokens=500,
+    )
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                """You are a precise query parser for university search. Your ONLY task is to extract EXACTLY what the user explicitly mentions.
 
             CRITICAL RULES:
             1. ONLY fill fields that are EXPLICITLY mentioned in the user query
@@ -238,15 +244,15 @@ prompt = ChatPromptTemplate.from_messages(
             - "Study abroad" → ALL fields None except maybe program_level if implied
 
             Your output MUST be strictly limited to the JSON format with NO additional text.""",
-        ),
-        (
-            "human",
-            "{query}\n\n. Return only JSON in this format:\n{format_instructions}",
-        ),
-    ]
-)
+            ),
+            (
+                "human",
+                "{query}\n\n. Return only JSON in this format:\n{format_instructions}",
+            ),
+        ]
+    )
 
-chain = prompt | llm | parser
+    return prompt | llm | parser
 
 
 # @method_decorator(api_key_required, name="dispatch")
@@ -263,7 +269,6 @@ class FilterSearchView(View):
 
         try:
             with connection.cursor() as cursor:
-                # Try to update count if exists
                 cursor.execute(
                     """
                     UPDATE unsanitized_searches
@@ -278,7 +283,6 @@ class FilterSearchView(View):
                 if row:
                     obj_id, count = row
                 else:
-                    # Insert new query if it does not exist
                     cursor.execute(
                         """
                         INSERT INTO unsanitized_searches (query, count)
@@ -290,31 +294,21 @@ class FilterSearchView(View):
                     obj_id, count = cursor.fetchone()
 
         except Exception as e:
-            # return JsonResponse({"status": "error", "message": str(e)}, status=500)
             logging.exception(
                 "If you can see this that means there has been an error. Error Details: %s",
                 e,
             )
-        # return JsonResponse({"status": "success", "query": query, "count": count})
-
-        # print(f"[DEBUG] Incoming query: {query}")
+            return JsonResponse({"error": "DB logging failed"})
 
         try:
-            # Step 1: Use Gemini to parse query → structured params
-            params: SearchParams = chain.invoke(
+            params: SearchParams = get_chain.invoke(
                 {
                     "query": query,
                     "format_instructions": parser.get_format_instructions(),
                 }
             )
 
-            # print("[DEBUG] Extracted Params:", params.dict())
-
-            # Step 2: Call Postgres function
             with connection.cursor() as cursor:
-                # print("[DEBUG] Executing filter_search_advance with args:")
-                # print(params.dict())
-
                 cursor.execute(
                     """
                     SELECT * from public.filter_search_advance(
@@ -349,13 +343,9 @@ class FilterSearchView(View):
                 )
                 result = cursor.fetchone()[0]
 
-            # print("[DEBUG] Raw DB Result:", result)
-
-            # Step 3: Send raw DB JSON back
             return JsonResponse({"courses": result}, status=200, safe=False)
 
         except Exception as e:
-            print("[ERROR] Exception occurred:", str(e))
             return JsonResponse({"error": str(e)}, status=500)
 
 
