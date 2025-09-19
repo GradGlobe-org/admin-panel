@@ -134,22 +134,92 @@ class FilterSearchView(View):
         ).start()
 
         try:
-            output: SearchParams = get_chain().invoke(
+            params: SearchParams = get_chain().invoke(
                 {
                     "query": query,
                     "format_instructions": parser.get_format_instructions(),
                 }
             )
+  
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT * from public.filter_search_advance(
+                        %s,%s,%s,%s,%s,
+                        %s,%s,%s,%s,
+                        %s,%s,%s,%s,
+                        %s,%s,%s,%s,
+                        %s,%s
+                    )
+                """,
+                    [
+                        None,
+                        params.university_name,
+                        params.program_name,
+                        params.program_level,
+                        params.country_name,
+                        params.duration_min,
+                        params.duration_max,
+                        params.tuition_fees_min,
+                        params.tuition_fees_max,
+                        params.gpa_min,
+                        params.gpa_max,
+                        params.sat_min,
+                        params.sat_max,
+                        params.act_min,
+                        params.act_max,
+                        params.ielts_min,
+                        params.ielts_max,
+                        params.limit_val,
+                        params.offset_val,
+                    ],
+                )
+                result = cursor.fetchone()[0]
 
-            try:
-                params = parser.parse(output)
-            except ValidationError as e:
-                # fallback: accept only valid fields, others → None
-                parsed_dict = {}
-                if isinstance(output, dict):
-                    for k in SearchParams.model_fields:
-                        parsed_dict[k] = output.get(k, None)
-                params = SearchParams(**parsed_dict)
+            return JsonResponse({"courses": result}, status=200, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+class UserFilterSearchView(View):
+    def get(self, request):
+        auth_header = request.headers.get("Authorization")  # required now
+
+        if not auth_header:
+            return JsonResponse({"error": "Missing Authorization header"}, status=401)
+        
+        logs_text = ""
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM recent_logs(%s);", [auth_header])
+                rows = cursor.fetchall()
+                if rows:
+                    logs_text = "\n".join(r[0] for r in rows)
+        except Exception as e:
+            print("Error fetching logs:", str(e))
+
+        print(logs_text)
+
+        try:
+            params: SearchParams = get_chain().invoke(
+                {
+                    "query": logs_text,
+                    "format_instructions": parser.get_format_instructions(),
+                }
+            )
+
+            print(params)
+
+            # try:
+            # params = parser.parse(output)
+            # except ValidationError as e:
+                # parsed_dict = {}
+                # if isinstance(output, dict):
+                #     for k in SearchParams.model_fields:
+                #         parsed_dict[k] = output.get(k, None)
+                # params = SearchParams(**parsed_dict)
+                
+            # print(dict(params))
 
             with connection.cursor() as cursor:
                 cursor.execute(
@@ -209,22 +279,12 @@ class FilterSuggest(View):
         ).start()
 
         try:
-            output: SearchParams = get_chain().invoke(
+            params: SearchParams = get_chain().invoke(
                 {
                     "query": query,
                     "format_instructions": parser.get_format_instructions(),
                 }
             )
-
-            try:
-                params = parser.parse(output)
-            except ValidationError as e:
-                # fallback: accept only valid fields, others → None
-                parsed_dict = {}
-                if isinstance(output, dict):
-                    for k in SearchParams.model_fields:
-                        parsed_dict[k] = output.get(k, None)
-                params = SearchParams(**parsed_dict)
 
             with connection.cursor() as cursor:
                 cursor.execute(
