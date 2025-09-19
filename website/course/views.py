@@ -106,6 +106,11 @@ class FilterSearchView(View):
         threading.Thread(
             target=save_unsanitized_query, args=(query,), daemon=True
         ).start()
+        threading.Thread(
+            target=create_student_log,
+            args=(request, f"Smart Searched '{query}'"),
+            daemon=True,
+        ).start()
 
         try:
             params: SearchParams = get_chain().invoke(
@@ -156,23 +161,87 @@ class FilterSearchView(View):
             return JsonResponse({"error": str(e)}, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["GET"])
-# @api_key_required
-def filter_search(request):
-    # Get the search query from GET parameters
-    search_query = request.GET.get("search_query", "").strip()
+class FilterSuggest(View):
+    def get(self, request, *args, **kwargs):
+        query = request.GET.get("search_query", "").strip()
+        if not query:
+            return JsonResponse({"error": "Missing query"}, status=400)
+        if len(query) < 3:
+            return JsonResponse(
+                {"status": "error", "message": "Query must be at least 3 characters"},
+                status=400,
+            )
+        threading.Thread(
+            target=create_student_log,
+            args=(request, f"Smart Suggested with '{query}'"),
+            daemon=True,
+        ).start()
 
-    # Require at least 3 characters
-    if len(search_query) < 3:
-        return JsonResponse(
-            {"error": "Search query must be at least 3 characters long."}, status=400
-        )
-    create_student_log(request, f"Smart Searched '{search_query}'")
-    # Use a cursor to call the Supabase function
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT public.filter_search(%s)", [search_query])
-        result = cursor.fetchone()[0]  # Fetch the JSON result
+        try:
+            params: SearchParams = get_chain().invoke(
+                {
+                    "query": query,
+                    "format_instructions": parser.get_format_instructions(),
+                }
+            )
 
-    return JsonResponse({"courses": result}, status=200)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT * from public.filter_search_advance(
+                        %s,%s,%s,%s,%s,
+                        %s,%s,%s,%s,
+                        %s,%s,%s,%s,
+                        %s,%s,%s,%s,
+                        %s,%s
+                    )
+                """,
+                    [
+                        None,
+                        params.university_name,
+                        params.program_name,
+                        params.program_level,
+                        params.country_name,
+                        params.duration_min,
+                        params.duration_max,
+                        params.tuition_fees_min,
+                        params.tuition_fees_max,
+                        params.gpa_min,
+                        params.gpa_max,
+                        params.sat_min,
+                        params.sat_max,
+                        params.act_min,
+                        params.act_max,
+                        params.ielts_min,
+                        params.ielts_max,
+                        params.limit_val,
+                        params.offset_val,
+                    ],
+                )
+                result = cursor.fetchone()[0]
 
+            return JsonResponse({"courses": result}, status=200, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+
+# @csrf_exempt
+# @require_http_methods(["GET"])
+# # @api_key_required
+# def filter_search(request):
+#     # Get the search query from GET parameters
+#     search_query = request.GET.get("search_query", "").strip()
+#
+#     # Require at least 3 characters
+#     if len(search_query) < 3:
+#         return JsonResponse(
+#             {"error": "Search query must be at least 3 characters long."}, status=400
+#         )
+#     create_student_log(request, f"Smart Searched '{search_query}'")
+#     # Use a cursor to call the Supabase function
+#     with connection.cursor() as cursor:
+#         cursor.execute("SELECT public.filter_search(%s)", [search_query])
+#         result = cursor.fetchone()[0]  # Fetch the JSON result
+#
+#     return JsonResponse({"courses": result}, status=200)
