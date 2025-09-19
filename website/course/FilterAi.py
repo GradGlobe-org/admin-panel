@@ -125,7 +125,7 @@ parser = PydanticOutputParser(pydantic_object=SearchParams)
 @lru_cache(maxsize=1)
 def get_chain():
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-flash-lite",
         google_api_key=os.getenv("GEMINI_API_KEY"),
         max_output_tokens=500,
     )
