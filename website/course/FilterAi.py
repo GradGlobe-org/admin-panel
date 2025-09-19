@@ -125,7 +125,7 @@ parser = PydanticOutputParser(pydantic_object=SearchParams)
 @lru_cache(maxsize=1)
 def get_chain():
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
+        model="gemini-2.5-flash",
         google_api_key=os.getenv("GEMINI_API_KEY"),
         max_output_tokens=500,
     )
@@ -151,11 +151,13 @@ def get_chain():
             - "Universities with low tuition" → tuition_fees_max: (some reasonable low value, but ONLY if "low" is explicitly mentioned)
             - "Study abroad" → ALL fields None except maybe program_level if implied
 
-            Your output MUST be strictly limited to the JSON format with NO additional text.""",
+            Your output MUST be strictly limited to the JSON format with NO additional text.
+            {format_instructions}
+            """,
             ),
             (
                 "human",
-                "{query}\n\n. Return only JSON in this format:\n{format_instructions}",
+                "{query}",
             ),
         ]
     )
