@@ -6,15 +6,13 @@ from .models import *
 from university.models import *
 from psycopg2.extras import register_default_jsonb
 import json
-import os
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from student.utils import create_student_log
 from django.views import View
-import logging
-
-# Uses The Supabase Function SELECT * FROM search_course('New York University', 'Applied Physics');
+from search.utils import save_unsanitized_query
+import threading
 from .FilterAi import parser, get_chain, SearchParams
 
 
@@ -105,38 +103,9 @@ class FilterSearchView(View):
                 status=400,
             )
 
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    UPDATE unsanitized_searches
-                    SET count = count + 1
-                    WHERE query = %s
-                    RETURNING id, count
-                    """,
-                    [query],
-                )
-                row = cursor.fetchone()
-
-                if row:
-                    obj_id, count = row
-                else:
-                    cursor.execute(
-                        """
-                        INSERT INTO unsanitized_searches (query, count)
-                        VALUES (%s, 1)
-                        RETURNING id, count
-                        """,
-                        [query],
-                    )
-                    obj_id, count = cursor.fetchone()
-
-        except Exception as e:
-            logging.exception(
-                "If you can see this that means there has been an error. Error Details: %s",
-                e,
-            )
-            return JsonResponse({"error": "DB logging failed"})
+        threading.Thread(
+            target=save_unsanitized_query, args=(query,), daemon=True
+        ).start()
 
         try:
             params: SearchParams = get_chain().invoke(
@@ -206,3 +175,4 @@ def filter_search(request):
         result = cursor.fetchone()[0]  # Fetch the JSON result
 
     return JsonResponse({"courses": result}, status=200)
+

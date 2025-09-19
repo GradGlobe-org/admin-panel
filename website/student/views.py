@@ -962,6 +962,8 @@ def summarize_student_interest(request):
 
         # --- Prepare prompt for Gemini ---
         prompt = f"""
+            Also tell me how much profile is completed on teh scale of 1 to 100 by seeing all the data and missing fields.
+
             Analyze this student profile and give me a clear, easy-to-read summary with:
 
             Conversion Chance: High / Medium / Low → explain briefly why.
