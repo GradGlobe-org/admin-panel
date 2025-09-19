@@ -14,6 +14,7 @@ from django.views import View
 from search.utils import save_unsanitized_query
 import threading
 from .FilterAi import parser, get_chain, SearchParams
+from pydantic import ValidationError
 
 
 @require_GET
@@ -91,6 +92,26 @@ def compare_course_search(request):
     return JsonResponse(result, safe=False)
 
 
+def safe_parse(parser, text):
+    try:
+        return parser.parse(text)
+    except ValidationError as e:
+        # Create dict with None for invalid fields
+        raw = e.body if hasattr(e, "body") else {}
+        safe_data = {}
+        for field in SearchParams.model_fields.keys():
+            try:
+                safe_data[field] = SearchParams.model_validate(
+                    {field: raw.get(field)}
+                ).dict()[field]
+            except Exception:
+                safe_data[field] = None
+        return SearchParams(**safe_data)
+    except Exception:
+        # fallback: everything None
+        return SearchParams()
+
+
 # @method_decorator(api_key_required, name="dispatch")
 class FilterSearchView(View):
     def get(self, request, *args, **kwargs):
@@ -113,12 +134,22 @@ class FilterSearchView(View):
         ).start()
 
         try:
-            params: SearchParams = get_chain().invoke(
+            output: SearchParams = get_chain().invoke(
                 {
                     "query": query,
                     "format_instructions": parser.get_format_instructions(),
                 }
             )
+
+            try:
+                params = parser.parse(output)
+            except ValidationError as e:
+                # fallback: accept only valid fields, others → None
+                parsed_dict = {}
+                if isinstance(output, dict):
+                    for k in SearchParams.model_fields:
+                        parsed_dict[k] = output.get(k, None)
+                params = SearchParams(**parsed_dict)
 
             with connection.cursor() as cursor:
                 cursor.execute(
@@ -178,12 +209,22 @@ class FilterSuggest(View):
         ).start()
 
         try:
-            params: SearchParams = get_chain().invoke(
+            output: SearchParams = get_chain().invoke(
                 {
                     "query": query,
                     "format_instructions": parser.get_format_instructions(),
                 }
             )
+
+            try:
+                params = parser.parse(output)
+            except ValidationError as e:
+                # fallback: accept only valid fields, others → None
+                parsed_dict = {}
+                if isinstance(output, dict):
+                    for k in SearchParams.model_fields:
+                        parsed_dict[k] = output.get(k, None)
+                params = SearchParams(**parsed_dict)
 
             with connection.cursor() as cursor:
                 cursor.execute(
