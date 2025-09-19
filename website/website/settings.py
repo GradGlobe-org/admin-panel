@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "scholarship",
     "course",
     "student",
+    "search",
     "django_prometheus",
     "django.contrib.admin",
     "django.contrib.auth",

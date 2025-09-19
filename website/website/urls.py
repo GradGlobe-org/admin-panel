@@ -6,20 +6,24 @@ import os
 IS_PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/admin/', permanent=False)),  # ← redirect root to /admin/
-    path('', include('django_prometheus.urls')),
-    path('admin/', admin.site.urls),
-    path('auth/', include("authentication.urls")),
-    path('blog/', include("blogs.urls")),
-    path('seo/', include("seo.urls")),
-    path('university/', include("university.urls")),
-    path('scholarships/', include("scholarship.urls")),
-    path('user/', include("student.urls")),
-    path('course/', include("course.urls"))
+    path(
+        "", RedirectView.as_view(url="/admin/", permanent=False)
+    ),  # ← redirect root to /admin/
+    path("", include("django_prometheus.urls")),
+    path("admin/", admin.site.urls),
+    path("auth/", include("authentication.urls")),
+    path("blog/", include("blogs.urls")),
+    path("seo/", include("seo.urls")),
+    path("university/", include("university.urls")),
+    path("scholarships/", include("scholarship.urls")),
+    path("user/", include("student.urls")),
+    path("course/", include("course.urls")),
+    path("search/", include("search.urls")),
 ]
 
 
 if not IS_PRODUCTION:
     urlpatterns += [
-        path('schema-viewer/', include('schema_viewer.urls')),
+        path("schema-viewer/", include("schema_viewer.urls")),
     ]
+

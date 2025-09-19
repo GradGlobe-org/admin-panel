@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from student.utils import create_student_log
 from django.views import View
-
+import logging
 # Uses The Supabase Function SELECT * FROM search_course('New York University', 'Applied Physics');
 
 
@@ -255,6 +255,47 @@ class FilterSearchView(View):
         query = request.GET.get("search_query", "").strip()
         if not query:
             return JsonResponse({"error": "Missing query"}, status=400)
+        if len(query) < 3:
+            return JsonResponse(
+                {"status": "error", "message": "Query must be at least 3 characters"},
+                status=400,
+            )
+
+        try:
+            with connection.cursor() as cursor:
+                # Try to update count if exists
+                cursor.execute(
+                    """
+                    UPDATE unsanitized_searches
+                    SET count = count + 1
+                    WHERE query = %s
+                    RETURNING id, count
+                    """,
+                    [query],
+                )
+                row = cursor.fetchone()
+
+                if row:
+                    obj_id, count = row
+                else:
+                    # Insert new query if it does not exist
+                    cursor.execute(
+                        """
+                        INSERT INTO unsanitized_searches (query, count)
+                        VALUES (%s, 1)
+                        RETURNING id, count
+                        """,
+                        [query],
+                    )
+                    obj_id, count = cursor.fetchone()
+
+        except Exception as e:
+            # return JsonResponse({"status": "error", "message": str(e)}, status=500)
+            logging.exception(
+                "If you can see this that means there has been an error. Error Details: %s",
+                e,
+            )
+        # return JsonResponse({"status": "success", "query": query, "count": count})
 
         # print(f"[DEBUG] Incoming query: {query}")
 
