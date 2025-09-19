@@ -1,6 +1,8 @@
 import logging
 from django.db import connection
 
+logger = logging.getLogger(__name__)
+
 def save_unsanitized_query(query: str):
     """Background function to log query into unsanitized_searches table."""
     try:
