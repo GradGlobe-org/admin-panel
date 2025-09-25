@@ -15,6 +15,9 @@ from search.utils import save_unsanitized_query
 import threading
 from .FilterAi import parser, get_chain, SearchParams
 from pydantic import ValidationError
+from website.utils import user_token_required
+from django.utils.decorators import method_decorator
+
 
 
 @require_GET
@@ -181,9 +184,10 @@ class FilterSearchView(View):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
+@method_decorator(user_token_required, name='get')
 class UserFilterSearchView(View):
     def get(self, request):
-        auth_header = request.headers.get("Authorization")  # required now
+        auth_header = request.headers.get("Authorization")
 
         if not auth_header:
             return JsonResponse({"error": "Missing Authorization header"}, status=401)
@@ -201,65 +205,98 @@ class UserFilterSearchView(View):
         print(logs_text)
 
         try:
+            # Parse the search params from your chain
             params: SearchParams = get_chain().invoke(
                 {
                     "query": logs_text,
                     "format_instructions": parser.get_format_instructions(),
                 }
             )
-
             print(params)
 
-            # try:
-            # params = parser.parse(output)
-            # except ValidationError as e:
-                # parsed_dict = {}
-                # if isinstance(output, dict):
-                #     for k in SearchParams.model_fields:
-                #         parsed_dict[k] = output.get(k, None)
-                # params = SearchParams(**parsed_dict)
-                
-            # print(dict(params))
-
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT * from public.filter_search_advance(
-                        %s,%s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s
+            # Helper function to run query
+            def run_query(p: SearchParams):
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT * from public.filter_search_advance(
+                            %s,%s,%s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s
+                        )
+                        """,
+                        [
+                            None,
+                            p.university_name,
+                            p.program_name,
+                            p.program_level,
+                            p.country_name,
+                            p.duration_min,
+                            p.duration_max,
+                            p.tuition_fees_min,
+                            p.tuition_fees_max,
+                            p.gpa_min,
+                            p.gpa_max,
+                            p.sat_min,
+                            p.sat_max,
+                            p.act_min,
+                            p.act_max,
+                            p.ielts_min,
+                            p.ielts_max,
+                            p.limit_val,
+                            p.offset_val,
+                        ],
                     )
-                """,
-                    [
-                        None,
-                        params.university_name,
-                        params.program_name,
-                        params.program_level,
-                        params.country_name,
-                        params.duration_min,
-                        params.duration_max,
-                        params.tuition_fees_min,
-                        params.tuition_fees_max,
-                        params.gpa_min,
-                        params.gpa_max,
-                        params.sat_min,
-                        params.sat_max,
-                        params.act_min,
-                        params.act_max,
-                        params.ielts_min,
-                        params.ielts_max,
-                        params.limit_val,
-                        params.offset_val,
-                    ],
+                    return cursor.fetchone()[0]
+
+            # First try: full search
+            result = run_query(params)
+
+            # Fallback mode if first search is empty
+            fallback_fields = ["university_name", "program_level", "country_name", "program_name"]
+            if not result.get("courses"):
+                # Start with all fallback filters
+                fallback_params = SearchParams(
+                    university_name=params.university_name,
+                    program_name=params.program_name,
+                    program_level=params.program_level,
+                    country_name=params.country_name,
+                    duration_min=None,
+                    duration_max=None,
+                    tuition_fees_min=None,
+                    tuition_fees_max=None,
+                    gpa_min=None,
+                    gpa_max=None,
+                    sat_min=None,
+                    sat_max=None,
+                    act_min=None,
+                    act_max=None,
+                    ielts_min=None,
+                    ielts_max=None,
+                    limit_val=params.limit_val,
+                    offset_val=params.offset_val,
                 )
-                result = cursor.fetchone()[0]
+
+                # Gradually remove fallback fields one by one if results are empty
+                for i in range(len(fallback_fields) + 1):
+                    current_params = fallback_params.copy()
+                    # Remove the first 'i' filters
+                    for field in fallback_fields[:i]:
+                        setattr(current_params, field, None)
+
+                    print(f"Fallback search removing: {fallback_fields[:i]}")
+                    result = run_query(current_params)
+
+                    if result.get("courses"):
+                        break  # stop when we find results
 
             return JsonResponse({"courses": result}, status=200, safe=False)
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+
 
 
 class FilterSuggest(View):
