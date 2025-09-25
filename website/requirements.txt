@@ -9,6 +9,7 @@ dj-database-url==2.3.0
 Django==5.2.1
 django-cors-headers==4.7.0
 django-jazzmin==3.0.1
+django-nested-admin==4.1.4
 django-prometheus==2.4.0
 django-schema-viewer==0.5.3
 django-widget-tweaks==1.5.0
@@ -57,6 +58,7 @@ pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 python-env==1.0.0
+python-monkey-business==1.1.0
 python-slugify==8.0.4
 pytz==2025.2
 PyYAML==6.0.2

@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 from university.models import university
 from course.models import Course
+from django.core.validators import RegexValidator, MaxLengthValidator, MinLengthValidator
 
 
 # Static variable for country choices using full country names
@@ -320,6 +321,33 @@ class PhoneNumber(models.Model):
 
     def __str__(self):
         return f"{self.mobile_number}"
+
+# phone_regex = RegexValidator(regex=r'^\d{10}$', message="Phone number must be exactly 10 digits.")
+# otp_regex = RegexValidator(regex=r'^\d{6}$', message="OTP must be exactly 6 digits.")
+
+# class OTPRequest(models.Model):
+#     phone_number = models.CharField(
+#         max_length=10,
+#         unique=True,
+#         validators=[phone_regex],
+#         help_text="Enter the phone number associated with the OTP."
+#     )
+#     otp = models.CharField(
+#         max_length=6,
+#         validators=[otp_regex],
+#         help_text="6-digit OTP code."
+#     )
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     class Meta:
+#         db_table = 'otp_request'
+#         ordering = ['-created_at']
+#         indexes = [
+#             models.Index(fields=['phone_number'], name='idx_otp_phone')
+#         ]
+
+#     def __str__(self):
+#         return f"{self.phone_number} - {self.otp}"
 
 
 class StudentDetails(models.Model):
