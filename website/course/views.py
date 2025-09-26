@@ -13,11 +13,17 @@ from student.utils import create_student_log
 from django.views import View
 from search.utils import save_unsanitized_query
 import threading
-from .FilterAi import parser, get_chain, SearchParams
+from .FilterAi import (
+    parser,
+    get_chain,
+    SearchParams,
+    ChatResponseToUser,
+    chat_parser,
+    chat_chain,
+)
 from pydantic import ValidationError
 from website.utils import user_token_required
 from django.utils.decorators import method_decorator
-
 
 
 @require_GET
@@ -143,7 +149,7 @@ class FilterSearchView(View):
                     "format_instructions": parser.get_format_instructions(),
                 }
             )
-  
+
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
@@ -184,14 +190,15 @@ class FilterSearchView(View):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
-@method_decorator(user_token_required, name='get')
+
+@method_decorator(user_token_required, name="get")
 class UserFilterSearchView(View):
     def get(self, request):
         auth_header = request.headers.get("Authorization")
 
         if not auth_header:
             return JsonResponse({"error": "Missing Authorization header"}, status=401)
-        
+
         logs_text = ""
         try:
             with connection.cursor() as cursor:
@@ -255,7 +262,12 @@ class UserFilterSearchView(View):
             result = run_query(params)
 
             # Fallback mode if first search is empty
-            fallback_fields = ["university_name", "program_level", "country_name", "program_name"]
+            fallback_fields = [
+                "university_name",
+                "program_level",
+                "country_name",
+                "program_name",
+            ]
             if not result.get("courses"):
                 # Start with all fallback filters
                 fallback_params = SearchParams(
@@ -296,7 +308,6 @@ class UserFilterSearchView(View):
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
-
 
 
 class FilterSuggest(View):
@@ -359,6 +370,78 @@ class FilterSuggest(View):
                 result = cursor.fetchone()[0]
 
             return JsonResponse({"courses": result}, status=200, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ChatSuggest(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        query = data.get("search_query", "").strip()
+
+        if not query:
+            return JsonResponse({"error": "Missing query"}, status=400)
+        if len(query) < 2:
+            return JsonResponse(
+                {"status": "error", "message": "Query must be at least 3 characters"},
+                status=400,
+            )
+
+        try:
+            chat_parser: ChatResponseToUser = chat_chain().invoke(
+                {
+                    "query": query,
+                    "format_instructions": parser.get_format_instructions(),
+                }
+            )
+            if chat_parser.should_suggest:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT * from public.filter_search_advance(
+                            %s,%s,%s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s,%s,%s,
+                            %s,%s
+                        )
+                    """,
+                        [
+                            None,
+                            chat_parser.university_name,
+                            chat_parser.program_name,
+                            chat_parser.program_level,
+                            chat_parser.country_name,
+                            chat_parser.duration_min,
+                            chat_parser.duration_max,
+                            chat_parser.tuition_fees_min,
+                            chat_parser.tuition_fees_max,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            5,
+                            0,
+                        ],
+                    )
+                    result = cursor.fetchone()[0]
+            else:
+                result = ""
+            return JsonResponse(
+                {"response": str(chat_parser.response_text), "courses": result},
+                status=200,
+                safe=False,
+            )
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)

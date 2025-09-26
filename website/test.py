@@ -1,26 +1,20 @@
-import csv
-from django.db.models import Count
-from university.models import university
+import pandas as pd
 
 
-def export_university_count_by_country():
-    # Aggregate university counts per country
-    data = (
-        university.objects.values("location__country")
-        .annotate(university_count=Count("id"))
-        .order_by("location__country")
+def drop_first_column(input_file, output_file):
+    # Load file
+    df = pd.read_csv(input_file)
+
+    # Drop first column
+    df = df.iloc[:, 1:]
+
+    # Save cleaned file
+    df.to_csv(output_file, index=False, encoding="utf-8")
+    print(f"✅ Cleaned file saved to {output_file}")
+
+
+if __name__ == "__main__":
+    drop_first_column(
+        "/home/mayank/Documents/Mayank/Grad Globe Admin Panel/admin-panel/website/KC2.csv",  # input file
+        "/home/mayank/Documents/Mayank/Grad Globe Admin Panel/admin-panel/website/Uni_santitized_2.csv",  # output file
     )
-
-    # Create the CSV file
-    file_path = "university_count_by_country.csv"
-    with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["Country", "Number of Universities"])  # Header row
-
-        for row in data:
-            writer.writerow([row["location__country"], row["university_count"]])
-
-    print(f"CSV exported successfully: {file_path}")
-
-
-export_university_count_by_country()
