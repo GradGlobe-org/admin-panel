@@ -3,6 +3,22 @@ from authentication.models import Employee
 from student.models import Student
 from django.utils import timezone
 
+# Rule Template
+class TestRules(models.Model):
+    name = models.CharField(max_length=255)
+    text = models.TextField(help_text="The rules text displayed to the student before starting the test")
+    added_by = models.ForeignKey(
+        Employee, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name="added_test_rules"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
 # ----------------------------
 # Test model
 # ----------------------------
@@ -13,11 +29,19 @@ class Test(models.Model):
         ("high", "HIGH")
     ]
 
+    test_rule = models.ForeignKey(
+        TestRules, 
+        on_delete=models.SET_NULL, 
+        blank=True, 
+        null=True,
+        related_name="tests"
+    )
     title = models.CharField(max_length=1000)
     description = models.TextField(blank=True)
     duration_minutes = models.PositiveIntegerField(default=30)
     priority = models.CharField(max_length=10, choices=PRIORITY, default="low")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     created_by_employee = models.ForeignKey(
         Employee,
         on_delete=models.SET_NULL,
@@ -25,7 +49,7 @@ class Test(models.Model):
         related_name="created_tests"
     )
     total_marks = models.FloatField(default=0)  # Auto-calculated
-    # Negative marking for MCQs. Choices: 0 (none), 0.25, 0.5, 0.33, 0.2
+
     NEGATIVE_CHOICES = [
         (0, "None"),
         (0.25, "1/4"),
@@ -35,19 +59,47 @@ class Test(models.Model):
     ]
     negative_marking_factor = models.FloatField(choices=NEGATIVE_CHOICES, default=0)
 
+    class Meta:
+        ordering = ["-created_at"]  # newest tests first
+
     def __str__(self):
         return self.title
 
     def calculate_total_marks(self):
-        """Automatically sum all question marks."""
-        total = self.questions.aggregate(models.Sum('marks'))['marks__sum'] or 0
+        """Sum all questions in all sections."""
+        total = 0
+        for section in self.sections.all():
+            total += section.questions.aggregate(models.Sum('marks'))['marks__sum'] or 0
         self.total_marks = total
         self.save()
         return self.total_marks
 
+    def get_rules_text(self):
+        """Returns the rule text to show before the test starts."""
+        return self.test_rule.text if self.test_rule else ""
+
 
 # ----------------------------
-# Course model
+# Test Section model
+# ----------------------------
+class TestSection(models.Model):
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="sections")
+    title = models.CharField(max_length=255)
+    negative_marking_factor = models.FloatField(
+        choices=Test.NEGATIVE_CHOICES,
+        default=0
+    )
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.test.title} - {self.title}"
+
+
+# ----------------------------
+# Course models
 # ----------------------------
 class CourseCategories(models.Model):
     name = models.CharField(max_length=1000, unique=True)
@@ -86,9 +138,6 @@ class CourseLinkedStudent(models.Model):
         return f"{self.student} -> {self.course}"
 
 
-# ----------------------------
-# Through table for Course -> Test ordering
-# ----------------------------
 class CourseTest(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     test = models.ForeignKey(Test, on_delete=models.CASCADE)
@@ -103,7 +152,7 @@ class CourseTest(models.Model):
 
 
 # ----------------------------
-# Question model
+# Question and Option models
 # ----------------------------
 class Question(models.Model):
     QUESTION_TYPES = [
@@ -111,7 +160,7 @@ class Question(models.Model):
         ("SUB", "Subjective"),
     ]
 
-    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="questions")
+    section = models.ForeignKey(TestSection, on_delete=models.CASCADE, related_name="questions")
     question = models.TextField()
     question_type = models.CharField(max_length=3, choices=QUESTION_TYPES)
     marks = models.FloatField(default=1.0)
@@ -122,12 +171,9 @@ class Question(models.Model):
         ordering = ['order']
 
     def __str__(self):
-        return f"{self.test.title} - {self.question[:50]}"
+        return f"{self.section.title} - {self.question[:50]}"
 
 
-# ----------------------------
-# Option model
-# ----------------------------
 class Option(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="options")
     option_name = models.CharField(max_length=5000)
@@ -154,13 +200,13 @@ class TestStatus(models.Model):
     deadline = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     started_at = models.DateTimeField(null=True, blank=True)
+    valid_till = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ("student", "test")
 
     def is_active(self):
-        """Check if the student can still attempt the test."""
         now = timezone.now()
         return self.status in ["pending", "ongoing"] and now <= self.deadline
 
@@ -169,22 +215,49 @@ class TestStatus(models.Model):
 
 
 # ----------------------------
-# Store student answers for later evaluation
+# Store student answers
 # ----------------------------
 class Answer(models.Model):
     test_status = models.ForeignKey(TestStatus, on_delete=models.CASCADE, related_name="answers")
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     selected_options = models.ManyToManyField(Option, blank=True)  # For MCQs
     subjective_answer = models.TextField(blank=True, null=True)    # For subjective
-    marks_obtained = models.FloatField(default=0)  # per-question evaluation
+    marks_obtained = models.FloatField(default=0)
     answered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.test_status.student} - {self.question[:50]}"
 
+    def evaluate(self):
+        """Evaluate answer based on section-level negative marking."""
+        section = self.question.section
+
+        if self.question.question_type == "MCQ":
+            correct_options = self.question.options.filter(is_correct=True)
+            selected_correct = self.selected_options.filter(is_correct=True).count()
+            total_correct = correct_options.count()
+            total_selected = self.selected_options.count()
+
+            if total_selected == 0:
+                self.marks_obtained = 0
+            else:
+                self.marks_obtained = self.question.marks * (selected_correct / total_correct)
+
+                # Negative marking for wrong options
+                wrong_selected = total_selected - selected_correct
+                if wrong_selected > 0 and section.negative_marking_factor > 0:
+                    negative = wrong_selected * section.negative_marking_factor
+                    self.marks_obtained -= negative
+                    if self.marks_obtained < 0:
+                        self.marks_obtained = 0
+
+        # Subjective marks are to be entered manually by teacher
+        self.save()
+        return self.marks_obtained
+
 
 # ----------------------------
-# Evaluation table for storing marks
+# Evaluation model
 # ----------------------------
 class Evaluation(models.Model):
     test_status = models.OneToOneField(TestStatus, on_delete=models.CASCADE, related_name="evaluation")
@@ -197,3 +270,17 @@ class Evaluation(models.Model):
 
     def __str__(self):
         return f"{self.test_status.student} - {self.test_status.test.title} Evaluation"
+
+    def calculate_totals(self):
+        """Evaluate all answesrs and compute total marks."""
+        total_marks = 0
+        obtained_marks = 0
+
+        for answer in self.test_status.answers.all():
+            total_marks += answer.question.marks
+            obtained_marks += answer.evaluate()
+
+        self.total_marks = total_marks
+        self.obtained_marks = obtained_marks
+        self.save()
+        return self.total_marks, self.obtained_marks

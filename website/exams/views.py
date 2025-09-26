@@ -293,63 +293,152 @@ def get_student_courses_with_test_status_view(request):
         return JsonResponse({"status": "error", "message": str(e)}, status=400)
     
 
-# @csrf_exempt
-# @user_token_required
-# def get_test_details_view(request):
-#     if request.method != "POST":
-#         return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+@csrf_exempt
+@user_token_required
+def get_test_rules_view(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
-#     try:
-#         data = json.loads(request.body)
-#     except json.JSONDecodeError:
-#         return JsonResponse({"status": "error", "message": "Invalid JSON payload"}, status=400)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON payload"}, status=400)
 
-#     test_id = data.get("test_id")
-#     if not test_id:
-#         return JsonResponse({"status": "error", "message": "test_id is required"}, status=400)
+    test_id = data.get("test_id")
+    if not test_id:
+        return JsonResponse({"status": "error", "message": "test_id is required"}, status=400)
 
-#     student_id = request.user.id
+    student_id = request.user.id
 
-#     try:
-#         with connection.cursor() as cursor:
-#             cursor.execute(
-#                 "SELECT get_test_details_for_student(%s, %s)",
-#                 [student_id, test_id]
-#             )
-#             result = cursor.fetchone()[0]
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT get_test_rules_for_student(%s, %s)",
+                [student_id, test_id]
+            )
+            result = cursor.fetchone()[0]
 
-#         return JsonResponse(result, status=200 if result.get('status') == 'success' else 403)
+        # Ensure response is always JSON serializable
+        if not isinstance(result, dict):
+            return JsonResponse({"status": "error", "message": "Invalid response from database"}, status=500)
 
-#     except Exception as e:
-#         return JsonResponse({"status": "error", "message": str(e)}, status=400)
+        # Choose status code based on eligibility/error
+        status_code = 200 if result.get("status") == "success" else 403
+        return JsonResponse(result, status=status_code)
+
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
     
 
-# @csrf_exempt
-# @user_token_required
-# def start_or_get_test_view(request):
-#     """
-#     Calls the Postgres function to start the test if not started and fetch full test details.
-#     """
-#     if request.method != "POST":
-#         return JsonResponse({"status":"error","message":"Invalid request method"}, status=405)
+@csrf_exempt
+@user_token_required
+def start_or_resume_test_view(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "Invalid request method"},
+            status=405
+        )
 
-#     try:
-#         data = json.loads(request.body)
-#         test_id = data.get("test_id")
-#         if not test_id:
-#             return JsonResponse({"status":"error","message":"test_id is required"}, status=400)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON payload"},
+            status=400
+        )
 
-#         student_id = request.user.id
+    test_id = data.get("test_id")
+    if not test_id:
+        return JsonResponse(
+            {"status": "error", "message": "test_id is required"},
+            status=400
+        )
 
-#         with connection.cursor() as cursor:
-#             cursor.execute(
-#                 "SELECT start_and_get_test_for_student(%s, %s)",
-#                 [student_id, test_id]
-#             )
-#             result = cursor.fetchone()[0]
+    student_id = request.user.id  # assumes request.user is Student
 
-#         status_code = 200 if result.get('status') == 'success' else 403
-#         return JsonResponse(result, status=status_code)
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT start_or_resume_test(%s, %s)",
+                [student_id, test_id]
+            )
+            result = cursor.fetchone()[0]  # get JSONB result
 
-#     except Exception as e:
-#         return JsonResponse({"status":"error","message": str(e)}, status=400)
+        # Determine HTTP status based on eligibility
+        if isinstance(result, str):
+            result = json.loads(result)
+
+        http_status = 200 if result.get("eligible") else 403
+
+        return JsonResponse(result, status=http_status)
+
+    except Exception as e:
+        # Log error (optional)
+        print(f"Error in start_or_resume_test_view: {e}")
+
+        return JsonResponse(
+            {"status": "error", "eligible": False, "message": str(e)},
+            status=500
+        )
+
+
+@csrf_exempt
+@user_token_required
+def submit_answer_view(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "Invalid request method"},
+            status=405
+        )
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON payload"},
+            status=400
+        )
+
+    test_id = data.get("test_id")
+    question_id = data.get("question_id")
+    selected_option_id = data.get("selected_option_id")
+    answer = data.get("answer")
+
+    if not test_id or not question_id:
+        return JsonResponse(
+            {"status": "error", "message": "test_id and question_id are required"},
+            status=400
+        )
+
+    if selected_option_id is None and answer is None:
+        return JsonResponse(
+            {"status": "error", "message": "Either selected_option_id or answer is required"},
+            status=400
+        )
+
+    student_id = request.user.id  # Assumes request.user is Student
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT submit_answer(%s, %s, %s, %s::jsonb)",
+                [student_id, test_id, question_id, json.dumps({
+                    "selected_option_id": selected_option_id,
+                    "answer": answer
+                })]
+            )
+            result = cursor.fetchone()[0]  # Get JSONB result
+
+        if isinstance(result, str):
+            result = json.loads(result)
+
+        http_status = 200 if result.get("status") == "success" else 400
+
+        return JsonResponse(result, status=http_status)
+
+    except Exception as e:
+        print(f"Error in submit_answer_view: {e}")
+        return JsonResponse(
+            {"status": "error", "message": str(e)},
+            status=500
+        )
