@@ -5,6 +5,7 @@ import json
 from website.utils import token_required, user_token_required
 from django.db import connection, transaction
 from django.utils import timezone
+from exams.models import TestStatus, Question, Option, Answer
 
 # @csrf_exempt
 # @token_required
@@ -297,16 +298,25 @@ def get_student_courses_with_test_status_view(request):
 @user_token_required
 def get_test_rules_view(request):
     if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+        return JsonResponse(
+            {"status": "error", "message": "Invalid request method"},
+            status=405
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({"status": "error", "message": "Invalid JSON payload"}, status=400)
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON payload"},
+            status=400
+        )
 
     test_id = data.get("test_id")
     if not test_id:
-        return JsonResponse({"status": "error", "message": "test_id is required"}, status=400)
+        return JsonResponse(
+            {"status": "error", "message": "test_id is required"},
+            status=400
+        )
 
     student_id = request.user.id
 
@@ -318,16 +328,32 @@ def get_test_rules_view(request):
             )
             result = cursor.fetchone()[0]
 
-        # Ensure response is always JSON serializable
+        # Convert JSONB (string) → Python dict
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except Exception:
+                return JsonResponse(
+                    {"status": "error", "message": "Invalid JSON from database"},
+                    status=500
+                )
+
+        # Ensure valid dict
         if not isinstance(result, dict):
-            return JsonResponse({"status": "error", "message": "Invalid response from database"}, status=500)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid response from database"},
+                status=500
+            )
 
         # Choose status code based on eligibility/error
         status_code = 200 if result.get("status") == "success" else 403
         return JsonResponse(result, status=status_code)
 
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        return JsonResponse(
+            {"status": "error", "message": str(e)},
+            status=500
+        )
     
 
 @csrf_exempt
@@ -384,61 +410,156 @@ def start_or_resume_test_view(request):
 
 @csrf_exempt
 @user_token_required
-def submit_answer_view(request):
+def save_student_answer_view(request):
     if request.method != "POST":
-        return JsonResponse(
-            {"status": "error", "message": "Invalid request method"},
-            status=405
+        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+
+    try:
+        payload = json.loads(request.body)
+        student_id = request.user.id  # From token
+        test_id = payload.get("test_id")
+        question_id = payload.get("question_id")
+        selected_option_ids = payload.get("selected_option_ids", [])
+        subjective_answer = payload.get("subjective_answer", None)
+
+        if not test_id or not question_id:
+            return JsonResponse({"status": "error", "message": "Missing test_id or question_id"}, status=400)
+
+        # Fetch test status
+        try:
+            test_status = TestStatus.objects.get(student_id=student_id, test_id=test_id)
+        except TestStatus.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Test not assigned to this student"}, status=400)
+
+        # Check if test is active
+        now = timezone.now()
+        if test_status.status in ["completed", "expired"] or (test_status.valid_till and test_status.valid_till < now):
+            if test_status.status != "completed":
+                test_status.status = "expired"
+                test_status.completed_at = now
+                test_status.save()
+            return JsonResponse({"status": "error", "message": "Test time has expired"}, status=400)
+
+        # Fetch question
+        try:
+            question = Question.objects.get(id=question_id, section__test_id=test_id)
+        except Question.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Question does not belong to this test"}, status=400)
+
+        # Handle MCQ
+        if question.question_type == "MCQ":
+            # Validate option IDs
+            valid_option_ids = set(Option.objects.filter(question=question).values_list('id', flat=True))
+            if any(opt_id not in valid_option_ids for opt_id in selected_option_ids):
+                return JsonResponse({"status": "error", "message": "One or more selected options are invalid"}, status=400)
+
+            # Check single-answer constraint
+            if question.is_single_answer and len(selected_option_ids) > 1:
+                return JsonResponse({"status": "error", "message": "This question allows only a single answer"}, status=400)
+
+        # Normalize subjective answer
+        if subjective_answer is not None:
+            subjective_answer = subjective_answer.strip()
+            if subjective_answer == "":
+                subjective_answer = None
+
+        # Fetch or create Answer
+        answer, created = Answer.objects.get_or_create(
+            test_status=test_status,
+            question=question,
+            defaults={
+                "subjective_answer": subjective_answer,
+                "marks_obtained": 0
+            }
         )
+
+        # Update answer if exists
+        if not created:
+            answer.subjective_answer = subjective_answer
+            answer.selected_options.clear()
+
+        # Set selected options for MCQ
+        if question.question_type == "MCQ":
+            if selected_option_ids:
+                options = Option.objects.filter(id__in=selected_option_ids)
+                answer.selected_options.add(*options)
+
+        answer.answered_at = timezone.now()
+        answer.save()
+
+        return JsonResponse({"status": "success", "message": "Answer saved successfully"}, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON payload"}, status=400)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+
+@csrf_exempt
+@user_token_required
+def confirm_before_submit_view(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
     try:
         data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {"status": "error", "message": "Invalid JSON payload"},
-            status=400
-        )
+    except Exception:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
+    student_id = request.user.id
     test_id = data.get("test_id")
-    question_id = data.get("question_id")
-    selected_option_id = data.get("selected_option_id")
-    answer = data.get("answer")
 
-    if not test_id or not question_id:
-        return JsonResponse(
-            {"status": "error", "message": "test_id and question_id are required"},
-            status=400
-        )
-
-    if selected_option_id is None and answer is None:
-        return JsonResponse(
-            {"status": "error", "message": "Either selected_option_id or answer is required"},
-            status=400
-        )
-
-    student_id = request.user.id  # Assumes request.user is Student
+    if not test_id:
+        return JsonResponse({"status": "error", "message": "test_id is required"}, status=400)
 
     try:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT submit_answer(%s, %s, %s, %s::jsonb)",
-                [student_id, test_id, question_id, json.dumps({
-                    "selected_option_id": selected_option_id,
-                    "answer": answer
-                })]
+                "SELECT confirm_before_submit(%s, %s)",
+                [student_id, test_id]
             )
-            result = cursor.fetchone()[0]  # Get JSONB result
+            result_str = cursor.fetchone()[0]  # this is a string from Postgres
 
-        if isinstance(result, str):
-            result = json.loads(result)
+        # Convert the string to Python dict
+        result = json.loads(result_str) if isinstance(result_str, str) else result_str
 
-        http_status = 200 if result.get("status") == "success" else 400
-
-        return JsonResponse(result, status=http_status)
+        return JsonResponse(result, status=200 if result.get("status") == "success" else 400)
 
     except Exception as e:
-        print(f"Error in submit_answer_view: {e}")
-        return JsonResponse(
-            {"status": "error", "message": str(e)},
-            status=500
-        )
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
+
+@csrf_exempt
+@user_token_required
+def submit_test_view(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        test_id = data.get("test_id")
+        student_id = request.user.id  # from token
+
+        if not test_id:
+            return JsonResponse({"status": "error", "message": "test_id is required"}, status=400)
+
+        now = timezone.now()
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE exams_teststatus
+                SET status = 'completed',
+                    completed_at = %s
+                WHERE student_id = %s AND test_id = %s
+                  AND status = 'ongoing'
+                RETURNING id
+            """, [now, student_id, test_id])
+            updated = cursor.fetchone()
+
+        if updated:
+            return JsonResponse({"status": "success", "message": "Test marked as completed", "completed_at": now})
+        else:
+            return JsonResponse({"status": "error", "message": "Test not found or already completed"}, status=400)
+
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)

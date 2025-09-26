@@ -173,7 +173,7 @@ class FilterSearchView(View):
                         params.act_max,
                         params.ielts_min,
                         params.ielts_max,
-                        params.limit_val,
+                        10,
                         params.offset_val,
                     ],
                 )

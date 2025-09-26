@@ -11,5 +11,8 @@ urlpatterns = [
     # path("get_all_courses/", get_all_courses_view),
     path("student/get_courses_list/", get_student_courses_with_test_status_view),
     path("student/get_test_details/", get_test_rules_view ),
-    path("student/start_test/",start_or_resume_test_view)
+    path("student/start_test/",start_or_resume_test_view),
+    path("student/save_answer/", save_student_answer_view),
+    path("student/confirm_submit/", confirm_before_submit_view),
+    path("student/submit_test/", submit_test_view)
 ]

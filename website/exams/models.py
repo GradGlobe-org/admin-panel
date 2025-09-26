@@ -83,8 +83,14 @@ class Test(models.Model):
 # Test Section model
 # ----------------------------
 class TestSection(models.Model):
+    QUESTION_MODES = [
+        ("MCQ", "Multiple Choice"),
+        ("SUB", "Subjective"),
+    ]
+
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="sections")
     title = models.CharField(max_length=255)
+    question_mode = models.CharField(max_length=3, choices=QUESTION_MODES)  # <-- NEW
     negative_marking_factor = models.FloatField(
         choices=Test.NEGATIVE_CHOICES,
         default=0
@@ -155,23 +161,15 @@ class CourseTest(models.Model):
 # Question and Option models
 # ----------------------------
 class Question(models.Model):
-    QUESTION_TYPES = [
-        ("MCQ", "Multiple Choice"),
-        ("SUB", "Subjective"),
-    ]
-
     section = models.ForeignKey(TestSection, on_delete=models.CASCADE, related_name="questions")
     question = models.TextField()
-    question_type = models.CharField(max_length=3, choices=QUESTION_TYPES)
     marks = models.FloatField(default=1.0)
     is_single_answer = models.BooleanField(default=True)
     order = models.PositiveBigIntegerField(default=0, null=True, blank=True)
 
-    class Meta:
-        ordering = ['order']
-
-    def __str__(self):
-        return f"{self.section.title} - {self.question[:50]}"
+    @property
+    def question_type(self):
+        return self.section.question_mode
 
 
 class Option(models.Model):
@@ -194,8 +192,8 @@ class TestStatus(models.Model):
         ("expired", "Expired"),
     ]
 
-    student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, related_name="test_statuses")
-    test = models.ForeignKey(Test, on_delete=models.SET_NULL, null=True, related_name="statuses")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, related_name="test_statuses")
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, null=True, related_name="statuses")
     assigned_at = models.DateTimeField(auto_now_add=True)
     deadline = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
@@ -220,13 +218,13 @@ class TestStatus(models.Model):
 class Answer(models.Model):
     test_status = models.ForeignKey(TestStatus, on_delete=models.CASCADE, related_name="answers")
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    selected_options = models.ManyToManyField(Option, blank=True)  # For MCQs
+    selected_options = models.ManyToManyField(Option, blank=True, null=True)  # For MCQs
     subjective_answer = models.TextField(blank=True, null=True)    # For subjective
-    marks_obtained = models.FloatField(default=0)
+    marks_obtained = models.FloatField(blank=True, null=True)
     answered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.test_status.student} - {self.question[:50]}"
+        return f"{self.test_status.student} - {self.question.question[:50]}"
 
     def evaluate(self):
         """Evaluate answer based on section-level negative marking."""
