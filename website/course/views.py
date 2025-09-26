@@ -245,7 +245,7 @@ class UserFilterSearchView(View):
                             p.act_max,
                             p.ielts_min,
                             p.ielts_max,
-                            p.limit_val,
+                            10,
                             p.offset_val,
                         ],
                     )
