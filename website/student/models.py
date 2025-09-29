@@ -3,8 +3,12 @@ from django.db import models
 from django.utils import timezone
 from university.models import university
 from course.models import Course
-from django.core.validators import RegexValidator, MaxLengthValidator, MinLengthValidator
-
+from django.core.validators import (
+    RegexValidator,
+    MaxLengthValidator,
+    MinLengthValidator,
+)
+from authentication.models import Employee
 
 # Static variable for country choices using full country names
 COUNTRY_CHOICES = [
@@ -321,6 +325,7 @@ class PhoneNumber(models.Model):
 
     def __str__(self):
         return f"{self.mobile_number}"
+
 
 # phone_regex = RegexValidator(regex=r'^\d{10}$', message="Phone number must be exactly 10 digits.")
 # otp_regex = RegexValidator(regex=r'^\d{6}$', message="OTP must be exactly 6 digits.")
@@ -738,3 +743,59 @@ class StudentLogs(models.Model):
         return (
             f"Log for {self.student} on {self.added_on.strftime('%Y-%m-%d %H:%M:%S')}"
         )
+
+
+class CallRequest(models.Model):
+    student = models.ForeignKey(
+        "Student",
+        on_delete=models.CASCADE,
+        related_name="call_requests",
+    )
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name="call_requests"
+    )
+    requested_on = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["student"]),
+            models.Index(fields=["employee"]),
+            models.Index(fields=["requested_on"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "employee"],
+                name="unique_student_employee_request",
+            )
+        ]
+        verbose_name = "Call Request"
+        verbose_name_plural = "Call Requests"
+
+    def __str__(self):
+        return f"Call request: {self.student} → {self.employee} on {self.requested_on:%Y-%m-%d %H:%M}"
+
+
+class AssignedCounsellor(models.Model):
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="assigned_counsellors",
+    )
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="counselling_students",
+    )
+    assigned_on = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = (
+            "student",
+            "employee",
+        )
+        verbose_name = "Assigned Counsellor"
+        verbose_name_plural = "Assigned Counsellors"
+        ordering = ["-assigned_on"]
+
+    def __str__(self):
+        return f"{self.employee.name} assigned to {self.student.full_name} on {self.assigned_on:%Y-%m-%d %H:%M}"

@@ -12,6 +12,8 @@ from .models import (
     ShortlistedUniversity,
     ShortlistedCourse,
     StudentLogs,
+    CallRequest,
+    AssignedCounsellor,
 )
 
 # ---------------- Inlines ----------------
@@ -166,3 +168,25 @@ class StudentLogsAdmin(admin.ModelAdmin):
         return (obj.logs[:50] + "...") if len(obj.logs) > 50 else obj.logs
 
     short_log.short_description = "Log"
+
+
+@admin.register(CallRequest)
+class CallRequestAdmin(admin.ModelAdmin):
+    list_display = ("student", "employee", "requested_on")  # shows these columns
+    list_filter = ("employee", "requested_on")  # sidebar filters
+    search_fields = ("student__full_name", "employee__name")  # search by related fields
+    ordering = ("-requested_on",)  # newest first
+    date_hierarchy = "requested_on"
+    autocomplete_fields = ("student", "employee")
+    readonly_fields = ("requested_on",)
+
+
+@admin.register(AssignedCounsellor)
+class AssignedCounsellorAdmin(admin.ModelAdmin):
+    list_display = ("student", "employee", "assigned_on")  # columns in list view
+    list_filter = ("employee", "assigned_on")  # sidebar filters
+    search_fields = ("student__full_name", "employee__name")  # search by related fields
+    ordering = ("-assigned_on",)  # newest first
+    date_hierarchy = "assigned_on"  # date drilldown
+    autocomplete_fields = ("student", "employee")  # improves dropdown UX
+    readonly_fields = ("assigned_on",)  # prevent manual edits
