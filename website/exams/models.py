@@ -218,7 +218,7 @@ class TestStatus(models.Model):
 class Answer(models.Model):
     test_status = models.ForeignKey(TestStatus, on_delete=models.CASCADE, related_name="answers")
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    selected_options = models.ManyToManyField(Option, blank=True, null=True)  # For MCQs
+    selected_options = models.ManyToManyField(Option, blank=True)  # For MCQs
     subjective_answer = models.TextField(blank=True, null=True)    # For subjective
     marks_obtained = models.FloatField(blank=True, null=True)
     answered_at = models.DateTimeField(auto_now_add=True)

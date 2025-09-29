@@ -265,8 +265,8 @@ class UserFilterSearchView(View):
             fallback_fields = [
                 "university_name",
                 "program_level",
-                "country_name",
                 "program_name",
+                "country_name",
             ]
             if not result.get("courses"):
                 # Start with all fallback filters
