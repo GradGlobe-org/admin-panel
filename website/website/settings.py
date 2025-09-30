@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     "authentication",
     "blogs",
     "seo",
+    "tasks",
+    "events",
     "jazzmin",
     "corsheaders",
     "university",

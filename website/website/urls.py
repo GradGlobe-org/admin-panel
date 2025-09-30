@@ -19,7 +19,8 @@ urlpatterns = [
     path("user/", include("student.urls")),
     path("course/", include("course.urls")),
     path("search/", include("search.urls")),
-    path("exams/", include("exams.urls"))
+    path("exams/", include("exams.urls")),
+    path("events/", include("events.urls")),
 ]
 
 
@@ -27,4 +28,3 @@ if not IS_PRODUCTION:
     urlpatterns += [
         path("schema-viewer/", include("schema_viewer.urls")),
     ]
-
