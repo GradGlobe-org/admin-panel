@@ -26,23 +26,22 @@ def login(request):
     if not username or not password:
         return JsonResponse({"error": "Missing required fields"}, status=400)
 
-    # try:
-    with connection.cursor() as cursor:
-        # Call the existing login_employee function
-        cursor.execute(
-            "select * from login_employee(%s, %s) AS result",
-            [username, password]
-        )
-        
-        result = cursor.fetchone()[0]
+    try:
+        with connection.cursor() as cursor:
+            # Call the existing login_employee function
+            cursor.execute(
+                "select * from login_employee(%s, %s) AS result", [username, password]
+            )
 
-        if result:
-            return JsonResponse(result, status=200)
-        else:
+            result = cursor.fetchone()[0]
+
+            if result:
+                return JsonResponse(result, status=200)
+            else:
+                return JsonResponse({"error": "No such Employee exists"}, status=409)
+
+    except Exception as e:
+        error_message = str(e)
+        if "No such Employee exists" in error_message:
             return JsonResponse({"error": "No such Employee exists"}, status=409)
-
-    # except Exception as e:
-    #     error_message = str(e)
-    #     if "No such Employee exists" in error_message:
-    #         return JsonResponse({"error": "No such Employee exists"}, status=409)
-    #     return JsonResponse({"error": "Internal server error"}, status=500)
+        return JsonResponse({"error": "Internal server error"}, status=500)

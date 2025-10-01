@@ -21,6 +21,7 @@ urlpatterns = [
     path("search/", include("search.urls")),
     path("exams/", include("exams.urls")),
     path("events/", include("events.urls")),
+    # path("tasks/", include("tasks.urls")),
 ]
 
 
