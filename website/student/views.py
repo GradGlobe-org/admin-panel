@@ -25,6 +25,158 @@ from .models import StudentLogs
 from django.db import connection
 from google import genai
 import os
+from django.conf import settings
+import secrets
+import requests
+
+WHATSAPP_TOKEN = settings.WHATSAPP_TOKEN
+WHATSAPP_PHONE_NUMBER_ID = settings.WHATSAPP_PHONE_NUMBER_ID
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+# -------------------------
+# Sync WhatsApp OTP Sender
+# -------------------------
+def send_whatsapp_otp(phone_number: str, otp: int):
+    url = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": "91" + phone_number,
+        "type": "template",
+        "template": {
+            "name": "auth",
+            "language": {"code": "en"},
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [{"type": "text", "text": str(otp)}]
+                },
+                {
+                    "type": "button",
+                    "sub_type": "url",
+                    "index": "0",
+                    "parameters": [{"type": "text", "text": str(otp)}]
+                }
+            ]
+        }
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        data = response.json()
+    except Exception as e:
+        logger.error(f"Network error sending WhatsApp OTP: {e}")
+        return {"status": "error", "reason": "network"}
+
+    # Log all non-success responses for debugging
+    if "error" in data:
+        logger.error(f"WhatsApp API error: {data}")
+        return {"status": "error", "reason": "provider_error"}
+
+    if response.status_code != 200:
+        logger.error(f"HTTP error from WhatsApp API: {response.status_code} {data}")
+        return {"status": "error", "reason": "provider_error"}
+
+    messages = data.get("messages")
+    if messages and isinstance(messages, list) and messages[0].get("message_status") == "accepted":
+        return {"status": "success"}
+
+    logger.warning(f"Unexpected WhatsApp API response: {data}")
+    return {"status": "error", "reason": "unexpected_response"}
+
+
+# ---------------- Send OTP ----------------
+@csrf_exempt
+@require_http_methods(["POST"])
+def send_otp(request):
+    """
+    Generates a 6-digit OTP and calls the request_otp Postgres function.
+    """
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    phone_number = str(data.get("phone_number", "")).strip()
+    if not phone_number.isdigit() or len(phone_number) != 10:
+        return JsonResponse({"status": "error", "message": "Invalid phone number"}, status=400)
+
+    otp = str(secrets.randbelow(900000) + 100000)  # 6-digit OTP
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT request_otp(%s, %s);",
+                [phone_number, otp]
+            )
+            result = cursor.fetchone()[0]  # request_otp returns JSON
+            # result is a dict if psycopg2 extras JSON is enabled, else string
+            if isinstance(result, str):
+                result = json.loads(result)
+
+        if result.get("status") == "wait":
+            return JsonResponse(result, status=200)
+
+        # Here, you can call your actual WhatsApp/SMS sending function
+        send_success = send_whatsapp_otp(phone_number, otp)  # Implement separately
+        if send_success.get("status") != "success":
+            return JsonResponse({
+                "status": "error",
+                "message": "Could not send OTP",
+                "reason": send_success.get("reason", "unknown")
+            }, status=400)
+
+        return JsonResponse({
+            "status": "success",
+            "message": f"OTP successfully sent to {phone_number}"
+        })
+
+    except Exception as e:
+        logger.exception("Error sending OTP")
+        return JsonResponse({"status": "error", "message": "Internal server error"}, status=500)
+
+
+# ---------------- Verify OTP ----------------
+@csrf_exempt
+@require_http_methods(["POST"])
+def verify_otp_view(request):
+    """
+    Verifies OTP using the verify_otp Postgres function.
+    """
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    phone_number = str(data.get("phone_number", "")).strip()
+    otp = str(data.get("otp", "")).strip()
+
+    if not phone_number.isdigit() or len(phone_number) != 10:
+        return JsonResponse({"status": "error", "message": "Invalid phone number"}, status=400)
+    if not otp.isdigit() or len(otp) != 6:
+        return JsonResponse({"status": "error", "message": "Invalid OTP"}, status=400)
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT verify_otp(%s, %s);",
+                [phone_number, otp]
+            )
+            result = cursor.fetchone()[0]  # verify_otp returns JSON
+            if isinstance(result, str):
+                result = json.loads(result)
+
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.exception("Error verifying OTP")
+        return JsonResponse({"status": "error", "message": "Internal server error"}, status=500)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

@@ -21,6 +21,10 @@ GOOGLE_DRIVE_FOLDER_ID_PUBLIC = os.getenv("GOOGLE_DRIVE_FOLDER_ID_PUBLIC")
 GOOGLE_DRIVE_FOLDER_ID_PRIVATE = os.getenv("GOOGLE_DRIVE_FOLDER_ID_PRIVATE")
 GOOGLE_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 
+# WhatsApp secrets
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
@@ -92,7 +96,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "website.wsgi.application"
 
 
-# if IS_PRODUCTION:
+if IS_PRODUCTION:
 DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL"), conn_max_age=600, ssl_require=True

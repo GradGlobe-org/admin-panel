@@ -3,7 +3,7 @@ from .models import (
     Student,
     Bucket,
     Email,
-    PhoneNumber,
+    # PhoneNumber,
     StudentDetails,
     EducationDetails,
     ExperienceDetails,
@@ -33,11 +33,11 @@ class EmailInline(admin.StackedInline):
     extra = 0
 
 
-class PhoneNumberInline(admin.StackedInline):
-    model = PhoneNumber
-    can_delete = False
-    max_num = 1
-    extra = 0
+# class PhoneNumberInline(admin.StackedInline):
+#     model = PhoneNumber
+#     can_delete = False
+#     max_num = 1
+#     extra = 0
 
 
 class EducationDetailsInline(admin.StackedInline):

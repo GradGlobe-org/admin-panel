@@ -277,10 +277,18 @@ class Bucket(models.Model):
     def __str__(self):
         return self.name
 
+phone_regex = RegexValidator(regex=r'^\d{10}$', message="Phone number must be exactly 10 digits.")
+otp_regex = RegexValidator(regex=r'^\d{6}$', message="OTP must be exactly 6 digits.")
 
 class Student(models.Model):
-    full_name = models.CharField(max_length=200)
-    password = models.CharField(max_length=128)  # Expect hash
+    phone_number = models.CharField(
+        max_length=10,
+        unique=True,
+        validators=[phone_regex],
+        help_text="Enter a 10-digit phone number."
+    )
+    full_name = models.CharField(max_length=200, null=True)
+    password = models.CharField(max_length=128, null=True)
     authToken = models.UUIDField(default=uuid4, editable=False, unique=True)
     category = models.ForeignKey(
         Bucket,
@@ -312,47 +320,29 @@ class Email(models.Model):
         return self.student.full_name
 
 
-class PhoneNumber(models.Model):
-    student = models.OneToOneField(
-        Student, on_delete=models.CASCADE, related_name="phone_number"
+class OTPRequest(models.Model):
+    phone_number = models.CharField(
+        max_length=10,
+        unique=True,
+        validators=[phone_regex],
+        help_text="Enter the phone number associated with the OTP."
     )
-    mobile_number = models.CharField(max_length=15, unique=True)
+    otp = models.CharField(
+        max_length=6,
+        validators=[otp_regex],
+        help_text="6-digit OTP code."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = "Phone Number"
-        verbose_name_plural = "Phone Numbers"
-        ordering = ["mobile_number"]
+        db_table = 'otp_request'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['phone_number'], name='idx_otp_phone')
+        ]
 
     def __str__(self):
-        return f"{self.mobile_number}"
-
-
-# phone_regex = RegexValidator(regex=r'^\d{10}$', message="Phone number must be exactly 10 digits.")
-# otp_regex = RegexValidator(regex=r'^\d{6}$', message="OTP must be exactly 6 digits.")
-
-# class OTPRequest(models.Model):
-#     phone_number = models.CharField(
-#         max_length=10,
-#         unique=True,
-#         validators=[phone_regex],
-#         help_text="Enter the phone number associated with the OTP."
-#     )
-#     otp = models.CharField(
-#         max_length=6,
-#         validators=[otp_regex],
-#         help_text="6-digit OTP code."
-#     )
-#     created_at = models.DateTimeField(auto_now_add=True)
-
-#     class Meta:
-#         db_table = 'otp_request'
-#         ordering = ['-created_at']
-#         indexes = [
-#             models.Index(fields=['phone_number'], name='idx_otp_phone')
-#         ]
-
-#     def __str__(self):
-#         return f"{self.phone_number} - {self.otp}"
+        return f"{self.phone_number} - {self.otp}"
 
 
 class StudentDetails(models.Model):

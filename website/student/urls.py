@@ -4,6 +4,8 @@ from .views import *
 from .call_requests import *
 
 urlpatterns = [
+    path("request_otp/", send_otp),
+    path("verify_otp/", verify_otp_view),
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path(
