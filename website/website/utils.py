@@ -173,13 +173,18 @@ def upload_file_to_drive_public(file_obj, ext=None):
         file_bytes.close()
 
 
-PRIVATE_ALLOWED_EXTENSIONS = {"jpg", "jpeg", "webp", "pdf"}
+PRIVATE_ALLOWED_EXTENSIONS = {
+    "jpg", "jpeg", "webp", "pdf"
+}
+
+MIME_TYPES = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+    "pdf": "application/pdf",
+}
 
 def upload_file_to_drive_private(file_obj, ext=None):
-    """
-    Upload file to Google Drive (private access).
-    Supported extensions: jpg, jpeg, webp, pdf
-    """
     service = get_drive_service()
     generated_uuid = str(uuid.uuid4())
 
@@ -190,7 +195,6 @@ def upload_file_to_drive_private(file_obj, ext=None):
         raise ValueError(f"Unsupported file extension: {ext}")
 
     filename = f"{generated_uuid}.{ext}"
-
     metadata = {
         "name": filename,
         "parents": [getattr(settings, "GOOGLE_DRIVE_FOLDER_ID_PRIVATE")],
@@ -199,19 +203,12 @@ def upload_file_to_drive_private(file_obj, ext=None):
     file_bytes = io.BytesIO(file_obj.read())
 
     try:
-        # Set MIME type
-        if ext == "pdf":
-            mimetype = "application/pdf"
-        else:
-            mimetype = f"image/{ext}"
-
+        mimetype = MIME_TYPES.get(ext, "application/octet-stream")
         media = MediaIoBaseUpload(file_bytes, mimetype=mimetype, resumable=False)
         uploaded = service.files().create(
             body=metadata, media_body=media, fields="id"
         ).execute()
 
-        # File remains private by default
         return uploaded["id"], generated_uuid
-
     finally:
         file_bytes.close()

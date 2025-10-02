@@ -641,40 +641,41 @@ class Preference(models.Model):
         return self.full_name
 
 
-# class Document(models.Model):
-#     DOC_TYPE_CHOICES = [
-#         ('Passport', 'Passport'),
-#         ('Transcript', 'Transcript'),
-#         ('Degree Certificate', 'Degree Certificate'),
-#         ('Recommendation Letter', 'Recommendation Letter'),
-#         ('Statement of Purpose', 'Statement of Purpose'),
-#         ('Resume', 'Resume'),
-#         ('Test Score Report', 'Test Score Report'),
-#         ('ID Proof', 'ID Proof'),
-#         ('Other', 'Other'),
-#     ]
+class Document(models.Model):
+    DOC_TYPE_CHOICES = [
+        ('Passport', 'Passport'),
+        ('Transcript', 'Transcript'),
+        ('Degree Certificate', 'Degree Certificate'),
+        ('Recommendation Letter', 'Recommendation Letter'),
+        ('Statement of Purpose', 'Statement of Purpose'),
+        ('Resume', 'Resume'),
+        ('Test Score Report', 'Test Score Report'),
+        ('ID Proof', 'ID Proof'),
+        ('Other', 'Other'),
+    ]
 
-#     # Static variable for document status choices
-#     STATUS_CHOICES = [
-#         ('uploaded', 'Uploaded'),
-#         ('verified', 'Verified'),
-#         ('rejected', 'Rejected'),
-#         ('in_review', 'In Review'),
-#         ('processing', 'Processing'),
-#     ]
-#     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents')
-#     name = models.CharField(max_length=255)
-#     doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES)
-#     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='uploaded')
-#     document_url = models.URLField(max_length=1000)
+    # Static variable for document status choices
+    STATUS_CHOICES = [
+        ('uploaded', 'Uploaded'),
+        ('verified', 'Verified'),
+        ('rejected', 'Rejected'),
+        ('in_review', 'In Review'),
+        ('processing', 'Processing'),
+    ]
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents')
+    name = models.CharField(max_length=255)
+    doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='uploaded')
+    file_id = models.CharField(max_length=255)
+    file_uuid = models.UUIDField(default=uuid4, editable=False)
 
-#     class Meta:
-#         verbose_name = "Document"
-#         verbose_name_plural = "Documents"
-#         ordering = ["name"]
+    class Meta:
+        verbose_name = "Document"
+        verbose_name_plural = "Documents"
+        ordering = ["name"]
 
-# def __str__(self):
-#     return f"{self.name} ({self.doc_type}) "
+def __str__(self):
+    return f"{self.name} ({self.doc_type}) "
 
 
 class ShortlistedUniversity(models.Model):

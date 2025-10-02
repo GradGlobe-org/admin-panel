@@ -27,6 +27,9 @@ urlpatterns = [
     ),
     path("get_all_buckets/", bucket_list),
     path("add_student_to_bucket/", set_student_bucket),
+    path("upload_document/", upload_document),
+    path("get_user_documents_list/", get_student_documents_list),
+    path("download_document/", download_document)
 ]
 
 urlpatterns += [

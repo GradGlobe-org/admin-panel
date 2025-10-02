@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import (
     Student,
+    Document,
     Bucket,
     Email,
     # PhoneNumber,
@@ -190,3 +191,12 @@ class AssignedCounsellorAdmin(admin.ModelAdmin):
     date_hierarchy = "assigned_on"  # date drilldown
     autocomplete_fields = ("student", "employee")  # improves dropdown UX
     readonly_fields = ("assigned_on",)  # prevent manual edits
+
+
+@admin.register(Document)
+class DocumentAdmin(admin.ModelAdmin):
+    list_display = ("student", "name", "doc_type", "status", "file_id")
+    search_fields = ("student__full_name", "name", "doc_type")
+    list_filter = ("doc_type", "status")
+    readonly_fields = ("file_id", "file_uuid", "status")
+    ordering = ("name",)

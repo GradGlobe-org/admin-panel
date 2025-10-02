@@ -28,6 +28,9 @@ import os
 from django.conf import settings
 import secrets
 import requests
+from website.utils import upload_file_to_drive_private
+from .models import Document
+from .utils import stream_private_drive_file
 
 WHATSAPP_TOKEN = settings.WHATSAPP_TOKEN
 WHATSAPP_PHONE_NUMBER_ID = settings.WHATSAPP_PHONE_NUMBER_ID
@@ -1232,3 +1235,128 @@ def set_student_bucket(request):
     except Exception as e:
         # return JsonResponse({"status": "error", "error": f"Unexpected error: {str(e)}"}, status=500)
         return JsonResponse({"status": "error", "error": f"Unexpected error"}, status=500)
+
+
+MAX_FILE_SIZE = 1 * 1024 * 1024  # 1 MB
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@user_token_required
+def upload_document(request):
+    """
+    Handle document upload for authenticated students.
+    Returns JSON in all cases.
+    """
+    try:
+        student_id = request.user.id  # obtained from decorator
+        student = get_object_or_404(Student, id=student_id)
+
+        file_obj = request.FILES.get('document')
+        doc_type = request.POST.get('doc_type')
+        name = request.POST.get('name') or (file_obj.name if file_obj else None)
+
+        # Validate input
+        if not file_obj:
+            return JsonResponse({"error": "No file uploaded."}, status=400)
+        if file_obj.size > MAX_FILE_SIZE:
+            return JsonResponse({"error": "File size exceeds 1 MB."}, status=400)
+        if not doc_type:
+            return JsonResponse({"error": "Document type is required."}, status=400)
+        if not name:
+            return JsonResponse({"error": "Document name is required."}, status=400)
+
+        # Upload to Google Drive (private)
+        try:
+            file_id, file_uuid = upload_file_to_drive_private(file_obj)
+        except ValueError as e:
+            return JsonResponse({"error": str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": f"Upload failed: {e}"}, status=500)
+
+        # Save document record in DB
+        document = Document.objects.create(
+            student=student,
+            name=name,
+            doc_type=doc_type,
+            status='uploaded',
+            file_id=file_id,
+            file_uuid=file_uuid,
+        )
+
+        return JsonResponse({
+            "message": "Document uploaded successfully.",
+            "document_id": document.id,
+            "file_uuid": str(document.file_uuid),
+            "file_id": document.file_id,
+        }, status=201)
+
+    except Exception as e:
+        # Catch-all to ensure JSON response
+        return JsonResponse({"error": f"Unexpected error: {e}"}, status=500)
+
+
+
+@require_http_methods(['GET'])
+@user_token_required
+def download_document(request):
+    """
+    Stream a private Google Drive document to the authenticated user.
+    Returns JSON errors if anything goes wrong.
+    """
+    try:
+        try:
+            document_id = request.GET.get("document_id")
+        except Exception as e:
+            return JsonResponse({
+                "error": "Error in parsing document"
+            }, status=500)
+        document = get_object_or_404(Document, id=document_id, student_id=request.user.id)
+        response = stream_private_drive_file(document.file_id, filename=document.name)
+        if isinstance(response, JsonResponse):
+            return response
+
+        return response
+
+    except Document.DoesNotExist:
+        return JsonResponse({"error": "Document not found or access denied."}, status=404)
+
+    except Exception as e:
+        return JsonResponse({"error": f"Unable to download document: {str(e)}"}, status=500)
+
+@require_http_methods(['GET'])
+@user_token_required
+def get_student_documents_list(request):
+    """
+    Fetch all documents for the authenticated student.
+    Returns JSON with document name, type, status, and download link.
+    """
+    student_id = request.user.id
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, name, doc_type, status
+                FROM student_document
+                WHERE student_id = %s
+                ORDER BY name
+            """, [student_id])
+            
+            rows = cursor.fetchall()
+
+        # Build response
+        documents = []
+        for row in rows:
+            doc_id, name, doc_type, status = row
+            download_link = f"/user/download_document/?document_id={doc_id}"
+            documents.append({
+                # "id": doc_id,
+                "name": name,
+                "doc_type": doc_type,
+                "status": status,
+                "download_link": download_link
+            })
+
+        return JsonResponse({"documents": documents})
+
+    except Exception as e:
+        return JsonResponse({"error": f"Unable to fetch documents: {str(e)}"}, status=500)

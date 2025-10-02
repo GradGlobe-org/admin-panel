@@ -96,7 +96,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "website.wsgi.application"
 
 
-if IS_PRODUCTION:
+# if IS_PRODUCTION:
 DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL"), conn_max_age=600, ssl_require=True
