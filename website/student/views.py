@@ -31,6 +31,7 @@ import requests
 from website.utils import upload_file_to_drive_private
 from .models import Document
 from .utils import stream_private_drive_file
+import threading
 
 WHATSAPP_TOKEN = settings.WHATSAPP_TOKEN
 WHATSAPP_PHONE_NUMBER_ID = settings.WHATSAPP_PHONE_NUMBER_ID
@@ -39,9 +40,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# -------------------------
-# Sync WhatsApp OTP Sender
-# -------------------------
 def send_whatsapp_otp(phone_number: str, otp: int):
     url = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
@@ -75,40 +73,37 @@ def send_whatsapp_otp(phone_number: str, otp: int):
         data = response.json()
     except Exception as e:
         logger.error(f"Network error sending WhatsApp OTP: {e}")
-        return {"status": "error", "reason": "network"}
+        return {"status": "error", "reason": "network", "code": 502}
 
-    # Log all non-success responses for debugging
-    if "error" in data:
-        logger.error(f"WhatsApp API error: {data}")
-        return {"status": "error", "reason": "provider_error"}
-
-    if response.status_code != 200:
-        logger.error(f"HTTP error from WhatsApp API: {response.status_code} {data}")
-        return {"status": "error", "reason": "provider_error"}
+    if "error" in data or response.status_code != 200:
+        logger.error(f"WhatsApp API error: {response.status_code} {data}")
+        return {"status": "error", "reason": "provider_error", "code": 502}
 
     messages = data.get("messages")
     if messages and isinstance(messages, list) and messages[0].get("message_status") == "accepted":
-        return {"status": "success"}
+        return {"status": "success", "code": 200}
 
     logger.warning(f"Unexpected WhatsApp API response: {data}")
-    return {"status": "error", "reason": "unexpected_response"}
+    return {"status": "error", "reason": "unexpected_response", "code": 502}
 
 
-# ---------------- Send OTP ----------------
 @csrf_exempt
 @require_http_methods(["POST"])
 def send_otp(request):
-    """
-    Generates a 6-digit OTP and calls the request_otp Postgres function.
-    """
     try:
         data = json.loads(request.body.decode("utf-8"))
     except json.JSONDecodeError:
-        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON", "code": 400},
+            status=400
+        )
 
     phone_number = str(data.get("phone_number", "")).strip()
     if not phone_number.isdigit() or len(phone_number) != 10:
-        return JsonResponse({"status": "error", "message": "Invalid phone number"}, status=400)
+        return JsonResponse(
+            {"status": "error", "message": "Invalid phone number", "code": 400},
+            status=400
+        )
 
     otp = str(secrets.randbelow(900000) + 100000)  # 6-digit OTP
 
@@ -118,68 +113,98 @@ def send_otp(request):
                 "SELECT request_otp(%s, %s);",
                 [phone_number, otp]
             )
-            result = cursor.fetchone()[0]  # request_otp returns JSON
-            # result is a dict if psycopg2 extras JSON is enabled, else string
-            if isinstance(result, str):
-                result = json.loads(result)
+            result_status = cursor.fetchone()[0]  # 'success', 'wait', or 'error'
 
-        if result.get("status") == "wait":
-            return JsonResponse(result, status=200)
+        if result_status == 'success':
+            # Send OTP in a separate thread
+            threading.Thread(target=send_whatsapp_otp, args=(phone_number, otp), daemon=True).start()
 
-        # Here, you can call your actual WhatsApp/SMS sending function
-        send_success = send_whatsapp_otp(phone_number, otp)  # Implement separately
-        if send_success.get("status") != "success":
-            return JsonResponse({
-                "status": "error",
-                "message": "Could not send OTP",
-                "reason": send_success.get("reason", "unknown")
-            }, status=400)
+            # Immediately return API response
+            return JsonResponse(
+                {"status": "success", "message": f"OTP sent to {phone_number}", "code": 200},
+                status=200
+            )
 
-        return JsonResponse({
-            "status": "success",
-            "message": f"OTP successfully sent to {phone_number}"
-        })
+        elif result_status == 'wait':
+            return JsonResponse(
+                {"status": "error", "message": "Please wait before requesting OTP again", "code": 429},
+                status=429
+            )
 
-    except Exception as e:
-        logger.exception("Error sending OTP")
-        return JsonResponse({"status": "error", "message": "Internal server error"}, status=500)
+        else:  # 'error'
+            return JsonResponse(
+                {"status": "error", "message": "Internal server error", "code": 500},
+                status=500
+            )
 
+    except Exception:
+        logger.exception("Error in send_otp")
+        return JsonResponse(
+            {"status": "error", "message": "An error occurred, try again later", "code": 500},
+            status=500
+        )
 
-# ---------------- Verify OTP ----------------
 @csrf_exempt
 @require_http_methods(["POST"])
 def verify_otp_view(request):
-    """
-    Verifies OTP using the verify_otp Postgres function.
-    """
     try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
-
-    phone_number = str(data.get("phone_number", "")).strip()
-    otp = str(data.get("otp", "")).strip()
-
-    if not phone_number.isdigit() or len(phone_number) != 10:
-        return JsonResponse({"status": "error", "message": "Invalid phone number"}, status=400)
-    if not otp.isdigit() or len(otp) != 6:
-        return JsonResponse({"status": "error", "message": "Invalid OTP"}, status=400)
-
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT verify_otp(%s, %s);",
-                [phone_number, otp]
+        # Parse JSON body
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {"status": "error", "message": "Invalid JSON body"},
+                status=400
             )
-            result = cursor.fetchone()[0]  # verify_otp returns JSON
-            if isinstance(result, str):
-                result = json.loads(result)
 
-        return JsonResponse(result)
+        phone_number = data.get("phone_number")
+        otp = data.get("otp")
+
+        if not phone_number or not otp:
+            return JsonResponse(
+                {"status": "error", "message": "Phone number and OTP are required"},
+                status=400
+            )
+
+        # Call Postgres function
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM verify_otp(%s, %s)", [phone_number, otp])
+            result = cursor.fetchone()
+
+        if not result:
+            return JsonResponse(
+                {"status": "error", "message": "Unexpected error"},
+                status=500
+            )
+
+        status, token, is_existing = result
+
+        # Handle database response
+        if status == "expired":
+            return JsonResponse({"status": "error", "message": "OTP expired"}, status=410)
+
+        elif status == "invalid":
+            return JsonResponse({"status": "error", "message": "Invalid OTP"}, status=401)
+
+        elif status == "success":
+            return JsonResponse({
+                "status": "success",
+                "message": "OTP verified",
+                "type": "login" if is_existing else "register",
+                "auth_token": str(token)
+            }, status=200)
+
+        return JsonResponse(
+            {"status": "error", "message": f"Unknown status: {status}"},
+            status=500
+        )
 
     except Exception as e:
-        logger.exception("Error verifying OTP")
-        return JsonResponse({"status": "error", "message": "Internal server error"}, status=500)
+        return JsonResponse(
+            {"status": "error", "message": f"Server error: {str(e)}"},
+            status=500
+        )
+
 
 
 @method_decorator(csrf_exempt, name="dispatch")
