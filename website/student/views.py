@@ -177,7 +177,7 @@ def verify_otp_view(request):
                 status=500
             )
 
-        status, token, is_existing = result
+        status, token, is_existing, full_name = result
 
         # Handle database response
         if status == "expired":
@@ -190,6 +190,8 @@ def verify_otp_view(request):
             return JsonResponse({
                 "status": "success",
                 "message": "OTP verified",
+                "phone_number":phone_number,
+                "name": full_name,
                 "type": "login" if is_existing else "register",
                 "auth_token": str(token)
             }, status=200)
