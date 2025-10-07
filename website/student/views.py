@@ -1135,7 +1135,7 @@ def get_student_details_with_student_id(request):
         return JsonResponse(student_data, safe=False)
 
     except Exception as e:
-        return JsonResponse({"error": "an error occured"}, status=500)
+        return JsonResponse({"error": "An error occured, please try again later"}, status=500)
 
 
 @token_required

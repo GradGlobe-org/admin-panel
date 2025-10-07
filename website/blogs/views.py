@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 import uuid
 from django.core.files.uploadedfile import UploadedFile
 from website.utils import upload_file_to_drive_public
+import math
 
 STREAM_IMAGE_URL = "https://admin.gradglobe.org/blog/images"
 
@@ -88,7 +89,7 @@ def blog_post_detail_view(request, identifier):
             'title': post.title,
             'slug': post.slug,
             'content': post.content,
-            'featured_image': post.featured_image,
+            'featured_image': 'admin.gradglobe.org' + post.featured_image,
             'author': {
                 'id': post.author.id,
                 'username': post.author.username,
@@ -436,3 +437,79 @@ def upload_image_to_drive(request):
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+@require_http_methods(["GET"])
+@api_key_required
+@token_required
+def blog_gallery(request):
+    """
+    API Endpoint: /blog/image-gallery/
+    Supports ?search, ?limit, ?page
+    Example: /blog/image-gallery/?search=django&limit=10&page=2
+    """
+
+    search = request.GET.get("search")
+    limit = request.GET.get("limit", 10)
+    page = request.GET.get("page", 1)
+
+    # Validate limit
+    try:
+        limit = int(limit)
+    except (ValueError, TypeError):
+        limit = 10
+    limit = max(1, min(limit, 20))  # enforce 1 ≤ limit ≤ 20
+
+    # Validate page
+    try:
+        page = int(page)
+    except (ValueError, TypeError):
+        page = 1
+    page = max(1, page)
+
+    offset = (page - 1) * limit
+
+    # Base SQL (safe placeholders)
+    base_query = """
+        FROM blogs_post
+        WHERE (%s IS NULL OR title ILIKE '%%' || %s || '%%')
+    """
+
+    try:
+        with connection.cursor() as cursor:
+            # Total count
+            cursor.execute("SELECT COUNT(*) " + base_query, [search, search])
+            total = cursor.fetchone()[0]
+
+            # Compute total pages
+            total_pages = math.ceil(total / limit) if total > 0 else 1
+
+            # Paginated data
+            cursor.execute(
+                """
+                SELECT id, title, featured_image
+                """ + base_query + """
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+                """,
+                [search, search, limit, offset],
+            )
+
+            columns = [col[0] for col in cursor.description]
+            posts = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        return JsonResponse({
+            "status": "success",
+            "count": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "results": posts
+        }, status=200, safe=False)
+
+    except Exception as e:
+        # In production, log error details using logging or sentry
+        return JsonResponse({
+            "status": "error",
+            "message": "Something went wrong while fetching images.",
+            # "m":str(e)
+        }, status=500)
