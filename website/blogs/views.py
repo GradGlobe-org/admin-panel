@@ -404,20 +404,13 @@ MAX_FILE_SIZE_MB = 5
 
 @require_http_methods(['POST'])
 @csrf_exempt
-# @api_key_required 
 @token_required
-def upload_featured_image_for_post(request):
+def upload_image_to_drive(request):
     """
-    Upload an image to Google Drive for a specific Post (by blog_id),
-    update the Post, and return the featured_image URL.
-    Only the post author with permissions can update.
+    Upload an image to Google Drive and return its public URL.
+    No post or author validation.
     """
-    blog_id = request.POST.get("blog_id")
-    upload_file: UploadedFile = request.FILES.get("image")
-    author = request.user
-
-    if not blog_id:
-        return JsonResponse({"error": "Missing blog_id."}, status=400)
+    upload_file = request.FILES.get("image")
 
     if not upload_file:
         return JsonResponse({"error": "No image provided."}, status=400)
@@ -427,35 +420,16 @@ def upload_featured_image_for_post(request):
             "error": f"Image size must be under {MAX_FILE_SIZE_MB} MB."
         }, status=400)
 
-    # Fetch the Post instance
-    post = get_object_or_404(Post, id=blog_id)
-
-    # Permission checks
-    if not has_perms(author.id, ["Blog_update"]):
-        return JsonResponse({
-            'status': 'error',
-            'message': 'Employee does not have permissions to perform this task'
-        }, status=403)
-
-    if post.author.id != author.id:
-        return JsonResponse({
-            'status': 'error',
-            'message': 'Only the post author can update this post'
-        }, status=403)
-
     try:
-        # Upload image in-memory to Google Drive
+        # Upload file to Google Drive (assuming this function handles all)
         drive_file_id, generated_uuid = upload_file_to_drive_public(upload_file)
 
-        # Update Post instance
-        post.google_file_id = drive_file_id
-        post.image_uuid = generated_uuid
-        post.featured_image = f"/blog/images?id={drive_file_id}"
-        post.save()
+        # Generate the same-style public URL
+        featured_image_url = f"/blog/images?id={drive_file_id}"
 
         return JsonResponse({
             "success": True,
-            "featured_image": post.featured_image,
+            "featured_image": featured_image_url,
             "google_file_id": drive_file_id,
             "image_uuid": generated_uuid
         })

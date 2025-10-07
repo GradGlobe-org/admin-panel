@@ -287,8 +287,8 @@ class Student(models.Model):
         validators=[phone_regex],
         help_text="Enter a 10-digit phone number."
     )
+    is_otp_verified = models.BooleanField(default=False)
     full_name = models.CharField(max_length=200, null=True)
-    password = models.CharField(max_length=128, null=True)
     authToken = models.UUIDField(default=uuid4, editable=False, unique=True)
     category = models.ForeignKey(
         Bucket,
