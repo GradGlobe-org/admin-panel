@@ -89,7 +89,7 @@ def blog_post_detail_view(request, identifier):
             'title': post.title,
             'slug': post.slug,
             'content': post.content,
-            'featured_image': 'admin.gradglobe.org' + post.featured_image,
+            'featured_image': 'https://admin.gradglobe.org' + post.featured_image,
             'author': {
                 'id': post.author.id,
                 'username': post.author.username,
