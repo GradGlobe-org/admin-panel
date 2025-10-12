@@ -538,7 +538,7 @@ def submit_test_view(request):
     try:
         data = json.loads(request.body)
         test_id = data.get("test_id")
-        student_id = request.user.id  # from token
+        student_id = request.user.id
 
         if not test_id:
             return JsonResponse({"status": "error", "message": "test_id is required"}, status=400)
@@ -563,3 +563,6 @@ def submit_test_view(request):
 
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
+
+# def calculate_test_score(request):

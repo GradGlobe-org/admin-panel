@@ -5,7 +5,8 @@ from .call_requests import *
 
 #for students
 urlpatterns = [
-    path("request_otp/", send_otp),
+    path("register_user/", register_and_send_otp),
+    path("login_user/", send_otp),
     path("verify_otp/", verify_otp_view),
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
@@ -34,11 +35,7 @@ urlpatterns += [
     path("students_list/", get_all_students),
     path("logs/<int:student_id>/", get_student_logs, name="student-logs"),
     path("summarize_interest/", summarize_student_interest),
-    path(
-        "student_details_employee/",
-        get_student_details_with_student_id,
-        name="complete_student_details",
-    ),
+    path("student_details_employee/",get_student_details_with_student_id, name="complete_student_details"),
     path("get_all_buckets/", bucket_list),
     path("add_student_to_bucket/", set_student_bucket),
 ]

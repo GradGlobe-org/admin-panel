@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 import uuid
 from django.core.files.uploadedfile import UploadedFile
 from website.utils import upload_file_to_drive_public
+import math
 
 STREAM_IMAGE_URL = "https://admin.gradglobe.org/blog/images"
 
@@ -88,7 +89,7 @@ def blog_post_detail_view(request, identifier):
             'title': post.title,
             'slug': post.slug,
             'content': post.content,
-            'featured_image': post.featured_image,
+            'featured_image': 'https://admin.gradglobe.org' + post.featured_image,
             'author': {
                 'id': post.author.id,
                 'username': post.author.username,
@@ -404,20 +405,13 @@ MAX_FILE_SIZE_MB = 5
 
 @require_http_methods(['POST'])
 @csrf_exempt
-# @api_key_required 
 @token_required
-def upload_featured_image_for_post(request):
+def upload_image_to_drive(request):
     """
-    Upload an image to Google Drive for a specific Post (by blog_id),
-    update the Post, and return the featured_image URL.
-    Only the post author with permissions can update.
+    Upload an image to Google Drive and return its public URL.
+    No post or author validation.
     """
-    blog_id = request.POST.get("blog_id")
-    upload_file: UploadedFile = request.FILES.get("image")
-    author = request.user
-
-    if not blog_id:
-        return JsonResponse({"error": "Missing blog_id."}, status=400)
+    upload_file = request.FILES.get("image")
 
     if not upload_file:
         return JsonResponse({"error": "No image provided."}, status=400)
@@ -427,38 +421,95 @@ def upload_featured_image_for_post(request):
             "error": f"Image size must be under {MAX_FILE_SIZE_MB} MB."
         }, status=400)
 
-    # Fetch the Post instance
-    post = get_object_or_404(Post, id=blog_id)
-
-    # Permission checks
-    if not has_perms(author.id, ["Blog_update"]):
-        return JsonResponse({
-            'status': 'error',
-            'message': 'Employee does not have permissions to perform this task'
-        }, status=403)
-
-    if post.author.id != author.id:
-        return JsonResponse({
-            'status': 'error',
-            'message': 'Only the post author can update this post'
-        }, status=403)
-
     try:
-        # Upload image in-memory to Google Drive
+        # Upload file to Google Drive (assuming this function handles all)
         drive_file_id, generated_uuid = upload_file_to_drive_public(upload_file)
 
-        # Update Post instance
-        post.google_file_id = drive_file_id
-        post.image_uuid = generated_uuid
-        post.featured_image = f"/blog/images?id={drive_file_id}"
-        post.save()
+        # Generate the same-style public URL
+        featured_image_url = f"/blog/images?id={drive_file_id}"
 
         return JsonResponse({
             "success": True,
-            "featured_image": post.featured_image,
+            "featured_image": featured_image_url,
             "google_file_id": drive_file_id,
             "image_uuid": generated_uuid
         })
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+@require_http_methods(["GET"])
+@api_key_required
+@token_required
+def blog_gallery(request):
+    """
+    API Endpoint: /blog/image-gallery/
+    Supports ?search, ?limit, ?page
+    Example: /blog/image-gallery/?search=django&limit=10&page=2
+    """
+
+    search = request.GET.get("search")
+    limit = request.GET.get("limit", 10)
+    page = request.GET.get("page", 1)
+
+    # Validate limit
+    try:
+        limit = int(limit)
+    except (ValueError, TypeError):
+        limit = 10
+    limit = max(1, min(limit, 20))  # enforce 1 ≤ limit ≤ 20
+
+    # Validate page
+    try:
+        page = int(page)
+    except (ValueError, TypeError):
+        page = 1
+    page = max(1, page)
+
+    offset = (page - 1) * limit
+
+    # Base SQL (safe placeholders)
+    base_query = """
+        FROM blogs_post
+        WHERE (%s IS NULL OR title ILIKE '%%' || %s || '%%')
+    """
+
+    try:
+        with connection.cursor() as cursor:
+            # Total count
+            cursor.execute("SELECT COUNT(*) " + base_query, [search, search])
+            total = cursor.fetchone()[0]
+
+            # Compute total pages
+            total_pages = math.ceil(total / limit) if total > 0 else 1
+
+            # Paginated data
+            cursor.execute(
+                """
+                SELECT id, title, featured_image
+                """ + base_query + """
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+                """,
+                [search, search, limit, offset],
+            )
+
+            columns = [col[0] for col in cursor.description]
+            posts = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        return JsonResponse({
+            "status": "success",
+            "count": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "results": posts
+        }, status=200, safe=False)
+
+    except Exception as e:
+        # In production, log error details using logging or sentry
+        return JsonResponse({
+            "status": "error",
+            "message": "Something went wrong while fetching images.",
+            # "m":str(e)
+        }, status=500)

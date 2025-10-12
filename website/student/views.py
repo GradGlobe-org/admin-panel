@@ -32,6 +32,7 @@ from website.utils import upload_file_to_drive_private
 from .models import Document
 from .utils import stream_private_drive_file
 import threading
+import re
 
 WHATSAPP_TOKEN = settings.WHATSAPP_TOKEN
 WHATSAPP_PHONE_NUMBER_ID = settings.WHATSAPP_PHONE_NUMBER_ID
@@ -89,26 +90,131 @@ def send_whatsapp_otp(phone_number: str, otp: int):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def register_and_send_otp(request):
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    full_name = str(data.get("full_name", "")).strip()
+    phone_number = str(data.get("phone_number", "")).strip()
+    email = str(data.get("email", "")).strip()
+
+    if (
+        not full_name
+        or not phone_number
+        or not email
+        or not phone_number.isdigit()
+        or len(phone_number) != 10
+        or not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email)
+    ):
+        return JsonResponse(
+            {"status": "error", "message": "Invalid input. All fields are required and must be valid."},
+            status=400,
+        )
+
+    otp = str(secrets.randbelow(900000) + 100000)
+    auth_token = str(uuid4())
+
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                # Check if phone number already exists
+                cursor.execute("SELECT id FROM student_student WHERE phone_number = %s;", [phone_number])
+                if cursor.fetchone():
+                    return JsonResponse(
+                        {"status": "error", "message": "This number is already registered with an account. Kindly login using this number"},
+                        status=400,
+                    )
+
+                # Check if email already exists
+                cursor.execute("SELECT student_id FROM student_email WHERE email = %s;", [email])
+                if cursor.fetchone():
+                    return JsonResponse(
+                        {"status": "error", "message": "This email is already in use with another account."},
+                        status=400,
+                    )
+
+                # Insert new student
+                cursor.execute(
+                    """
+                    INSERT INTO student_student (phone_number, is_otp_verified, full_name, "authToken")
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    [phone_number, False, full_name, auth_token],
+                )
+                student_id_row = cursor.fetchone()
+                if not student_id_row:
+                    raise Exception("Failed to insert student")
+                student_id = student_id_row[0]
+
+                # Insert email into student_email table
+                cursor.execute(
+                    "INSERT INTO student_email (student_id, email) VALUES (%s, %s);",
+                    [student_id, email]
+                )
+
+                # Request OTP
+                cursor.execute("SELECT request_otp(%s, %s);", [phone_number, otp])
+                result_status = cursor.fetchone()[0]
+
+        if result_status == "success":
+            send_result = send_whatsapp_otp(phone_number, otp)
+            if send_result.get("status") != "success":
+                logger.error(f"Failed to send OTP to {phone_number}: {send_result}")
+                return JsonResponse({"status": "error", "message": "Could not send OTP"}, status=502)
+
+            return JsonResponse({"status": "success", "message": f"OTP sent to {phone_number}"}, status=200)
+
+        elif result_status == "wait":
+            return JsonResponse({"status": "error", "message": "Please wait before requesting OTP again"}, status=429)
+
+        else:
+            return JsonResponse({"status": "error", "message": "Internal server error"}, status=500)
+
+    except Exception as e:
+        logger.exception(f"Error in register_and_send_otp: {e}")
+        return JsonResponse({"status": "error", "message": "An error occurred, try again later"}, status=500)
+
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def send_otp(request):
     try:
         data = json.loads(request.body.decode("utf-8"))
     except json.JSONDecodeError:
         return JsonResponse(
-            {"status": "error", "message": "Invalid JSON", "code": 400},
+            {"status": "error", "message": "Invalid JSON"},
             status=400
         )
 
     phone_number = str(data.get("phone_number", "")).strip()
     if not phone_number.isdigit() or len(phone_number) != 10:
         return JsonResponse(
-            {"status": "error", "message": "Invalid phone number", "code": 400},
+            {"status": "error", "message": "Invalid phone number"},
             status=400
         )
 
-    otp = str(secrets.randbelow(900000) + 100000)  # 6-digit OTP
-
     try:
         with connection.cursor() as cursor:
+            # Check if student exists
+            cursor.execute(
+                "SELECT id FROM student_student WHERE phone_number = %s;",
+                [phone_number]
+            )
+            student = cursor.fetchone()
+            if not student:
+                return JsonResponse(
+                    {"status": "error", "message": "Phone number not registered. Please register first."},
+                    status=400
+                )
+
+            # Generate OTP
+            otp = str(secrets.randbelow(900000) + 100000)  # 6-digit OTP
+
+            # Request OTP from Postgres function
             cursor.execute(
                 "SELECT request_otp(%s, %s);",
                 [phone_number, otp]
@@ -116,33 +222,39 @@ def send_otp(request):
             result_status = cursor.fetchone()[0]  # 'success', 'wait', or 'error'
 
         if result_status == 'success':
-            # Send OTP in a separate thread
-            threading.Thread(target=send_whatsapp_otp, args=(phone_number, otp), daemon=True).start()
+            # Send OTP
+            send_result = send_whatsapp_otp(phone_number, otp)
+            if send_result.get("status") != "success":
+                logger.error(f"Failed to send OTP to {phone_number}: {send_result}")
+                return JsonResponse(
+                    {"status": "error", "message": "Could not send OTP"},
+                    status=502
+                )
 
-            # Immediately return API response
             return JsonResponse(
-                {"status": "success", "message": f"OTP sent to {phone_number}", "code": 200},
+                {"status": "success", "message": f"OTP sent to {phone_number}"},
                 status=200
             )
 
         elif result_status == 'wait':
             return JsonResponse(
-                {"status": "error", "message": "Please wait before requesting OTP again", "code": 429},
+                {"status": "error", "message": "Please wait before requesting OTP again"},
                 status=429
             )
 
         else:  # 'error'
             return JsonResponse(
-                {"status": "error", "message": "Internal server error", "code": 500},
+                {"status": "error", "message": "Internal server error"},
                 status=500
             )
 
-    except Exception:
-        logger.exception("Error in send_otp")
+    except Exception as e:
+        logger.exception(f"Error in send_otp: {e}")
         return JsonResponse(
-            {"status": "error", "message": "An error occurred, try again later", "code": 500},
+            {"status": "error", "message": "An error occurred, try again later"},
             status=500
         )
+        
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -177,22 +289,25 @@ def verify_otp_view(request):
                 status=500
             )
 
-        status, token, is_existing = result
+        status, token, is_existing, full_name, email = result
 
         # Handle database response
         if status == "expired":
             return JsonResponse({"status": "error", "message": "OTP expired"}, status=410)
 
         elif status == "invalid":
-            return JsonResponse({"status": "error", "message": "Invalid OTP"}, status=401)
+            return JsonResponse({"status": "error", "message": "Invalid or expired OTP"}, status=401)
 
         elif status == "success":
             return JsonResponse({
-                "status": "success",
-                "message": "OTP verified",
-                "type": "login" if is_existing else "register",
-                "auth_token": str(token)
-            }, status=200)
+            "status": "success",
+            "message": "OTP verified",
+            "phone_number": phone_number,
+            "name": full_name,
+            "email": email,
+            "type": "login" if is_existing else "register",
+            "auth_token": str(token)
+        }, status=200)
 
         return JsonResponse(
             {"status": "error", "message": f"Unknown status: {status}"},
@@ -204,7 +319,6 @@ def verify_otp_view(request):
             {"status": "error", "message": f"Server error: {str(e)}"},
             status=500
         )
-
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -1021,7 +1135,7 @@ def get_student_details_with_student_id(request):
         return JsonResponse(student_data, safe=False)
 
     except Exception as e:
-        return JsonResponse({"error": "an error occured"}, status=500)
+        return JsonResponse({"error": "An error occured, please try again later"}, status=500)
 
 
 @token_required
