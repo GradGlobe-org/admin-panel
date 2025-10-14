@@ -30,9 +30,9 @@ class Test(models.Model):
     ]
 
     test_rule = models.ForeignKey(
-        TestRules, 
-        on_delete=models.SET_NULL, 
-        blank=True, 
+        TestRules,
+        on_delete=models.SET_NULL,
+        blank=True,
         null=True,
         related_name="tests"
     )
@@ -222,6 +222,7 @@ class Answer(models.Model):
     subjective_answer = models.TextField(blank=True, null=True)    # For subjective
     marks_obtained = models.FloatField(blank=True, null=True)
     answered_at = models.DateTimeField(auto_now_add=True)
+    remarks = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.test_status.student} - {self.question.question[:50]}"
@@ -265,6 +266,7 @@ class Evaluation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     remarks = models.TextField(blank=True, null=True)
     evaluated_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name="evaluations")
+    is_error_evaluating = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.test_status.student} - {self.test_status.test.title} Evaluation"

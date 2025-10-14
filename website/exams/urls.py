@@ -14,5 +14,6 @@ urlpatterns = [
     path("student/start_test/",start_or_resume_test_view),
     path("student/save_answer/", save_student_answer_view),
     path("student/confirm_submit/", confirm_before_submit_view),
-    path("student/submit_test/", submit_test_view)
+    path("student/submit_test/", submit_test_view),
+    path("evaluate/", evaluate_subjective_answers),
 ]

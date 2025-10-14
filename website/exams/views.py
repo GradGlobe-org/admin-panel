@@ -360,52 +360,68 @@ def get_test_rules_view(request):
 @user_token_required
 def start_or_resume_test_view(request):
     if request.method != "POST":
-        return JsonResponse(
-            {"status": "error", "message": "Invalid request method"},
-            status=405
-        )
+        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse(
-            {"status": "error", "message": "Invalid JSON payload"},
-            status=400
-        )
+        return JsonResponse({"status": "error", "message": "Invalid JSON payload"}, status=400)
 
     test_id = data.get("test_id")
     if not test_id:
-        return JsonResponse(
-            {"status": "error", "message": "test_id is required"},
-            status=400
-        )
+        return JsonResponse({"status": "error", "message": "test_id is required"}, status=400)
 
     student_id = request.user.id  # assumes request.user is Student
 
+    from exams.models import Test, TestStatus
+    from .models import CourseLinkedStudent, CourseTest
+    from django.utils import timezone
+    from datetime import timedelta
+
+    # ✅ Step 1: Check if student already has a TestStatus
+    existing_status = TestStatus.objects.filter(student_id=student_id, test_id=test_id).first()
+
+    # ✅ Step 2: If not assigned, verify if test belongs to a course that the student is enrolled in
+    if not existing_status:
+        is_linked = CourseLinkedStudent.objects.filter(
+            student_id=student_id,
+            course__tests__id=test_id
+        ).exists()
+
+        if not is_linked:
+            return JsonResponse(
+                {"status": "error", "eligible": False, "message": "Student not enrolled in a course containing this test"},
+                status=403
+            )
+
+        # ✅ Step 3: Create a TestStatus record dynamically
+        deadline = timezone.now() + timedelta(days=1)  # you can adjust duration logic as needed
+        existing_status = TestStatus.objects.create(
+            student_id=student_id,
+            test_id=test_id,
+            status="pending",
+            deadline=deadline
+        )
+
+    # ✅ Step 4: Call your existing SQL function to start/resume the test
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT start_or_resume_test(%s, %s)",
-                [student_id, test_id]
-            )
-            result = cursor.fetchone()[0]  # get JSONB result
+            cursor.execute("SELECT start_or_resume_test(%s, %s)", [student_id, test_id])
+            result = cursor.fetchone()[0]
 
-        # Determine HTTP status based on eligibility
         if isinstance(result, str):
             result = json.loads(result)
 
         http_status = 200 if result.get("eligible") else 403
-
         return JsonResponse(result, status=http_status)
 
     except Exception as e:
-        # Log error (optional)
         print(f"Error in start_or_resume_test_view: {e}")
-
         return JsonResponse(
             {"status": "error", "eligible": False, "message": str(e)},
             status=500
         )
+
 
 
 @csrf_exempt
@@ -565,4 +581,298 @@ def submit_test_view(request):
         return JsonResponse({"status": "error", "message": str(e)}, status=400)
 
 
-# def calculate_test_score(request):
+import json
+import re
+import ast
+import logging
+import traceback
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from django.utils import timezone
+
+from .models import TestStatus, Answer, Evaluation, Test
+from exams.models import TestStatus, Answer, Evaluation
+from website.utils import user_token_required
+from .utils import get_subjective_eval_chain, subjective_eval_parser
+
+logger = logging.getLogger(__name__)
+
+def safe_jsonify_llm_output(raw_output):
+    """
+    Convert loosely formatted LLM output into valid JSON or Python list/dict.
+    Handles:
+      - LangChain reprs like "root=[SubjectiveEvaluation(qs_id=32, marks=10.0), ...]"
+      - Python reprs with single quotes
+      - JSON strings embedded in strings
+    Returns a Python list/dict.
+    """
+    if raw_output is None:
+        return []
+
+    # If already parsed
+    if isinstance(raw_output, (list, dict)):
+        return raw_output
+
+    # Unwrap `.root` if present
+    if hasattr(raw_output, "root"):
+        raw_output = getattr(raw_output, "root")
+
+    text = str(raw_output).strip()
+
+    # Handle "root=[SubjectiveEvaluation(...)]"
+    if "SubjectiveEvaluation(" in text:
+        # Extract each SubjectiveEvaluation(...) block
+        pattern = r"SubjectiveEvaluation\(qs_id=(\d+),\s*marks=([\d.]+)\)"
+        matches = re.findall(pattern, text)
+        if matches:
+            data = [{"qs_id": int(qs_id), "marks": float(marks)} for qs_id, marks in matches]
+            return data
+
+    # Handle "root=[{...}]" or plain JSON
+    root_match = re.search(r"root\s*=\s*(\[.*\])", text, flags=re.S)
+    if root_match:
+        text = root_match.group(1)
+
+    # Try JSON parsing directly
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Try Python literal (handles single quotes, tuples)
+    try:
+        return ast.literal_eval(text)
+    except Exception:
+        pass
+
+    # Try with single→double quote replacement
+    try:
+        fixed = re.sub(r"'", '"', text)
+        return json.loads(fixed)
+    except Exception:
+        return []
+
+
+from django.utils import timezone
+
+def build_test_report(test_status, evaluation):
+    """
+    Build structured report of evaluated test with per-question marks,
+    properly handling multiple selected options and negative marking.
+    """
+    answers = (
+        Answer.objects.filter(test_status=test_status)
+        .select_related("question", "question__section")
+        .prefetch_related("selected_options", "question__options")
+    )
+
+    report = {
+        "status": "success",
+        "test_id": test_status.test.id,
+        "test_title": test_status.test.title,
+        "attempt_time": (
+            test_status.completed_at.strftime("%Y-%m-%d %H:%M:%S")
+            if test_status.completed_at
+            else None
+        ),
+        "total_marks": evaluation.total_marks,
+        "obtained_marks": evaluation.obtained_marks,
+        "sections": [],
+    }
+
+    sections = {}
+    for ans in answers:
+        section = ans.question.section
+        section_name = section.title
+
+        if section_name not in sections:
+            sections[section_name] = {
+                "section": section_name,
+                "question_mode": section.question_mode,
+                "questions": []
+            }
+
+        q_data = {
+            "qs_no": ans.question.id,
+            "qs": ans.question.question,
+            "full_marks": ans.question.marks,
+        }
+
+        if section.question_mode == "MCQ":
+            # Prepare selected and correct options
+            selected_ids = set(ans.selected_options.values_list("id", flat=True))
+            options = []
+            correct_count = 0
+            selected_correct_count = 0
+            total_selected = len(selected_ids)
+
+            for opt in ans.question.options.all():
+                is_correct = opt.is_correct
+                is_selected = opt.id in selected_ids
+                options.append({
+                    "option": opt.option_name,
+                    "is_correct": is_correct,
+                    "is_selected": is_selected
+                })
+                if is_correct:
+                    correct_count += 1
+                    if is_selected:
+                        selected_correct_count += 1
+
+            # Calculate marks including negative marking
+            marks_obtained = 0.0
+            if total_selected > 0 and correct_count > 0:
+                # Positive marks proportion
+                marks_obtained = ans.question.marks * (selected_correct_count / correct_count)
+                # Negative marks for wrong options
+                wrong_selected = total_selected - selected_correct_count
+                if wrong_selected > 0 and section.negative_marking_factor > 0:
+                    negative = wrong_selected * section.negative_marking_factor
+                    marks_obtained -= negative
+                    if marks_obtained < 0:
+                        marks_obtained = 0.0
+            q_data["obtained_marks"] = marks_obtained
+            q_data["options"] = options
+
+        else:  # Subjective
+            q_data.update({
+                "obtained_marks": ans.marks_obtained or 0.0,
+                "answer": ans.subjective_answer or "",
+                "remarks": ans.remarks or "",
+            })
+
+        sections[section_name]["questions"].append(q_data)
+
+    report["sections"] = list(sections.values())
+    return report
+
+
+@csrf_exempt
+@user_token_required
+@transaction.atomic
+def evaluate_subjective_answers(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+
+    # Step 1: Parse request
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON payload"}, status=400)
+
+    test_id = payload.get("test_id")
+    student_id = getattr(request.user, "id", None)
+
+    if not test_id or not student_id:
+        return JsonResponse({"status": "error", "message": "Missing required parameters"}, status=400)
+
+    # Step 2: Fetch test & test status
+    try:
+        test = Test.objects.get(id=test_id)
+    except Test.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Test not found"}, status=404)
+
+    try:
+        test_status = TestStatus.objects.get(student_id=student_id, test=test)
+    except TestStatus.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "No test assigned to this student"}, status=404)
+
+    if str(test_status.status).lower() != "completed":
+        return JsonResponse(
+            {"status": "error", "message": f"Test not completed (status={test_status.status})"},
+            status=400,
+        )
+
+    # Step 3: Check if already evaluated
+    evaluation = Evaluation.objects.filter(test_status=test_status).first()
+    if evaluation and not evaluation.is_error_evaluating:
+        # Already evaluated → build report & return immediately
+        return JsonResponse(build_test_report(test_status, evaluation), status=200)
+
+    # Step 4: Evaluate MCQs
+    mcq_answers = Answer.objects.filter(
+        test_status=test_status,
+        question__section__question_mode="MCQ"
+    ).select_related("question", "question__section").prefetch_related("selected_options", "selected_options__question")
+
+    for ans in mcq_answers:
+        try:
+            ans.evaluate()
+            if ans.marks_obtained is None or ans.marks_obtained < 0:
+                ans.marks_obtained = 0
+            if ans.marks_obtained > ans.question.marks:
+                ans.marks_obtained = ans.question.marks
+            ans.save(update_fields=["marks_obtained"])
+        except Exception:
+            logger.exception("Error evaluating MCQ id=%s for test_status id=%s", ans.id, test_status.id)
+            return JsonResponse({"status": "error", "message": "MCQ evaluation failed"}, status=500)
+
+    # Step 5: Subjective evaluation
+    subjective_answers_qs = Answer.objects.filter(
+        test_status=test_status,
+        question__section__question_mode="SUB"
+    ).select_related("question")
+
+    if subjective_answers_qs.exists():
+        data_for_ai = [
+            {
+                "qs_id": ans.id,
+                "qs": ans.question.question,
+                "qs_answer": ans.subjective_answer or "",
+                "qs_max_marks": ans.question.marks,
+            }
+            for ans in subjective_answers_qs
+        ]
+
+        try:
+            chain = get_subjective_eval_chain()
+            format_instructions = subjective_eval_parser.get_format_instructions()
+            raw_ai_output = chain.invoke({
+                "subjective_data_json": json.dumps(data_for_ai),
+                "format_instructions": format_instructions
+            })
+            evaluations_output = safe_jsonify_llm_output(raw_ai_output)
+        except Exception:
+            logger.exception("LLM subjective eval failed")
+            evaluation, _ = Evaluation.objects.get_or_create(test_status=test_status)
+            evaluation.is_error_evaluating = True
+            evaluation.save(update_fields=["is_error_evaluating"])
+            return JsonResponse({"status": "error", "message": "Subjective evaluation failed"}, status=500)
+
+        # Map marks
+        marks_map = {}
+        for item in evaluations_output:
+            try:
+                qs_id = int(item.get("qs_id") or item.get("id"))
+                marks = float(item.get("marks") or item.get("score"))
+                marks_map[qs_id] = marks
+            except Exception:
+                logger.warning("Invalid item in eval output: %s", item)
+
+        # Apply marks
+        for ans in subjective_answers_qs:
+            val = marks_map.get(ans.id, 0.0)
+            if val < 0:
+                val = 0
+            if val > ans.question.marks:
+                val = ans.question.marks
+            ans.marks_obtained = val
+            ans.save(update_fields=["marks_obtained"])
+
+    # Step 6: Finalize totals
+    total_marks = 0
+    obtained_marks = 0
+    for ans in Answer.objects.filter(test_status=test_status).select_related("question"):
+        total_marks += ans.question.marks
+        obtained_marks += ans.marks_obtained or 0
+
+    evaluation, _ = Evaluation.objects.get_or_create(test_status=test_status)
+    evaluation.total_marks = total_marks
+    evaluation.obtained_marks = obtained_marks
+    evaluation.is_error_evaluating = False
+    evaluation.save()
+
+    # Step 7: Return structured report
+    return JsonResponse(build_test_report(test_status, evaluation), status=200)
