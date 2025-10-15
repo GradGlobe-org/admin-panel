@@ -43,7 +43,7 @@ def normalize_blog_posts(rows):
     return results
 
 @csrf_exempt
-# @api_key_required
+@api_key_required
 @require_http_methods(["GET"])
 def blog_post_summary_view(request):
     auth_token = request.headers.get("Authorization")
