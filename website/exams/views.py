@@ -749,6 +749,43 @@ def build_test_report(test_status, evaluation):
     return report
 
 
+def build_section_marks_summary(test_status, evaluation=None):
+    answers = (
+        Answer.objects.filter(test_status=test_status)
+        .select_related("question", "question__section")
+    )
+
+    section_summary = {}
+    total_marks = 0.0
+    obtained_marks = 0.0
+
+    for ans in answers:
+        section = ans.question.section
+        section_name = section.title
+
+        if section_name not in section_summary:
+            section_summary[section_name] = {
+                "section": section_name,
+                "question_mode": section.question_mode,
+                "total_marks": 0.0,
+                "obtained_marks": 0.0,
+            }
+
+        section_summary[section_name]["total_marks"] += ans.question.marks or 0.0
+        section_summary[section_name]["obtained_marks"] += ans.marks_obtained or 0.0
+        total_marks += ans.question.marks or 0.0
+        obtained_marks += ans.marks_obtained or 0.0
+
+    return {
+        "status": "success",
+        "test_id": test_status.test.id,
+        "test_title": test_status.test.title,
+        "total_marks": evaluation.total_marks if evaluation else total_marks,
+        "obtained_marks": evaluation.obtained_marks if evaluation else obtained_marks,
+        "sections": list(section_summary.values()),
+    }
+
+
 @csrf_exempt
 @user_token_required
 @transaction.atomic
@@ -789,7 +826,7 @@ def evaluate_subjective_answers(request):
     evaluation = Evaluation.objects.filter(test_status=test_status).first()
     if evaluation and not evaluation.is_error_evaluating:
         # Already evaluated → build report & return immediately
-        return JsonResponse(build_test_report(test_status, evaluation), status=200)
+        return JsonResponse(build_section_marks_summary(test_status, evaluation), status=200)
 
     # Step 4: Evaluate MCQs
     mcq_answers = Answer.objects.filter(
@@ -875,4 +912,4 @@ def evaluate_subjective_answers(request):
     evaluation.save()
 
     # Step 7: Return structured report
-    return JsonResponse(build_test_report(test_status, evaluation), status=200)
+    return JsonResponse(build_section_marks_summary(test_status, evaluation), status=200)
