@@ -90,7 +90,7 @@ def blog_post_detail_view(request, identifier):
             'title': post.title,
             'slug': post.slug,
             'content': post.content,
-            'featured_image': 'https://admin.gradglobe.org' + post.featured_image,
+            'featured_image': post.featured_image,
             'author': {
                 'id': post.author.id,
                 'username': post.author.username,
@@ -427,7 +427,7 @@ def upload_image_to_drive(request):
         drive_file_id, generated_uuid = upload_file_to_drive_public(upload_file)
 
         # Generate the same-style public URL
-        featured_image_url = f"/blog/images?id={drive_file_id}"
+        featured_image_url = f"https://admin.gradglobe.org/blog/images?id={drive_file_id}"
 
         return JsonResponse({
             "success": True,
