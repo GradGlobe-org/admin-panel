@@ -125,7 +125,7 @@ class CountryAdmin(admin.ModelAdmin):
 @admin.register(location)
 class LocationAdmin(admin.ModelAdmin):
     list_display = ('city', 'state', 'country')
-    search_fields = ('city', 'state', 'country__name')
+    search_fields = ('city', 'state', 'country')
 
 
 # === OTHER ADMINS ===
