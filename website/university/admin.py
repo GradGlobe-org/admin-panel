@@ -67,7 +67,7 @@ class UniversityAdmin(admin.ModelAdmin):
     list_filter = ('type', 'status', 'location')
     search_fields = ('name', 'location__city', 'location__state', 'location__country')
     raw_id_fields = ('location',)
-    ordering = ('name',)
+    ordering = ('name','id',)
     actions = ['make_published', 'make_draft']
 
     fieldsets = (

@@ -51,17 +51,37 @@ def blog_post_summary_view(request):
     try:
         with connection.cursor() as cursor:
             if not auth_token:
-                cursor.execute("SELECT supabase_blog_posts(NULL)")
+                # Only published posts
+                cursor.execute("""
+                    SELECT p.id, p.title, p.slug, p.view_count, p.featured_image, p.image_uuid,
+                           SUBSTR(p.content, 1, 1000) AS content_snippet,
+                           e.name AS author_name, 'PUBLISHED' AS status,
+                           p.modified_at
+                    FROM blogs_post p
+                    JOIN authentication_employee e ON p.author_id = e.id
+                    WHERE p.status='PUBLISHED'
+                    ORDER BY p.created_at DESC
+                """)
             else:
                 try:
                     uuid_token = uuid.UUID(auth_token)
                     request.user = Employee.objects.get(authToken=uuid_token)
-                    cursor.execute("SELECT supabase_blog_posts(%s)", [str(uuid_token)])
+                    # All posts regardless of status
+                    cursor.execute("""
+                        SELECT p.id, p.title, p.slug, p.view_count, p.featured_image, p.image_uuid,
+                               SUBSTR(p.content, 1, 1000) AS content_snippet,
+                               e.name AS author_name, p.status,
+                               p.modified_at
+                        FROM blogs_post p
+                        JOIN authentication_employee e ON p.author_id = e.id
+                        ORDER BY p.created_at DESC
+                    """)
                 except (ValueError, Employee.DoesNotExist):
                     return JsonResponse({"error": "Invalid or expired token"}, status=403)
 
-            supabase_result = cursor.fetchone()[0]  # JSON from Supabase function
-            rows = json.loads(supabase_result) if supabase_result else []
+            # Fetch results and convert to list of dicts
+            columns = [col[0] for col in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         results = normalize_blog_posts(rows)
         return JsonResponse(results, safe=False)
