@@ -8,9 +8,9 @@ from pydantic import Field
 from functools import lru_cache
 import os
 from langchain.tools import StructuredTool
-
+from langchain_openai import ChatOpenAI
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
-
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 class ProgramLevel(str, Enum):
     bachelors = "bachelors"
@@ -107,9 +107,15 @@ parser = PydanticOutputParser(pydantic_object=SearchParams)
 
 @lru_cache(maxsize=1)
 def get_llm():
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
+    # llm = ChatGoogleGenerativeAI(
+    #     model="gemini-2.5-flash-lite",
+    #     google_api_key=os.getenv("GEMINI_API_KEY"),
+    #     max_output_tokens=500,
+    # )
+    llm = ChatOpenAI(
+        model="qwen/qwen2.5-vl-72b-instruct",  # or any OpenRouter model name
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY,
         max_output_tokens=500,
     )
     return llm
@@ -117,9 +123,15 @@ def get_llm():
 
 @lru_cache(maxsize=1)
 def get_llm_with_bigger_brains():
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
+    # llm = ChatGoogleGenerativeAI(
+    #     model="gemini-2.5-flash",
+    #     google_api_key=os.getenv("GEMINI_API_KEY"),
+    #     max_output_tokens=500,
+    # )
+    llm = ChatOpenAI(
+        model="qwen/qwen2.5-vl-72b-instruct",  # or any OpenRouter model name
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY,
         max_output_tokens=500,
     )
     return llm

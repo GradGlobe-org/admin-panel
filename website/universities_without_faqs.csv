@@ -1,0 +1,79 @@
+id,University Name,Type,Establish Year,City,State,Country,Review Rating,Status
+50,Assiniboine Community College,PUBLIC,1961,Brandon,Manitoba,Canada,5.0,DRAFT
+276,Martin Luther University of Halle Wittenberg,PUBLIC,1502,Saxton,Saxony-Anhalt,Germany,5.0,DRAFT
+86,Felician University,PRIVATE,1942,Rutherford,New Jersey,United States,5.0,DRAFT
+252,Leibniz Universität,PUBLIC,1831,Hannover,Lower Saxony,Germany,5.0,DRAFT
+209,International Business Academy (IBA),PRIVATE,1991,Syddanmark,Syddanmark,Denmark,5.0,DRAFT
+166,Hochschule Furtwangen University,PUBLIC,1850,Furtwangen,Baden-Württemberg,Germany,5.0,DRAFT
+31,Alpha College of Business and Technology,PRIVATE,2008,Toronto,Ontario,Canada,5.0,DRAFT
+179,Ecole Conte School,PRIVATE,1949,Paris,Paris,France,5.0,DRAFT
+36,Anhalt University of Applied Sciences (HS Anhalt),PUBLIC,1992,Saxony,Saxony,United States,5.0,DRAFT
+214,INTO - Hofstra University,PRIVATE,1935,Hempstead,New York,United States,5.0,DRAFT
+226,INTO - University of Massachusetts Amherst,PUBLIC,1863,Amherst Center,Massachusetts,United States,5.0,DRAFT
+177,Griffith University,PUBLIC,1971,Gold Coast,Queensland,Australia,5.0,DRAFT
+148,Hamburg University of Applied Sciences,PUBLIC,1970,Hamburg,Hamburg,United States,5.0,DRAFT
+30,Alliant International University,PRIVATE,2001,California City,California,United States,5.0,DRAFT
+7,Adler University,PRIVATE,1952,Vancouver,British Columbia,Canada,5.0,PUBLISH
+217,INTO - Long Island University-Brooklyn,PRIVATE,1926,New York,New York,United States,5.0,DRAFT
+510,ISM-International School of Management Frankfurt Campus,PRIVATE,2007,Frankfurt am Main,Hesse,Germany,4.2,DRAFT
+55,Atlantis University,PRIVATE,1975,Miami,Florida,United States,5.0,DRAFT
+512,National Research University Higher School of Economics,PUBLIC,1992,Myasnitskaya Ulitsa,Moscow,Russia,4.5,DRAFT
+165,Hochschule Fulda University of Applied Sciences,PUBLIC,1974,Fulda,Hesse,Germany,5.0,DRAFT
+225,INTO - Thomas Jefferson University,PUBLIC,1824,Philadelphia,Pennsylvania,United States,5.0,DRAFT
+215,INTO - Illinois State University,PUBLIC,1857,Normal,Illinois,United States,5.0,DRAFT
+8,Ajman University,PRIVATE,1988,Ajman,Ajman,United Arab Emirates,5.0,PUBLISH
+23,Britts Imperial University College,PRIVATE,1892,Sharjah,Sharjah,United Arab Emirates,5.0,DRAFT
+228,IU University of Applied Sciences,PRIVATE,1998,Bad Honnef,North Rhine-Westphalia,Germany,5.0,DRAFT
+162,Heriot-Watt University (Dubai),PRIVATE,2005,Dubai,Dubai,United Arab Emirates,5.0,DRAFT
+211,INTO Colorado State University,PUBLIC,1870,Fort Collins,Colorado,United States,5.0,DRAFT
+191,ESDES Business School,PRIVATE,1987,Auvergne,Auvergne,France,5.0,DRAFT
+511,RANEPA St. Petersburg,PUBLIC,1991,Sredny pr.,St. Petersburg,Russia,4.2,DRAFT
+240,Kent State University,PUBLIC,1910,Ohio,Ohio,United States,5.0,DRAFT
+199,Excelia Business School,PRIVATE,2019,Ile-de-France,Ile-de-France,France,5.0,DRAFT
+169,Hochscule Bielefeld University of Applied Sciences and Arts (HSBI),PUBLIC,1971,North Rhine-Westphalia,North Rhine-Westphalia,Germany,5.0,DRAFT
+152,Hawaii Pacific University,PRIVATE,1965,Honolulu,Hawaii,United States,5.0,DRAFT
+126,Crandall University,PRIVATE,1949,Moncton,New Brunswick,Canada,5.0,DRAFT
+127,Georg August University of Gottingen,PUBLIC,1734,Lower Saxony,Lower Saxony,Germany,5.0,DRAFT
+197,European Institute of Management and Technology (EIMT),PRIVATE,2013,Ile-de-France,Ile-de-France,France,5.0,DRAFT
+168,Hochschule Worms University of Applied Sciences,PUBLIC,1978,Rhineland-Palatinate,Rhineland-Palatinate,Germany,5.0,DRAFT
+60,CBS International Business School,PRIVATE,1993,Cologne,North Rhine-Westphalia,Germany,5.0,DRAFT
+216,INTO - Long Island University (Post),PRIVATE,1954,New York,New York,United States,5.0,DRAFT
+167,Hochschule Schmalkalden - University of Applied Sciences,PUBLIC,1991,Schmalkalden,Thuringia,Germany,5.0,DRAFT
+521,Woosong University,PRIVATE,1954,Dong-gu,Daejeon,South Korea,4.1,DRAFT
+114,Constructor University,PRIVATE,2001,Bremen,Bremen,Germany,5.0,DRAFT
+93,Fleming College,PRIVATE,1967,Peterborough,Ontario,Canada,5.0,DRAFT
+223,INTO - The University of Alabama at Birmingham,PUBLIC,1969,Birmingham,Alabama,United States,5.0,DRAFT
+218,INTO - Montclair State University,PUBLIC,1908,Montclair,New Jersey,United States,5.0,DRAFT
+27,Burgundy School of Business,PUBLIC,1899,Bourgogne,Bourgogne,France,5.0,DRAFT
+212,INTO - Drew University,PRIVATE,1867,Madison,New Jersey,United States,5.0,DRAFT
+219,INTO - New England College,PRIVATE,1946,New Hampshire,New Hampshire,United States,5.0,DRAFT
+515,Livingstone College,PRIVATE,1879,Salisbury,North Carolina,United States,4.0,DRAFT
+120,Fraser International College (NAVITAS),PRIVATE,2006,Burnaby,British Columbia,Canada,5.0,DRAFT
+45,California State University Monterey Bay,PUBLIC,1994,California,California,United States,5.0,DRAFT
+519,Ural State University of Economics,PUBLIC,1967,"Yekaterinburg (Ekaterinburg), Sverdlovsk Oblast, Russia",Sverdlovsk Oblast,Russia,4.1,DRAFT
+16,BITS Pilani Dubai,PRIVATE,2000,Dubai,Dubai,United Arab Emirates,5.0,DRAFT
+18,Bow Valley College,PUBLIC,1965,Calgary,Alberta,Canada,5.0,DRAFT
+159,Gonzaga University,PRIVATE,1887,Spokane,Washington,United States,5.0,DRAFT
+517,Peter the Great St Petersburg Polytechnic University,PUBLIC,1899,Politekhnicheskaya Ulitsa,St Petersburg,Russia,4.2,DRAFT
+520,University of Sunderland,PUBLIC,1992,Sunderland,Tyne and Wear,"England, United Kingdom",4.2,DRAFT
+151,Harz University of Applied Sciences (HS Harz),PUBLIC,1991,Halberstadt,Saxony-Anhalt,Germany,5.0,DRAFT
+514,Università Cattolica del Sacro Cuore,PRIVATE,1921,Milan,Lombardy,Italy,4.6,DRAFT
+221,INTO - Saint Louis University,PRIVATE,1818,St. Louis,Missouri,United States,5.0,DRAFT
+189,Esaip Engineer School,PRIVATE,1987,Maine-et-Loire,Maine-et-Loire,France,5.0,DRAFT
+186,EMLV Business School,PRIVATE,1995,Ile-de-France,Ile-de-France,France,5.0,DRAFT
+220,INTO - Oregon State University,PUBLIC,1868,Corvallis,Oregon,United States,5.0,DRAFT
+188,EPITA - School of Engineering and Computer Science,PRIVATE,1984,Ile-de-France,Ile-de-France,France,5.0,DRAFT
+513,Moscow Pedagogical State University,PUBLIC,1872,Malaya Pirogovskaya Ulitsa,Moscow,Russia,4.3,DRAFT
+164,Duke University Educo,PRIVATE,1892,Durham,North Carolina,United States,5.0,DRAFT
+155,Gisma University of Applied Sciences,PRIVATE,1999,Potsdam,Lower Saxony,Germany,5.0,DRAFT
+254,Les Roches International School of Hotel Management,PRIVATE,1954,Crans-Montana,Valais,Switzerland,5.0,DRAFT
+62,Cegep De La Gaspesie Et Des Iles,PUBLIC,1968,Gaspe,Quebec,Canada,5.0,DRAFT
+222,INTO - Suffolk University Boston,PRIVATE,1906,Boston,Massachusetts,United States,5.0,DRAFT
+233,Johannes Gutenberg University of Mainz,PUBLIC,1477,Mainz,Rhineland-Palatinate,Germany,5.0,DRAFT
+213,INTO - George Mason University,PUBLIC,1957,Fairfax,Virginia,United States,5.0,DRAFT
+518,UiT The Arctic University of Norway,PUBLIC,1968,Tromsø,Troms and Finnmark,Norway,4.3,DRAFT
+172,Humber International Graduate School,PUBLIC,1967,Ontario,Ontario,United States,5.0,DRAFT
+255,Leuphana University,PUBLIC,1946,Lower Saxony,Lower Saxony,Germany,5.0,DRAFT
+229,Jacksonville State University,PUBLIC,1883,Jacksonville,Alabama,United States,5.0,DRAFT
+516,St. Petersburg State University of Economics (UNECON),PUBLIC,1930,Griboyedov channel embankment,St Petersburg,Russia,4.0,DRAFT
+263,Macromedia University of Applied Sciences,PRIVATE,1999,Bavaria,Bavaria,Germany,5.0,DRAFT

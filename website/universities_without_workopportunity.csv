@@ -1,0 +1,287 @@
+id,University Name,Type,Establish Year,City,State,Country,Review Rating,Status
+4,Academy of Art University,PRIVATE,1929,San Francisco,California,United States,5.0,PUBLISH
+5,Acadia University,PUBLIC,1838,Wolfville,Nova Scotia,Canada,5.0,PUBLISH
+7,Adler University,PRIVATE,1952,Vancouver,British Columbia,Canada,5.0,PUBLISH
+9,Bauhaus University,PUBLIC,1996,Wiemar,Thuringia,Germany,5.0,PUBLISH
+10,Algoma University,PUBLIC,1965,Brampton,Ontario,Canada,5.0,PUBLISH
+13,Berlin School of Business and Innovation (BSBI),PRIVATE,2014,Berlin,Berlin,Germany,5.0,PUBLISH
+14,Bielefeld University,PUBLIC,1969,Bielefeld,Bielefeld,Germany,5.0,PUBLISH
+15,Binghamton University,PUBLIC,1946,Binghamton,New York,United States,5.0,DRAFT
+16,BITS Pilani Dubai,PRIVATE,2000,Dubai,Dubai,United Arab Emirates,5.0,DRAFT
+17,Bond University,PRIVATE,1989,Gold Coast,Queensland,Australia,5.0,DRAFT
+18,Bow Valley College,PUBLIC,1965,Calgary,Alberta,Canada,5.0,DRAFT
+20,Brandeis University,PRIVATE,1948,Waltham,Massachusetts,United States,5.0,DRAFT
+22,British Columbia Institute of Technology,PUBLIC,1960,Burnaby,British Columbia,Canada,5.0,DRAFT
+23,Britts Imperial University College,PRIVATE,1892,Sharjah,Sharjah,United Arab Emirates,5.0,DRAFT
+24,Brock University,PUBLIC,1964,St. Catharines,Ontario,Canada,5.0,DRAFT
+27,Burgundy School of Business,PUBLIC,1899,Bourgogne,Bourgogne,France,5.0,DRAFT
+28,Algonquin College,PUBLIC,1967,Ottawa,Ontario,Canada,5.0,DRAFT
+31,Alpha College of Business and Technology,PRIVATE,2008,Toronto,Ontario,Canada,5.0,DRAFT
+35,California Institute of The Arts,PRIVATE,1961,Los Angeles,California,United States,5.0,DRAFT
+36,Anhalt University of Applied Sciences (HS Anhalt),PUBLIC,1992,Saxony,Saxony,United States,5.0,DRAFT
+37,California Lutheran University,PRIVATE,1959,Thousand Oaks,California,United States,5.0,DRAFT
+38,California State University Dominguez Hills,PUBLIC,1960,Carson,California,United States,5.0,DRAFT
+39,California State University East Bay,PUBLIC,1957,Hayward,California,United States,5.0,DRAFT
+40,California State University Fresno,PUBLIC,1911,Fresno,California,United States,5.0,DRAFT
+42,California State University Fullerton,PUBLIC,1957,Fullerton,California,United States,5.0,DRAFT
+43,California State University Long Beach,PUBLIC,1998,Long Beach,California,United States,5.0,DRAFT
+44,Arizona State University,PUBLIC,1885,Tempe,Arizona,United States,5.0,DRAFT
+45,California State University Monterey Bay,PUBLIC,1994,California,California,United States,5.0,DRAFT
+46,Arkansas State University,PUBLIC,1909,Arkansas,Arkansas,United States,5.0,DRAFT
+47,California State University Northridge,PUBLIC,1958,Los Angeles,California,United States,5.0,DRAFT
+48,Cambrian College,PUBLIC,1967,Greater Sudbury,Ontario,Canada,5.0,DRAFT
+49,Aspire Business School Barcelona,PRIVATE,2016,Barcelona,Barcelona,Spain,5.0,DRAFT
+53,Athabasca University,PUBLIC,1970,Athabasca,Alberta,Canada,5.0,DRAFT
+54,Canadore College,PUBLIC,1967,North Bay,Ontario,Canada,5.0,DRAFT
+56,Cape Breton University,PUBLIC,1951,Sydney,Nova Scotia,Canada,5.0,DRAFT
+57,Capilano University,PUBLIC,1968,North Vancouver,British Columbia,Canada,5.0,DRAFT
+59,Carnegie Mellon University,PRIVATE,1900,Pittsburgh,Pennsylvania,United States,5.0,DRAFT
+61,CCT College Dublin,PRIVATE,2005,Dublin,Dublin,Ireland,5.0,DRAFT
+62,Cegep De La Gaspesie Et Des Iles,PUBLIC,1968,Gaspe,Quebec,Canada,5.0,DRAFT
+63,Centennial College,PUBLIC,1966,Toronto,Ontario,Canada,5.0,DRAFT
+64,Central European University,PRIVATE,1991,Budapest,Budapest,Hungary,5.0,DRAFT
+66,Central Michigan University,PRIVATE,1892,Mount Pleasant,Michigan,United States,5.0,DRAFT
+67,Chalmers University of Technology,PRIVATE,1829,Gothenburg,Västra Götaland,Sweden,5.0,DRAFT
+68,Chapman University,PRIVATE,1961,Orange,California,United States,5.0,DRAFT
+69,Fachhochschule Dortmund - University of Applied Sciences and Arts,PUBLIC,1971,North Rhine-Westphalia,North Rhine-Westphalia,Germany,5.0,DRAFT
+70,Charles Darwin University,PUBLIC,2003,Darwin,Northern Territory,Australia,5.0,DRAFT
+71,Fachhochschule Kiel University of Applied Sciences,PUBLIC,1969,Schleswig,Schleswig-Holstein,Germany,5.0,DRAFT
+74,Charles Sturt University,PUBLIC,1989,Bathurst,New South Wales,Australia,5.0,DRAFT
+75,Fairfield University,PRIVATE,1942,Fairfield,Connecticut,United States,5.0,DRAFT
+77,Fairleigh Dickinson University,PRIVATE,1942,Vancouver,British Columbia,Canada,5.0,DRAFT
+79,Chemnitz University of Technology,PUBLIC,1836,Chemnitz,Saxony,Germany,5.0,DRAFT
+83,City University of New York,PUBLIC,1961,New York,New York,United States,5.0,DRAFT
+85,Auburn University,PUBLIC,1856,Waltham,Alabama,United States,5.0,DRAFT
+87,Ferris State University,PRIVATE,1884,Big Rapids,Michigan,United States,5.0,DRAFT
+90,Clark University,PRIVATE,1887,Worcester,Massachusetts,United States,5.0,DRAFT
+91,Fitchburg State University,PUBLIC,1894,Fitchburg,Massachusetts,United States,5.0,DRAFT
+92,Clemson University,PUBLIC,1889,Clemson,South Carolina,United States,5.0,DRAFT
+93,Fleming College,PRIVATE,1967,Peterborough,Ontario,Canada,5.0,DRAFT
+94,Cleveland State University,PUBLIC,1964,Cleveland,Ohio,United States,5.0,DRAFT
+95,Flinders University,PUBLIC,1966,Adelaide,South Australia,Australia,5.0,DRAFT
+96,Coast Mountain College,PUBLIC,1975,Terrace,British Columbia,Canada,5.0,DRAFT
+97,Florida Atlantic University,PUBLIC,1961,Boca Raton,Florida,United States,5.0,DRAFT
+101,College National de science et technology,PRIVATE,2019,Montreal,Quebec,Canada,5.0,DRAFT
+103,College of New Caledonia,PUBLIC,1969,Prince George,British Columbia,Canada,5.0,DRAFT
+105,Cologne Business School,PRIVATE,1993,Cologne,North Rhine-Westphalia,Germany,5.0,DRAFT
+106,Colorado State University,PUBLIC,1870,Fort Collins,Colorado,United States,5.0,DRAFT
+109,Concordia University of Edmonton,PRIVATE,1921,Edmonton,Alberta,Canada,5.0,DRAFT
+110,Conestoga College,PUBLIC,1966,Kitchener,Ontario,Canada,5.0,DRAFT
+111,Conestoga College Doon,PUBLIC,1966,Kitchener,Ontario,Canada,5.0,DRAFT
+112,Conestoga College Waterloo,PUBLIC,1966,Waterloo,Ontario,Canada,5.0,DRAFT
+113,Confederation College,PUBLIC,1967,Thunder Bay,Ontario,Canada,5.0,DRAFT
+115,Copenhagen Business School,PUBLIC,1917,Frederiksberg and Copenhagen,Capital Region,Denmark,5.0,DRAFT
+119,Franklin University,PRIVATE,1902,Columbus,Ohio,United States,5.0,DRAFT
+120,Fraser International College (NAVITAS),PRIVATE,2006,Burnaby,British Columbia,Canada,5.0,DRAFT
+123,Gannon University,PRIVATE,1925,Erie,Pennsylvania,United States,5.0,DRAFT
+124,Cornell University,PRIVATE,1865,Ithaca,New York,United States,5.0,DRAFT
+125,CQUniversity,PRIVATE,1865,Rockhampton,Queensland,Australia,5.0,DRAFT
+126,Crandall University,PRIVATE,1949,Moncton,New Brunswick,Canada,5.0,DRAFT
+127,Georg August University of Gottingen,PUBLIC,1734,Lower Saxony,Lower Saxony,Germany,5.0,DRAFT
+129,George Brown College,PUBLIC,1967,Toronto,Ontario,Canada,5.0,DRAFT
+131,George Washington University,PRIVATE,1821,Washington,"Washington, D.C.",United States,5.0,DRAFT
+135,Dartmouth College,PRIVATE,1769,Hanover,New Hampshire,United States,5.0,DRAFT
+137,Deakin University,PUBLIC,1974,Geelong,Victoria,Australia,5.0,DRAFT
+139,Georgia State University,PUBLIC,1913,Atlanta,Georgia,United States,5.0,DRAFT
+141,Georgian College,PUBLIC,1967,Barrie,Ontario,Canada,5.0,DRAFT
+144,Douglas College,PUBLIC,1970,New Westminster,British Columbia,Canada,5.0,DRAFT
+147,Dublin Business School,PRIVATE,1975,Dublin,Leinster,Ireland,5.0,DRAFT
+148,Hamburg University of Applied Sciences,PUBLIC,1970,Hamburg,Hamburg,United States,5.0,DRAFT
+149,Harrisburg University,PRIVATE,2001,Harrisburg,Pennsylvania,United States,5.0,DRAFT
+151,Harz University of Applied Sciences (HS Harz),PUBLIC,1991,Halberstadt,Saxony-Anhalt,Germany,5.0,DRAFT
+152,Hawaii Pacific University,PRIVATE,1965,Honolulu,Hawaii,United States,5.0,DRAFT
+155,Gisma University of Applied Sciences,PRIVATE,1999,Potsdam,Lower Saxony,Germany,5.0,DRAFT
+156,Goethe University,PUBLIC,1914,Frankfurt,Hesse,Germany,5.0,DRAFT
+158,Golden Gate University,PRIVATE,1901,San Francisco,California,United States,5.0,DRAFT
+159,Gonzaga University,PRIVATE,1887,Spokane,Washington,United States,5.0,DRAFT
+162,Heriot-Watt University (Dubai),PRIVATE,2005,Dubai,Dubai,United Arab Emirates,5.0,DRAFT
+163,Hochschule Bremen - International Graduate Center,PRIVATE,2001,Bremen,Bremen,Germany,5.0,DRAFT
+165,Hochschule Fulda University of Applied Sciences,PUBLIC,1974,Fulda,Hesse,Germany,5.0,DRAFT
+166,Hochschule Furtwangen University,PUBLIC,1850,Furtwangen,Baden-Württemberg,Germany,5.0,DRAFT
+169,Hochscule Bielefeld University of Applied Sciences and Arts (HSBI),PUBLIC,1971,North Rhine-Westphalia,North Rhine-Westphalia,Germany,5.0,DRAFT
+170,Hult International Business School,PRIVATE,1964,London,London,United States,5.0,DRAFT
+171,Humber College,PUBLIC,1959,Toronto,Ontario,Canada,5.0,DRAFT
+172,Humber International Graduate School,PUBLIC,1967,Ontario,Ontario,United States,5.0,DRAFT
+173,Durham College,PUBLIC,1967,Oshawa,Ontario,Canada,5.0,DRAFT
+176,Grand Valley State University,PUBLIC,1960,Allendale Charter Township,Michigan,United States,5.0,DRAFT
+177,Griffith University,PUBLIC,1971,Gold Coast,Queensland,Australia,5.0,DRAFT
+178,Eastern Michigan University,PUBLIC,1849,Michigan,Michigan,United States,5.0,DRAFT
+179,Ecole Conte School,PRIVATE,1949,Paris,Paris,France,5.0,DRAFT
+183,Edith Cowan University,PUBLIC,1991,Joondalup,Western Australia,Australia,5.0,DRAFT
+187,Engineering Institute of Technology,PRIVATE,2008,Perth,Western Australia,Australia,5.0,DRAFT
+191,ESDES Business School,PRIVATE,1987,Auvergne,Auvergne,France,5.0,DRAFT
+194,Esslingen University of Applied Sciences,PUBLIC,1914,Esslingen am Neckar,Baden-Württemberg,Germany,5.0,DRAFT
+195,ETH Zurich,PUBLIC,1855,Zurich,Zurich,Switzerland,5.0,DRAFT
+198,Evergreen College,PRIVATE,1967,Toronto,Ontario,Canada,5.0,DRAFT
+199,Excelia Business School,PRIVATE,2019,Ile-de-France,Ile-de-France,France,5.0,DRAFT
+202,IE University,PRIVATE,1973,Segovia,Community of Madrid,Spain,5.0,DRAFT
+203,Illinois Institute of Technology,PRIVATE,1940,Chicago,Illinois,United States,5.0,DRAFT
+206,Indiana University,PUBLIC,1820,Bloomington,Indiana,United States,5.0,DRAFT
+209,International Business Academy (IBA),PRIVATE,1991,Syddanmark,Syddanmark,Denmark,5.0,DRAFT
+210,International College of Management Sydney,PRIVATE,1996,Sydney,New South Wales,Australia,5.0,DRAFT
+211,INTO Colorado State University,PUBLIC,1870,Fort Collins,Colorado,United States,5.0,DRAFT
+212,INTO - Drew University,PRIVATE,1867,Madison,New Jersey,United States,5.0,DRAFT
+213,INTO - George Mason University,PUBLIC,1957,Fairfax,Virginia,United States,5.0,DRAFT
+214,INTO - Hofstra University,PRIVATE,1935,Hempstead,New York,United States,5.0,DRAFT
+218,INTO - Montclair State University,PUBLIC,1908,Montclair,New Jersey,United States,5.0,DRAFT
+219,INTO - New England College,PRIVATE,1946,New Hampshire,New Hampshire,United States,5.0,DRAFT
+222,INTO - Suffolk University Boston,PRIVATE,1906,Boston,Massachusetts,United States,5.0,DRAFT
+223,INTO - The University of Alabama at Birmingham,PUBLIC,1969,Birmingham,Alabama,United States,5.0,DRAFT
+224,INTO - The University of Western Australia,PRIVATE,1911,Perth,Western Australia,Australia,5.0,PUBLISH
+226,INTO - University of Massachusetts Amherst,PUBLIC,1863,Amherst Center,Massachusetts,United States,5.0,DRAFT
+228,IU University of Applied Sciences,PRIVATE,1998,Bad Honnef,North Rhine-Westphalia,Germany,5.0,DRAFT
+229,Jacksonville State University,PUBLIC,1883,Jacksonville,Alabama,United States,5.0,DRAFT
+230,Jacobs University Bremen,PRIVATE,2001,Vegesack,Bremen,Germany,5.0,DRAFT
+231,Jagiellonian University,PUBLIC,1364,Krakow,Central Europe,Poland,5.0,DRAFT
+233,Johannes Gutenberg University of Mainz,PUBLIC,1477,Mainz,Rhineland-Palatinate,Germany,5.0,DRAFT
+234,Johns Hopkins University,PRIVATE,1876,Baltimore,Maryland,United States,5.0,DRAFT
+236,Justice Institute of British Columbia,PRIVATE,1978,New Westminster,British Columbia,Canada,5.0,DRAFT
+237,Kansas State University,PUBLIC,1873,Manhattan,Kansas,United States,5.0,DRAFT
+240,Kent State University,PUBLIC,1910,Ohio,Ohio,United States,5.0,DRAFT
+243,KU Leuven,PUBLIC,1425,Dutch,Flemish Brabant,Belgium,5.0,DRAFT
+244,Kwantlen Polytechnic University,PUBLIC,1981,Surrey,British Columbia,Canada,5.0,DRAFT
+246,Lakeland College,PUBLIC,1913,Vermilion,Alberta,Canada,5.0,DRAFT
+248,Lambton College,PUBLIC,1969,Sarnia,London,Canada,5.0,DRAFT
+249,Langara College,PUBLIC,1994,Vancouver,British Columbia,Canada,5.0,DRAFT
+251,Lawrence Technological University,PRIVATE,1932,Southfield,Michigan,United States,5.0,DRAFT
+254,Les Roches International School of Hotel Management,PRIVATE,1954,Crans-Montana,Valais,Switzerland,5.0,DRAFT
+255,Leuphana University,PUBLIC,1946,Lower Saxony,Lower Saxony,Germany,5.0,DRAFT
+256,Lewis University,PRIVATE,1932,Romeoville,Illinois,United States,5.0,DRAFT
+258,Linnaeus University,PRIVATE,2010,Smaland,Kronoberg County,Sweden,5.0,DRAFT
+259,Lomonosov Moscow State University,PUBLIC,1755,Moskva,Moscow,Russia,5.0,DRAFT
+263,Macromedia University of Applied Sciences,PRIVATE,1999,Bavaria,Bavaria,Germany,5.0,DRAFT
+264,Loyalist College - Toronto,PUBLIC,1967,Toronto,Ontario,Canada,5.0,DRAFT
+265,Manipal University (Dubai),PRIVATE,2000,Dubai,Dubai,United Arab Emirates,5.0,DRAFT
+267,Marist College,PRIVATE,1929,Poughkeepsie,New York,United States,5.0,DRAFT
+274,Lundquist Business School,PUBLIC,1914,Oregon,Oregon,United States,5.0,DRAFT
+280,Matrix College,PRIVATE,2014,Montreal,Quebec,Canada,5.0,DRAFT
+282,New England Institute of Technology,PRIVATE,1940,East Greenwich,Rhode Island,United States,5.0,DRAFT
+284,Mcgill University,PUBLIC,1821,Montreal,Quebec,Canada,5.0,DRAFT
+285,New European College,PRIVATE,2019,Munich,Bavaria,Germany,5.0,DRAFT
+287,MDH University of Applied Science,PRIVATE,2004,Berlin,Berlin,Germany,5.0,DRAFT
+288,New Mexico State University,PUBLIC,1888,Las Cruces,New Mexico,United States,5.0,DRAFT
+289,Medicine Hat College,PUBLIC,1965,Alberta,Alberta,Canada,5.0,DRAFT
+290,Melbourne Institute of Technology,PRIVATE,1996,Melbourne,Victoria,Australia,5.0,DRAFT
+292,Niagara College,PUBLIC,1967,Welland,Ontario,Canada,5.0,DRAFT
+295,Michigan Technological University,PUBLIC,1885,Houghton,Michigan,United States,5.0,DRAFT
+296,Norquest College,PUBLIC,1965,Edmonton,Alberta,Canada,5.0,DRAFT
+297,North Island College,PUBLIC,1975,Courtenay,British Columbia,Canada,5.0,DRAFT
+298,Middlesex University (Dubai),PRIVATE,2005,Dubai,Dubai,United Arab Emirates,5.0,DRAFT
+299,North Park University,PRIVATE,1891,Chicago,Illinois,United States,5.0,DRAFT
+302,Milwaukee School of Engineering,PRIVATE,1903,Milwaukee,Wisconsin,United States,5.0,DRAFT
+303,Northeastern University,PRIVATE,1898,Boston,Massachusetts,United States,5.0,DRAFT
+304,Mississippi College,PRIVATE,1826,Clinton,Mississippi,United States,5.0,DRAFT
+305,Northeastern University - Toronto,PRIVATE,1898,Toronto,Ontario,Canada,5.0,DRAFT
+306,Northern Alberta Institute of Technology,PUBLIC,1962,Edmonton,Alberta,Canada,5.0,DRAFT
+307,Missouri State University,PUBLIC,1905,Missouri,Missouri,United States,5.0,DRAFT
+309,Missouri University of Science and Technology,PUBLIC,1870,Rolla,Missouri,United States,5.0,DRAFT
+312,Mohawk College,PUBLIC,1966,Hamilton,Ontario,Canada,5.0,DRAFT
+317,Northern Lights College,PUBLIC,1975,Dawson Creek,British Columbia,Canada,5.0,DRAFT
+320,Muma College of Business,PUBLIC,1965,Tampa,Florida,United States,5.0,DRAFT
+321,Northwest Missouri State University,PUBLIC,1905,Maryville,Missouri,United States,5.0,DRAFT
+322,Munich Business School,PRIVATE,1991,Bavaria,Bavaria,Germany,5.0,DRAFT
+323,Northwestern Polytechnic University,PRIVATE,1984,Fremont,California,United States,5.0,DRAFT
+324,Northwestern University,PRIVATE,1851,Evanston,Illinois,United States,5.0,DRAFT
+325,Nova Southeastern University,PRIVATE,1964,Davie,Florida,United States,5.0,DRAFT
+328,Murdoch University,PUBLIC,1973,Perth,Western Australia,Australia,5.0,DRAFT
+329,Pace University,PUBLIC,1906,New York City,New York,United States,5.0,DRAFT
+331,Pacific Lutheran University,PRIVATE,1890,Tacoma,Washington,United States,5.0,DRAFT
+332,Paris College of Art,PRIVATE,1981,Paris,Paris,France,5.0,DRAFT
+335,Oakland University,PUBLIC,1957,Rochester,Michigan,United States,5.0,DRAFT
+336,Polytechnic University of Valencia,PUBLIC,1968,Valencia,Valencia,Spain,5.0,DRAFT
+337,Portland State University,PUBLIC,1946,Portland,Oregon,United States,5.0,DRAFT
+338,Pratt Institute,PRIVATE,1887,Brooklyn,New York,United States,5.0,DRAFT
+340,Providence University College and Theological Seminary,PRIVATE,1925,Brandon,Manitoba,Canada,5.0,DRAFT
+342,Queensland University of Technology,PUBLIC,1989,Brisbane,Queensland,Australia,5.0,DRAFT
+343,Quinnipiac University,PRIVATE,1929,Hamden,Connecticut,United States,5.0,DRAFT
+344,OCAD University,PRIVATE,1876,Toronto,Ontario,Canada,5.0,DRAFT
+346,Red Deer Polytechnic,PUBLIC,1964,Red Deer,Alberta,Canada,5.0,DRAFT
+348,Regis University,PRIVATE,1877,Denver,Colorado,United States,5.0,DRAFT
+349,Odessa National Medical University,PUBLIC,1900,Odessa,Odessa Oblast,Ukraine,5.0,DRAFT
+350,Ohio Dominican University,PRIVATE,1911,Ohio,Ohio,United States,5.0,DRAFT
+351,Rensselaer Polytechnic Institute,PRIVATE,1824,Troy,New York,United States,5.0,DRAFT
+352,Ohio University,PUBLIC,1804,Athens,Ohio,United States,5.0,DRAFT
+353,Rhine Waal University of Applied Sciences,PUBLIC,2009,Kleve,North Rhine-Westphalia,Germany,5.0,DRAFT
+355,Rice University,PRIVATE,1912,Houston,Texas,United States,5.0,DRAFT
+356,Okanagan College,PUBLIC,1963,Kelowna,British Columbia,Canada,5.0,DRAFT
+358,Oklahoma City University,PRIVATE,1904,Oklahoma City,Oklahoma,United States,5.0,DRAFT
+362,OMNES - ESCE Business School,PRIVATE,1968,Ile-de-France,Ile-de-France,France,5.0,DRAFT
+364,OMNES - INSEEC School of Business and Economics,PRIVATE,1975,Paris,Paris,France,5.0,DRAFT
+365,Oregon State University,PUBLIC,1868,Corvallis,Oregon,United States,5.0,DRAFT
+367,Sacred Heart University,PRIVATE,1963,Fairfield,Connecticut,United States,5.0,DRAFT
+368,Robert Morris University,PRIVATE,1921,Moon Township,Pennsylvania,United States,5.0,DRAFT
+372,Saint Peter's University,PRIVATE,1872,Jersey City,New Jersey,United States,5.0,DRAFT
+373,Roosevelt University,PRIVATE,1945,Chicago,Illinois,United States,5.0,DRAFT
+374,San Diego State University,PUBLIC,1897,San Diego,California,United States,5.0,DRAFT
+376,San Francisco State University,PUBLIC,1899,San Francisco,California,United States,5.0,DRAFT
+377,San Jose State University,PUBLIC,1857,San Jose,California,United States,5.0,DRAFT
+379,Rowan University,PUBLIC,1923,Glassboro,New Jersey,United States,5.0,DRAFT
+380,Royal Roads University,PUBLIC,1995,Colwood,British Columbia,Canada,5.0,DRAFT
+384,Tampere University,PUBLIC,2019,Tampere,Pirkanmaa,Finland,5.0,DRAFT
+387,Technical University Dortmund,PRIVATE,1968,Dortmund,North Rhine-Westphalia,Germany,5.0,DRAFT
+388,Technical University of Braunschweig,PUBLIC,1745,Braunschweig,Lower Saxony,Germany,5.0,DRAFT
+389,Technical University of Darmstadt,PUBLIC,1877,Darmstadt,Hesse,Germany,5.0,DRAFT
+391,Technical University of Dresden,PUBLIC,1828,Dresden,Saxony,Germany,5.0,DRAFT
+394,Sapienza University,PUBLIC,1303,Rome,Lazio,Italy,5.0,DRAFT
+396,Saskatchewan Polytechnic,PUBLIC,1959,Saskatoon,Saskatchewan,Canada,5.0,DRAFT
+398,Sault College,PUBLIC,1965,Sault,Ontario,Canada,5.0,DRAFT
+399,Texas A & M University,PUBLIC,1876,Texas,Texas,Australia,5.0,DRAFT
+403,Texas Tech University,PUBLIC,1923,Lubbock,Texas,United States,5.0,DRAFT
+404,Texas Wesleyan University,PRIVATE,1890,Fort Worth,Texas,United States,5.0,DRAFT
+405,The Australian College of Applied Professions,PRIVATE,1983,Sydney,Victoria,Australia,5.0,DRAFT
+409,Selkirk College,PUBLIC,1966,Castlegar,British Columbia,Canada,5.0,DRAFT
+414,The University of Newcastle (Australia),PUBLIC,1965,Newcastle,New South Wales,Australia,5.0,DRAFT
+416,Seton Hall University,PRIVATE,1856,South Orange,New Jersey,United States,5.0,DRAFT
+418,Sheridan College Davis,PUBLIC,1967,Brampton,Ontario,Canada,5.0,DRAFT
+421,Slippery Rock University,PUBLIC,1889,Slippery Rock,Pennsylvania,United States,5.0,DRAFT
+422,The University of Texas at Austin,PUBLIC,1883,Austin,Texas,United States,5.0,DRAFT
+428,Thomas Jefferson University,PRIVATE,1824,Philadelphia,Pennsylvania,United States,5.0,DRAFT
+429,Thompson Rivers University,PUBLIC,1970,Kamloops,British Columbia,Canada,5.0,DRAFT
+431,Southern Alberta Institute of Technology,PUBLIC,1916,Calgary,Alberta,Canada,5.0,DRAFT
+432,Southern Cross University,PUBLIC,1994,Lismore,New South Wales,Australia,5.0,DRAFT
+433,Torrens University,PRIVATE,2012,Adelaide,South Australia,Australia,5.0,DRAFT
+435,Southern Illinois University Edwardsville,PUBLIC,1957,Edwardsville,Illinois,United States,5.0,DRAFT
+436,Southern Methodist University,PRIVATE,1911,Dallas,Texas,United States,5.0,DRAFT
+437,Southern New Hampshire University,PRIVATE,1932,Manchester,New Hampshire,United States,5.0,DRAFT
+441,SRH - Hochschulen Heidelberg,PRIVATE,1966,Heidelberg,Baden-Württemberg,Germany,5.0,DRAFT
+443,Trinity Western University Langley,PRIVATE,1962,Langley,British Columbia,Canada,5.0,DRAFT
+444,SRH - International College,PRIVATE,2007,Ludwigsburg,Baden-Wurttemberg,Germany,5.0,DRAFT
+445,Troy University,PUBLIC,1887,Troy,Michigan,United States,5.0,DRAFT
+448,St. Thomas University,PUBLIC,1961,Fredericton,New Brunswick,Canada,5.0,DRAFT
+451,State University of New York,PUBLIC,1948,Oswego,New York,United States,5.0,DRAFT
+452,Tulane University,PRIVATE,1834,New Orleans,Louisiana,United States,5.0,DRAFT
+453,Steinbeis University,PRIVATE,1998,Berlin,Baden-Württemberg,Germany,5.0,DRAFT
+454,UCAM Catholic University of Murcia,PRIVATE,1996,Guadalupe,Murcia,Spain,5.0,DRAFT
+455,Stenberg College,PRIVATE,1990,Surrey,British Columbia,Canada,5.0,DRAFT
+456,Ulm University,PUBLIC,1967,Baden-Württemberg,Baden-Württemberg,Germany,5.0,DRAFT
+457,Umea University,PUBLIC,1965,Umea,Västerbotten County,Sweden,5.0,DRAFT
+459,Stevens Institute of Technology,PRIVATE,1870,Hoboken,New Jersey,United States,5.0,DRAFT
+460,Universität Leipzig,PUBLIC,1409,Saxony,Saxony,United States,5.0,DRAFT
+464,Stony Brook University,PUBLIC,1957,New York,New York,United States,5.0,DRAFT
+465,University of Alabama at Birmingham,PUBLIC,1969,Birmingham,Alabama,United States,5.0,DRAFT
+467,University of Alaska - Fairbanks,PUBLIC,1917,Fairbanks,Alaska,United States,5.0,DRAFT
+468,Sumy State University,PUBLIC,1948,Sumy,Sumy Oblast,Ukraine,5.0,DRAFT
+469,University of Albany,PUBLIC,1844,Albany,New York,United States,5.0,DRAFT
+472,Swinburne University of Technology,PUBLIC,1908,Melbourne,Victoria,Australia,5.0,DRAFT
+474,Uppsala University,PUBLIC,1477,Uppsala,Uppsala County,Sweden,5.0,DRAFT
+475,University of Antwerp,PUBLIC,2003,Antwerp,Antwerp,Belgium,5.0,DRAFT
+476,Upper Iowa University,PRIVATE,1857,Fayette,Iowa,United States,5.0,DRAFT
+477,University of Arizona,PUBLIC,1885,Tucson,Arizona,United States,5.0,DRAFT
+480,University of Barcelona,PUBLIC,1450,Barcelona,Catalonia,Spain,5.0,DRAFT
+481,University of Bari Aldo Moro,PUBLIC,1925,Bari Taranto Brindisi,Apulia,Italy,5.0,DRAFT
+482,University of Wyoming,PUBLIC,1886,Laramie,Wyoming,United States,5.0,DRAFT
+483,University of Basel,PUBLIC,1460,Basel,Basel-Stadt,Switzerland,5.0,DRAFT
+484,University of Bayreuth,PUBLIC,1975,Bavaria,Bavaria,Germany,5.0,DRAFT
+485,University of Wurzburg,PRIVATE,1402,Wurzburg,Bavaria,Germany,5.0,DRAFT
+486,University of Bern,PUBLIC,1834,Bern,Bern,Switzerland,5.0,DRAFT
+487,University of Bologna,PUBLIC,1088,Bologna,Emilia-Romagna,Italy,5.0,DRAFT
+488,University of Wroclaw,PUBLIC,1702,Wroclaw,Lower Silesian,Poland,5.0,DRAFT
+489,University of Bonn,PUBLIC,1818,Bonn,North Rhine-Westphalia,Germany,5.0,DRAFT
+490,University of Wollongong Dubai,PRIVATE,1993,Dubai,UAE,United Arab Emirates,5.0,DRAFT
+511,RANEPA St. Petersburg,PUBLIC,1991,Sredny pr.,St. Petersburg,Russia,4.2,DRAFT
+515,Livingstone College,PRIVATE,1879,Salisbury,North Carolina,United States,4.0,DRAFT
+516,St. Petersburg State University of Economics (UNECON),PUBLIC,1930,Griboyedov channel embankment,St Petersburg,Russia,4.0,DRAFT
+517,Peter the Great St Petersburg Polytechnic University,PUBLIC,1899,Politekhnicheskaya Ulitsa,St Petersburg,Russia,4.2,DRAFT
+518,UiT The Arctic University of Norway,PUBLIC,1968,Tromsø,Troms and Finnmark,Norway,4.3,DRAFT
+519,Ural State University of Economics,PUBLIC,1967,"Yekaterinburg (Ekaterinburg), Sverdlovsk Oblast, Russia",Sverdlovsk Oblast,Russia,4.1,DRAFT
+520,University of Sunderland,PUBLIC,1992,Sunderland,Tyne and Wear,"England, United Kingdom",4.2,DRAFT
