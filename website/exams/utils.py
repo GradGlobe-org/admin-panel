@@ -3,8 +3,11 @@ from functools import lru_cache
 from typing import List
 from pydantic import BaseModel, Field
 # from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.output_parsers import PydanticOutputParser
+# from langchain.prompts import ChatPromptTemplate
+# from langchain.output_parsers import PydanticOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
+
 from pydantic import RootModel
 from langchain_openai import ChatOpenAI
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
