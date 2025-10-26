@@ -10,3 +10,5 @@ __pycache__/
 *.pyo
 *.pyd
 
+missing_faqs_uni.py
+new_university.py

@@ -67,7 +67,7 @@ class UniversityAdmin(admin.ModelAdmin):
     list_filter = ('type', 'status', 'location')
     search_fields = ('name', 'location__city', 'location__state', 'location__country')
     raw_id_fields = ('location',)
-    ordering = ('name',)
+    ordering = ('name','id',)
     actions = ['make_published', 'make_draft']
 
     fieldsets = (
@@ -125,7 +125,7 @@ class CountryAdmin(admin.ModelAdmin):
 @admin.register(location)
 class LocationAdmin(admin.ModelAdmin):
     list_display = ('city', 'state', 'country')
-    search_fields = ('city', 'state', 'country__name')
+    search_fields = ('city', 'state', 'country')
 
 
 # === OTHER ADMINS ===

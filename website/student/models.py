@@ -790,3 +790,79 @@ class AssignedCounsellor(models.Model):
 
     def __str__(self):
         return f"{self.employee.name} assigned to {self.student.full_name} on {self.assigned_on:%Y-%m-%d %H:%M}"
+
+
+# class Application(models.Model):
+#     STATUS_CHOICES = [
+#         ('draft', 'Draft'),
+#         ('submitted', 'Submitted'),
+#         ('under_review', 'Under Review'),
+#         ('accepted', 'Accepted'),
+#         ('rejected', 'Rejected'),
+#     ]
+
+#     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='applications')
+#     university = models.ForeignKey(university, on_delete=models.CASCADE, related_name='applications')
+#     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='draft')
+#     applied_on = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"{self.student.full_name} → {self.university.name}"
+    
+
+# class DocumentRequirement(models.Model):
+#     LEVEL_CHOICES = [
+#         ('country', 'Country'),
+#         ('university', 'University'),
+#         ('student', 'Student'),
+#     ]
+
+#     name = models.CharField(max_length=255)
+#     doc_type = models.CharField(max_length=100)  # Could reuse Document.DOC_TYPE_CHOICES if needed
+#     description = models.TextField(blank=True)
+#     level = models.CharField(max_length=20, choices=LEVEL_CHOICES)
+
+#     # Optional links depending on level
+#     country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True, blank=True, related_name='document_requirements')
+#     university = models.ForeignKey(University, on_delete=models.CASCADE, null=True, blank=True, related_name='document_requirements')
+#     student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True, related_name='custom_document_requirements')
+
+#     is_mandatory = models.BooleanField(default=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         target = self.country or self.university or self.student
+#         return f"{self.name} - {self.level} ({target})"
+
+
+# class Document(models.Model):
+#     DOC_TYPE_CHOICES = [
+#         ('Passport', 'Passport'),
+#         ('Transcript', 'Transcript'),
+#         ('Degree Certificate', 'Degree Certificate'),
+#         ('Recommendation Letter', 'Recommendation Letter'),
+#         ('Statement of Purpose', 'Statement of Purpose'),
+#         ('Resume', 'Resume'),
+#         ('Test Score Report', 'Test Score Report'),
+#         ('ID Proof', 'ID Proof'),
+#         ('Other', 'Other'),
+#     ]
+
+#     STATUS_CHOICES = [
+#         ('uploaded', 'Uploaded'),
+#         ('verified', 'Verified'),
+#         ('rejected', 'Rejected'),
+#         ('in_review', 'In Review'),
+#         ('processing', 'Processing'),
+#     ]
+
+#     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents')
+#     name = models.CharField(max_length=255)
+#     doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES)
+#     file_id = models.CharField(max_length=255)
+#     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='uploaded')
+#     file_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+#     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"{self.name} ({self.doc_type})"

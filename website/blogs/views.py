@@ -51,17 +51,37 @@ def blog_post_summary_view(request):
     try:
         with connection.cursor() as cursor:
             if not auth_token:
-                cursor.execute("SELECT supabase_blog_posts(NULL)")
+                # Only published posts
+                cursor.execute("""
+                    SELECT p.id, p.title, p.slug, p.view_count, p.featured_image, p.image_uuid,
+                           SUBSTR(p.content, 1, 1000) AS content_snippet,
+                           e.name AS author_name, 'PUBLISHED' AS status,
+                           p.modified_at
+                    FROM blogs_post p
+                    JOIN authentication_employee e ON p.author_id = e.id
+                    WHERE p.status='PUBLISHED'
+                    ORDER BY p.created_at DESC
+                """)
             else:
                 try:
                     uuid_token = uuid.UUID(auth_token)
                     request.user = Employee.objects.get(authToken=uuid_token)
-                    cursor.execute("SELECT supabase_blog_posts(%s)", [str(uuid_token)])
+                    # All posts regardless of status
+                    cursor.execute("""
+                        SELECT p.id, p.title, p.slug, p.view_count, p.featured_image, p.image_uuid,
+                               SUBSTR(p.content, 1, 1000) AS content_snippet,
+                               e.name AS author_name, p.status,
+                               p.modified_at
+                        FROM blogs_post p
+                        JOIN authentication_employee e ON p.author_id = e.id
+                        ORDER BY p.created_at DESC
+                    """)
                 except (ValueError, Employee.DoesNotExist):
                     return JsonResponse({"error": "Invalid or expired token"}, status=403)
 
-            supabase_result = cursor.fetchone()[0]  # JSON from Supabase function
-            rows = json.loads(supabase_result) if supabase_result else []
+            # Fetch results and convert to list of dicts
+            columns = [col[0] for col in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         results = normalize_blog_posts(rows)
         return JsonResponse(results, safe=False)
@@ -90,7 +110,7 @@ def blog_post_detail_view(request, identifier):
             'title': post.title,
             'slug': post.slug,
             'content': post.content,
-            'featured_image': 'https://admin.gradglobe.org' + post.featured_image,
+            'featured_image': post.featured_image,
             'author': {
                 'id': post.author.id,
                 'username': post.author.username,
@@ -427,7 +447,7 @@ def upload_image_to_drive(request):
         drive_file_id, generated_uuid = upload_file_to_drive_public(upload_file)
 
         # Generate the same-style public URL
-        featured_image_url = f"/blog/images?id={drive_file_id}"
+        featured_image_url = f"https://admin.gradglobe.org/blog/images?id={drive_file_id}"
 
         return JsonResponse({
             "success": True,
