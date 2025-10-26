@@ -2,17 +2,25 @@ import os
 from functools import lru_cache
 from typing import List
 from pydantic import BaseModel, Field
-from langchain_google_genai import ChatGoogleGenerativeAI
+# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import RootModel
+from langchain_openai import ChatOpenAI
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 
 @lru_cache(maxsize=1)
 def get_llm_with_bigger_brains():
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
+    # return ChatGoogleGenerativeAI(
+    #     model="gemini-2.5-flash",
+    #     google_api_key=os.getenv("GEMINI_API_KEY"),
+    #     max_output_tokens=1000,
+    # )
+    return ChatOpenAI(
+        model="qwen/qwen2.5-vl-72b-instruct",  # or any OpenRouter model name
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY,
         max_output_tokens=1000,
     )
 
