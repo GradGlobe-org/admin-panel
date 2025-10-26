@@ -116,7 +116,6 @@ def get_llm():
         model="qwen/qwen2.5-vl-72b-instruct",  # or any OpenRouter model name
         base_url="https://openrouter.ai/api/v1",
         api_key=OPENROUTER_API_KEY,
-        max_output_tokens=500,
     )
     return llm
 
@@ -132,7 +131,6 @@ def get_llm_with_bigger_brains():
         model="qwen/qwen2.5-vl-72b-instruct",  # or any OpenRouter model name
         base_url="https://openrouter.ai/api/v1",
         api_key=OPENROUTER_API_KEY,
-        max_output_tokens=500,
     )
     return llm
 
