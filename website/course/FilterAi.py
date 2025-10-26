@@ -1,13 +1,13 @@
 # from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.output_parsers import PydanticOutputParser
+from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel
 from typing import Optional, Annotated
 from enum import Enum
 from pydantic import Field
 from functools import lru_cache
 import os
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from langchain_openai import ChatOpenAI
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
