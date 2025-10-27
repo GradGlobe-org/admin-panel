@@ -65,7 +65,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.admindocs.middleware.XViewMiddleware",
-    "authentication.middleware.RateLimitMiddleware",
+    # "authentication.middleware.RateLimitMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
