@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -99,7 +100,7 @@ WSGI_APPLICATION = "website.wsgi.application"
 # if IS_PRODUCTION:
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL"), conn_max_age=600, ssl_require=True
+        default=os.getenv("DATABASE_URL"), conn_max_age=600, ssl_require='supabase.co' in (os.getenv("DATABASE_URL") or '')
     )
 }
 # else:
@@ -110,13 +111,13 @@ DATABASES = {
 #         }
 #     }
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'gradglobe',
-#         'USER': 'postgres',
-#         'PASSWORD': '',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": "gradglobe",
+#         "USER": "postgres",
+#         "PASSWORD": "",
+#         "HOST": "localhost",
+#         "PORT": "5432",
 #     }
 # }
 
