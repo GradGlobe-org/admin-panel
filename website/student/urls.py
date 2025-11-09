@@ -10,17 +10,17 @@ urlpatterns = [
     path("verify_otp/", verify_otp_view),
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
-    path(
-        "google-signin/", GoogleSignInView.as_view(), name="google_signin"
-    ),  # Added Google Sign-In endpoint
     path("add_to_shortlist_university/", add_to_shortlist_university),
     path("add_to_shortlist_course/", add_to_shortlist_course),
     path("get_shortlistings/", get_shortlisted_items),
+    path("delete_shortlistings/", remove_from_shortlist_view),
     path("student_details/", get_student_details),
     path("update/", update_student_profile),
     path("upload_document/", upload_document),
     path("get_user_documents_list/", get_student_documents_list),
-    path("download_document/", download_document)
+    path("download_document/", download_document),
+    path("student_dashboard/", student_dashboard_view),
+    path("apply_to_course/", apply_to_university_view)
 ]
 
 #for employees

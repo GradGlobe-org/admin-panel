@@ -9,6 +9,7 @@ from django.core.validators import (
     MinLengthValidator,
 )
 from authentication.models import Employee
+from course.models import Course
 
 # Static variable for country choices using full country names
 COUNTRY_CHOICES = [
@@ -641,41 +642,6 @@ class Preference(models.Model):
         return self.full_name
 
 
-class Document(models.Model):
-    DOC_TYPE_CHOICES = [
-        ('Passport', 'Passport'),
-        ('Transcript', 'Transcript'),
-        ('Degree Certificate', 'Degree Certificate'),
-        ('Recommendation Letter', 'Recommendation Letter'),
-        ('Statement of Purpose', 'Statement of Purpose'),
-        ('Resume', 'Resume'),
-        ('Test Score Report', 'Test Score Report'),
-        ('ID Proof', 'ID Proof'),
-        ('Other', 'Other'),
-    ]
-
-    # Static variable for document status choices
-    STATUS_CHOICES = [
-        ('uploaded', 'Uploaded'),
-        ('verified', 'Verified'),
-        ('rejected', 'Rejected'),
-        ('in_review', 'In Review'),
-        ('processing', 'Processing'),
-    ]
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents')
-    name = models.CharField(max_length=255)
-    doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES)
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='uploaded')
-    file_id = models.CharField(max_length=255)
-    file_uuid = models.UUIDField(default=uuid4, editable=False)
-
-    class Meta:
-        verbose_name = "Document"
-        verbose_name_plural = "Documents"
-        ordering = ["name"]
-
-def __str__(self):
-    return f"{self.name} ({self.doc_type}) "
 
 
 class ShortlistedUniversity(models.Model):
@@ -866,3 +832,99 @@ class AssignedCounsellor(models.Model):
 
 #     def __str__(self):
 #         return f"{self.name} ({self.doc_type})"
+
+# class DocumentType(models.Model):
+#     """Allows adding new document types from admin."""
+#     name = models.CharField(max_length=100, unique=True)
+
+#     def __str__(self):
+#         return self.name
+
+# class DocumentTemplate(models.Model):
+#     """Defines default documents each student should have."""
+#     name = models.CharField(max_length=255)
+#     doc_type = models.ForeignKey(DocumentType, on_delete=models.CASCADE)
+
+#     def __str__(self):
+#         return f"{self.name} ({self.doc_type})"
+
+class Document(models.Model):
+    DOC_TYPE_CHOICES = [
+        ('Passport', 'Passport'),
+        ('Transcript', 'Transcript'),
+        ('Degree Certificate', 'Degree Certificate'),
+        ('Recommendation Letter', 'Recommendation Letter'),
+        ('Statement of Purpose', 'Statement of Purpose'),
+        ('Resume', 'Resume'),
+        ('Test Score Report', 'Test Score Report'),
+        ('ID Proof', 'ID Proof'),
+        ('Marksheet', 'Marksheet'),
+        ('Other', 'Other'),
+    ]
+
+    # Static variable for document status choices
+    STATUS_CHOICES = [
+        ('uploaded', 'Uploaded'),
+        ('verified', 'Verified'),
+        ('rejected', 'Rejected'),
+        ('in_review', 'In Review'),
+        ('processing', 'Processing'),
+    ]
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents')
+    name = models.CharField(max_length=255)
+    doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES)
+    sub_type = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='uploaded')
+    file_id = models.CharField(max_length=255)
+    file_uuid = models.UUIDField(default=uuid4, editable=False)
+
+    class Meta:
+        verbose_name = "Document"
+        verbose_name_plural = "Documents"
+        ordering = ["name"]
+
+def __str__(self):
+    return f"{self.name} ({self.doc_type}) "
+
+# from django.db.models.signals import post_save
+# from django.dispatch import receiver
+
+# @receiver(post_save, sender=Student)
+# def create_default_documents(sender, instance, created, **kwargs):
+#     if created:
+#         default_docs = [
+#             ('ID Proof', 'ID Proof', None),
+#             ('10th Marksheet', 'Marksheet', None),
+#             ('12th Marksheet', 'Marksheet', None),
+#             ('Passport', 'Passport', None)
+#         ]
+
+#         for name, doc_type, sub_type in default_docs:
+#             Document.objects.create(
+#                 student=instance,
+#                 name=name,
+#                 doc_type=doc_type,
+#                 sub_type=sub_type,
+#                 status='pending'
+#             )
+
+
+class AppliedUniversity(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    applied_at = models.DateTimeField(auto_now_add=True)
+    STATUS = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected')
+    ]
+    status = models.CharField(max_length=55, choices=STATUS, default='pending')
+    application_number = models.CharField(max_length=20)
+
+    class Meta:
+        unique_together = ("student", "course")
+        ordering = ["-applied_at"]
+
+    def __str__(self):
+        return f"{self.student} → {self.course} ({self.application_id})"
+    

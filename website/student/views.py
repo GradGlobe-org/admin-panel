@@ -22,7 +22,7 @@ import string
 import random
 from .utils import create_student_log
 from .models import StudentLogs
-from django.db import connection
+from django.db import connection, DatabaseError
 from google import genai
 import os
 from django.conf import settings
@@ -947,142 +947,6 @@ def get_all_choices(request):
 
     return JsonResponse(choices, status=200)
 
-
-@method_decorator(csrf_exempt, name="dispatch")
-@method_decorator(require_http_methods(["POST"]), name="dispatch")
-class GoogleSignInView(View):
-    @method_decorator(api_key_required)
-    def post(self, request):
-        try:
-            data = json.loads(request.body.decode("utf-8"))
-            email = data.get("email")
-            full_name = data.get("full_name")
-
-            # Validate presence of required fields
-            if not email or not full_name:
-                return JsonResponse(
-                    {"error": "Email and full name are required."},
-                    status=400,
-                )
-
-            # Validate email format
-            try:
-                validate_email(email)
-            except ValidationError:
-                return JsonResponse({"error": "Invalid email format."}, status=400)
-
-            # Validate full_name
-            if not (1 <= len(full_name.strip()) <= 200):
-                return JsonResponse(
-                    {"error": "Full name must be between 1 and 200 characters."},
-                    status=400,
-                )
-
-            with transaction.atomic():
-                with connection.cursor() as cursor:
-                    # Check if email already exists
-                    cursor.execute(
-                        """
-                        SELECT s.id, s.full_name
-                        FROM student_student s
-                        JOIN student_email e ON e.student_id = s.id
-                        WHERE e.email = %s
-                        LIMIT 1
-                        """,
-                        [email],
-                    )
-                    row = cursor.fetchone()
-
-                    if row:
-                        # Existing student
-                        student_id, student_name = row
-                        new_token = str(uuid4())
-
-                        # Update authToken
-                        cursor.execute(
-                            'UPDATE student_student SET "authToken" = %s WHERE id = %s',
-                            [new_token, student_id],
-                        )
-
-                        # Log login
-                        cursor.execute(
-                            """
-                            INSERT INTO student_logs (student_id, logs, added_on)
-                            VALUES (%s, %s, NOW())
-                            """,
-                            [student_id, "Logged in via Google"],
-                        )
-
-                        return JsonResponse(
-                            {
-                                "status": "success",
-                                "message": "User already exists, logged in successfully.",
-                                "email": email,
-                                "full_name": student_name,
-                                "authToken": new_token,
-                            },
-                            status=200,
-                        )
-
-                    else:
-                        # New student → register
-                        random_password = "".join(
-                            random.choices(string.ascii_letters + string.digits, k=12)
-                        )
-                        hashed_password = make_password(random_password)
-                        new_token = str(uuid4())
-
-                        # Insert into student_student
-                        cursor.execute(
-                            """
-                            INSERT INTO student_student (full_name, password, "authToken", added_on)
-                            VALUES (%s, %s, %s, NOW())
-                            RETURNING id
-                            """,
-                            [full_name.strip(), hashed_password, new_token],
-                        )
-                        student_id = cursor.fetchone()[0]
-
-                        # Log registration
-                        cursor.execute(
-                            """
-                            INSERT INTO student_logs (student_id, logs, added_on)
-                            VALUES (%s, %s, NOW())
-                            """,
-                            [student_id, "Registered via Google"],
-                        )
-
-                        # Insert email
-                        cursor.execute(
-                            """
-                            INSERT INTO student_email (student_id, email, added_on)
-                            VALUES (%s, %s, NOW())
-                            """,
-                            [student_id, email],
-                        )
-
-                        return JsonResponse(
-                            {
-                                "status": "success",
-                                "message": "User registered successfully via Google Sign-In.",
-                                "email": email,
-                                "full_name": full_name,
-                                "authToken": new_token,
-                            },
-                            status=201,
-                        )
-
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON."}, status=400)
-        except Exception as e:
-            # return JsonResponse(
-            #     {"error": "Internal server error.", "details": str(e)}, status=500
-            # )
-            return JsonResponse(
-                    {"error": "Internal server error."}, status=500
-                )
-
-
 @require_http_methods(['GET'])
 @token_required
 def get_all_students(request):
@@ -1499,3 +1363,120 @@ def get_student_documents_list(request):
 
     except Exception as e:
         return JsonResponse({"error": f"Unable to fetch documents: {str(e)}"}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@user_token_required
+def remove_from_shortlist_view(request):
+    """
+    Removes a university or course from the student's shortlist.
+    Example body:
+    {
+        "type": "university",  # or "course"
+        "id": 12
+    }
+    """
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        item_type = data.get("type")
+        item_id = data.get("id")
+        student_id = request.user.id
+
+        if item_type not in ["university", "course"]:
+            return JsonResponse(
+                {"error": "Invalid type. Must be 'university' or 'course'."},
+                status=400,
+            )
+
+        if not item_id:
+            return JsonResponse({"error": "id is required."}, status=400)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT remove_from_shortlist(%s, %s, %s);",
+                [student_id, item_id, item_type],
+            )
+            result = cursor.fetchone()[0]
+
+        if not result.get("success"):
+            return JsonResponse(result, status=404)
+
+        return JsonResponse(result, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON body."}, status=400)
+
+    except Exception as e:
+        # For debugging:
+        # return JsonResponse({"error": str(e)}, status=500)
+        # For production (user-friendly message):
+        return JsonResponse({"error": "Something went wrong on the server."}, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@user_token_required
+def student_dashboard_view(request):
+    """
+    Returns a JSON dashboard summary for the logged-in student.
+    Uses PostgreSQL function get_student_dashboard(p_student_id).
+    """
+    try:
+        student_id = request.user.id
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_student_dashboard(%s);", [student_id])
+            result = cursor.fetchone()[0]
+
+        if not result:
+            return JsonResponse({"message": "No data found for this student."}, status=404)
+
+        return JsonResponse(result, safe=False, status=200)
+
+    except DatabaseError as db_err:
+        # Debug line: Uncomment for internal debugging
+        # return JsonResponse({"error": str(db_err)}, status=500)
+        return JsonResponse({"error": "A database error occurred. Please try again later."}, status=500)
+
+    except Exception as e:
+        # Debug line: Uncomment for internal debugging
+        # return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "Something went wrong while fetching dashboard data."}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@user_token_required
+def apply_to_university_view(request):
+    """
+    Handles student course applications.
+    Calls PostgreSQL function apply_to_university(p_student_id, p_course_id).
+    """
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        course_id = data.get("course_id")
+        student_id = request.user.id
+
+        if not course_id:
+            return JsonResponse({"error": "course_id is required."}, status=400)
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT apply_to_university(%s, %s);", [student_id, course_id])
+            result = cursor.fetchone()[0]
+
+        if not result:
+            return JsonResponse({"message": "Application could not be processed."}, status=400)
+
+        return JsonResponse(result, safe=False, status=201)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format in request body."}, status=400)
+
+    except DatabaseError as db_err:
+        # Debug line: Uncomment for internal debugging
+        # return JsonResponse({"error": str(db_err)}, status=500)
+        return JsonResponse({"error": "A database error occurred while processing the application."}, status=500)
+
+    except Exception as e:
+        # Debug line: Uncomment for internal debugging
+        # return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "An unexpected error occurred. Please try again later."}, status=500)
