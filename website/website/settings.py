@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "student",
     "search",
     "exams",
+    "core", #This contains robots.txt for crawlers
     "django_prometheus",
     "nested_admin",
     "django.contrib.admin",
@@ -203,9 +204,10 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 JAZZMIN_SETTINGS = {
     "site_title": "Admin",
     "site_header": " Dashboard",
-    "site_brand": "Gradglobe ",
-    # "site_logo": "images/logo.png",  # Place your logo in your static files
-    # "site_icon": "images/favicon.ico",
+    "site_brand": "GradGlobe Admin ",
+    "site_icon": "images/logo/favicon.png",
+    "site_logo": "images/logo/favicon.png",
+    "login_logo": "images/logo/gradglobe.jpg",
     "welcome_sign": "Welcome to the GradGlobe Admin Panel",
     "copyright": "GradGlobe © 2025",
     "user_avatar": None,

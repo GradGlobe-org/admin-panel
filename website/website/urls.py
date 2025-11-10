@@ -10,6 +10,7 @@ urlpatterns = [
         "", RedirectView.as_view(url="/admin/", permanent=False)
     ),  # ← redirect root to /admin/
     path("", include("django_prometheus.urls")),
+    path("", include("core.urls")),
     path("admin/", admin.site.urls),
     path("auth/", include("authentication.urls")),
     path("blog/", include("blogs.urls")),
