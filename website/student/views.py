@@ -1480,3 +1480,38 @@ def apply_to_university_view(request):
         # Debug line: Uncomment for internal debugging
         # return JsonResponse({"error": str(e)}, status=500)
         return JsonResponse({"error": "An unexpected error occurred. Please try again later."}, status=500)
+    
+@csrf_exempt
+@require_http_methods(["GET"])
+@user_token_required
+def student_applied_view(request):
+    """
+    Returns JSON data of applied courses and universities for the logged-in student.
+    Uses PostgreSQL function get_applied_items(p_student_id).
+    """
+    try:
+        student_id = request.user.id
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_applied_items(%s);", [student_id])
+            result = cursor.fetchone()[0]
+
+        if not result:
+            return JsonResponse(
+                {"status": "error", "message": "No applied data found for this student."},
+                status=404
+            )
+
+        return JsonResponse(result, safe=False, status=200)
+
+    except DatabaseError:
+        return JsonResponse(
+            {"status": "error", "message": "A database error occurred. Please try again later."},
+            status=500
+        )
+
+    except Exception:
+        return JsonResponse(
+            {"status": "error", "message": "Something went wrong while fetching applied items."},
+            status=500
+        )

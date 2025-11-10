@@ -6,9 +6,7 @@ import os
 IS_PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 
 urlpatterns = [
-    path(
-        "", RedirectView.as_view(url="/admin/", permanent=False)
-    ),  # ← redirect root to /admin/
+    path("", RedirectView.as_view(url="/admin/", permanent=False)),
     path("", include("django_prometheus.urls")),
     path("", include("core.urls")),
     path("admin/", admin.site.urls),
@@ -24,7 +22,6 @@ urlpatterns = [
     path("events/", include("events.urls")),
     path("tasks/", include("tasks.urls")),
 ]
-
 
 if not IS_PRODUCTION:
     urlpatterns += [
