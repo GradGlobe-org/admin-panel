@@ -7,30 +7,39 @@ def assign_template_to_student(student):
     Assign all template documents to a given student if not already assigned.
     """
     template_docs = TemplateDocument.objects.all()
-    for tdoc in template_docs:
-        StudentDocumentRequirement.objects.get_or_create(
-            student=student,
-            template_document=tdoc
-        )
+    existing_tdocs = set(
+        StudentDocumentRequirement.objects.filter(student=student)
+        .values_list('template_document_id', flat=True)
+    )
+    new_reqs = [
+        StudentDocumentRequirement(student=student, template_document=tdoc)
+        for tdoc in template_docs if tdoc.id not in existing_tdocs
+    ]
+    if new_reqs:
+        StudentDocumentRequirement.objects.bulk_create(new_reqs)
 
 def assign_student_to_template(tdoc):
     """
     Assign a new template document to all existing students.
     """
     students = Student.objects.all()
-    for student in students:
-        StudentDocumentRequirement.objects.get_or_create(
-            student=student,
-            template_document=tdoc
-        )
+    existing_reqs = set(
+        StudentDocumentRequirement.objects.filter(template_document=tdoc)
+        .values_list('student_id', flat=True)
+    )
+    new_reqs = [
+        StudentDocumentRequirement(student=student, template_document=tdoc)
+        for student in students if student.id not in existing_reqs
+    ]
+    if new_reqs:
+        StudentDocumentRequirement.objects.bulk_create(new_reqs)
 
-# When a new student is created
+# Signals remain the same
 @receiver(post_save, sender=Student)
 def student_created_assign_templates(sender, instance, created, **kwargs):
     if created:
         assign_template_to_student(instance)
 
-# When a new TemplateDocument is created
 @receiver(post_save, sender=TemplateDocument)
 def template_created_assign_to_students(sender, instance, created, **kwargs):
     if created:
