@@ -1115,58 +1115,70 @@ MAX_FILE_SIZE = 1 * 1024 * 1024  # 1 MB
 @user_token_required
 def upload_document(request):
     """
-    Handle document upload for authenticated students.
-    Returns JSON in all cases.
+    Upload a document for a student using template_document_id.
+    Updates StudentDocumentRequirement automatically.
     """
     try:
-        student_id = request.user.id  # obtained from decorator
+        student_id = request.user.id
         student = get_object_or_404(Student, id=student_id)
 
         file_obj = request.FILES.get("document")
-        doc_type = request.POST.get("doc_type")
-        name = request.POST.get("name") or (file_obj.name if file_obj else None)
+        template_document_id = request.POST.get("template_document_id")
 
-        # Validate input
         if not file_obj:
             return JsonResponse({"error": "No file uploaded."}, status=400)
         if file_obj.size > MAX_FILE_SIZE:
             return JsonResponse({"error": "File size exceeds 1 MB."}, status=400)
-        if not doc_type:
-            return JsonResponse({"error": "Document type is required."}, status=400)
-        if not name:
-            return JsonResponse({"error": "Document name is required."}, status=400)
+        if not template_document_id:
+            return JsonResponse({"error": "template_document_id is required."}, status=400)
+
+        # Fetch template document
+        template_doc = get_object_or_404(TemplateDocument, id=template_document_id)
+
+        # Use template's doc_type and name if not provided
+        doc_type = template_doc.doc_type
+        name = template_doc.name
 
         # Upload to Google Drive (private)
         try:
             file_id, file_uuid = upload_file_to_drive_private(file_obj)
-        except ValueError as e:
-            return JsonResponse({"error": str(e)}, status=400)
         except Exception as e:
             return JsonResponse({"error": f"Upload failed: {e}"}, status=500)
 
-        # Save document record in DB
+        # Create Document entry
         document = Document.objects.create(
             student=student,
             name=name,
             doc_type=doc_type,
+            template_document=template_doc,
             status="uploaded",
             file_id=file_id,
             file_uuid=file_uuid,
         )
 
+        # Update or create StudentDocumentRequirement
+        try:
+            StudentDocumentRequirement.objects.get_or_create(
+                student=student,
+                template_document=template_doc
+            )
+        except Exception:
+            # skip silently if anything goes wrong
+            pass
+
         return JsonResponse(
             {
                 "message": "Document uploaded successfully.",
                 "document_id": document.id,
-                "file_uuid": str(document.file_uuid),
-                "file_id": document.file_id,
+                "template_document_id": template_doc.id,
+                # "file_uuid": str(document.file_uuid),
+                # "file_id": document.file_id,
             },
             status=201,
         )
 
     except Exception as e:
-        # Catch-all to ensure JSON response
-        return JsonResponse({"error": f"Unexpected error: {e}"}, status=500)
+        return JsonResponse({"error": f"Unexpected error: error"}, status=500)
 
 
 @require_http_methods(["GET"])
@@ -1174,17 +1186,22 @@ def upload_document(request):
 def download_document(request):
     """
     Stream a private Google Drive document to the authenticated user.
+    Only allows access if the document belongs to the requesting student.
     Returns JSON errors if anything goes wrong.
     """
+    document_id = request.GET.get("document_id")
+
+    if not document_id:
+        return JsonResponse({"error": "document_id is required."}, status=400)
+
     try:
-        try:
-            document_id = request.GET.get("document_id")
-        except Exception as e:
-            return JsonResponse({"error": "Error in parsing document"}, status=500)
-        document = get_object_or_404(
-            Document, id=document_id, student_id=request.user.id
-        )
+        # Verify ownership: only the student who uploaded can download
+        document = get_object_or_404(Document, id=document_id, student_id=request.user.id)
+
+        # Stream the file from Google Drive
         response = stream_private_drive_file(document.file_id, filename=document.name)
+
+        # If streaming fails and returns JsonResponse, return it directly
         if isinstance(response, JsonResponse):
             return response
 
@@ -1207,6 +1224,7 @@ def get_student_documents_list(request):
     """
     Fetch all documents for the authenticated student.
     Returns JSON with document name, type, status, and download link.
+    Includes documents not yet uploaded.
     """
     student_id = request.user.id
 
@@ -1214,12 +1232,20 @@ def get_student_documents_list(request):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, name, doc_type, status
-                FROM student_document
-                WHERE student_id = %s
-                ORDER BY name
-            """,
-                [student_id],
+                SELECT
+                    td.id AS template_document_id,
+                    td.name AS document_name,
+                    td.doc_type,
+                    COALESCE(d.status, 'not_uploaded') AS status,
+                    d.id AS document_id
+                FROM student_templatedocument td
+                LEFT JOIN student_studentdocumentrequirement sdr
+                    ON sdr.template_document_id = td.id AND sdr.student_id = %s
+                LEFT JOIN student_document d
+                    ON d.template_document_id = td.id AND d.student_id = %s
+                ORDER BY td.name
+                """,
+                [student_id, student_id],
             )
 
             rows = cursor.fetchall()
@@ -1227,11 +1253,15 @@ def get_student_documents_list(request):
         # Build response
         documents = []
         for row in rows:
-            doc_id, name, doc_type, status = row
-            download_link = f"/user/download_document/?document_id={doc_id}"
+            template_doc_id, name, doc_type, status, doc_id = row
+            download_link = (
+                f"/user/download_document/?document_id={doc_id}"
+                if doc_id is not None
+                else None
+            )
             documents.append(
                 {
-                    # "id": doc_id,
+                    "template_document_id": template_doc_id,
                     "name": name,
                     "doc_type": doc_type,
                     "status": status,

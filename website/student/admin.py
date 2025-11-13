@@ -1,8 +1,7 @@
 from django.contrib import admin
-
-from .models import AppliedUniversity  # ✅ added new model
-from .models import CallRequest  # PhoneNumber,
 from .models import (
+    AppliedUniversity,
+    CallRequest,
     AssignedCounsellor,
     Bucket,
     Document,
@@ -16,10 +15,13 @@ from .models import (
     StudentDetails,
     StudentLogs,
     TestScores,
+    DocumentTemplate,
+    TemplateDocument,
+    StudentDocumentRequirement,
 )
 
-# ---------------- Inlines ----------------
 
+# ---------------- Inlines ----------------
 
 class StudentDetailsInline(admin.StackedInline):
     model = StudentDetails
@@ -33,13 +35,6 @@ class EmailInline(admin.StackedInline):
     can_delete = False
     max_num = 1
     extra = 0
-
-
-# class PhoneNumberInline(admin.StackedInline):
-#     model = PhoneNumber
-#     can_delete = False
-#     max_num = 1
-#     extra = 0
 
 
 class EducationDetailsInline(admin.StackedInline):
@@ -82,35 +77,14 @@ class ShortlistedCourseInline(admin.TabularInline):
 
 # ---------------- ModelAdmins ----------------
 
-
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = (
-        "full_name",
-        "email_address",
-        "mobile_number",
-        "category",
-    )
-    search_fields = (
-        "full_name",
-        "phone_number__mobile_number",
-        "email__email",
-    )
-    list_filter = ("category",)
+    list_display = ("full_name", "phone_number", "is_otp_verified", "category")
+    search_fields = ("full_name", "phone_number")
+    list_filter = ("category", "is_otp_verified")
     readonly_fields = ("authToken",)
     autocomplete_fields = ["category"]
-
-    fields = ("full_name", "password", "category")
-
-    def email_address(self, obj):
-        return getattr(obj.email, "email", "-")
-
-    email_address.short_description = "Email"
-
-    def mobile_number(self, obj):
-        return getattr(obj.phone_number, "mobile_number", "-")
-
-    mobile_number.short_description = "Mobile"
+    fields = ("full_name", "phone_number", "is_otp_verified", "category", "authToken")
 
 
 @admin.register(ExperienceDetails)
@@ -153,17 +127,9 @@ class ShortlistedCourseAdmin(admin.ModelAdmin):
 
 @admin.register(StudentLogs)
 class StudentLogsAdmin(admin.ModelAdmin):
-    list_display = (
-        "student",
-        "short_log",
-        "added_on",
-    )
-    search_fields = (
-        "student__full_name",
-        "logs",
-    )
+    list_display = ("student", "short_log", "added_on")
+    search_fields = ("student__full_name", "logs")
     list_filter = ("added_on",)
-
     readonly_fields = ("added_on",)
 
     def short_log(self, obj):
@@ -194,40 +160,66 @@ class AssignedCounsellorAdmin(admin.ModelAdmin):
     readonly_fields = ("assigned_on",)
 
 
-@admin.register(Document)
-class DocumentAdmin(admin.ModelAdmin):
-    list_display = ("student", "name", "doc_type", "status", "file_id")
-    search_fields = ("student__full_name", "name", "doc_type")
-    list_filter = ("doc_type", "status")
-    readonly_fields = ("file_id", "file_uuid", "status")
-    ordering = ("name",)
-
-
 @admin.register(AppliedUniversity)
 class AppliedUniversityAdmin(admin.ModelAdmin):
-    list_display = (
-        "student",
-        "formatted_course",
-        "application_number",
-        "status",
-        "applied_at",
-    )
+    list_display = ("student", "formatted_course", "application_number", "status", "applied_at")
     list_filter = ("status", "applied_at")
-    search_fields = (
-        "student__full_name",
-        "course__program_name",
-        "course__university__name",
-        "application_number",
-    )
+    search_fields = ("student__full_name", "course__program_name", "course__university__name", "application_number")
     readonly_fields = ("applied_at",)
     ordering = ("-applied_at",)
     autocomplete_fields = ("student", "course")
 
     def formatted_course(self, obj):
-        """Display course name, university name, and program level neatly."""
         course = obj.course
-        return (
-            f"{course.program_name} — {course.university.name} ({course.program_level})"
-        )
+        return f"{course.program_name} — {course.university.name} ({course.program_level})"
 
     formatted_course.short_description = "Course Details"
+
+
+# ---------------- Document-related admin ----------------
+
+class TemplateDocumentInline(admin.TabularInline):
+    model = TemplateDocument
+    extra = 1
+    fields = ("name", "doc_type", "sub_type")
+    show_change_link = True
+
+
+@admin.register(DocumentTemplate)
+class DocumentTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active", "description")
+    list_filter = ("is_active",)
+    search_fields = ("name", "description")
+    inlines = [TemplateDocumentInline]
+
+
+@admin.register(TemplateDocument)
+class TemplateDocumentAdmin(admin.ModelAdmin):
+    list_display = ("name", "doc_type", "sub_type", "template")
+    list_filter = ("doc_type", "template")
+    search_fields = ("name", "doc_type", "sub_type", "template__name")
+    ordering = ("template", "name")
+
+
+@admin.register(StudentDocumentRequirement)
+class StudentDocumentRequirementAdmin(admin.ModelAdmin):
+    list_display = ("student", "template_document")
+    list_filter = ("template_document__doc_type",)
+    search_fields = ("student__full_name", "template_document__name", "template_document__doc_type")
+
+
+@admin.register(Document)
+class DocumentAdmin(admin.ModelAdmin):
+    list_display = ("student", "name", "doc_type", "status", "uploaded_at", "template_document")
+    list_filter = ("status", "doc_type", "uploaded_at")
+    search_fields = ("student__full_name", "name", "doc_type", "file_id", "file_uuid")
+    readonly_fields = ("uploaded_at", "updated_at", "file_uuid")
+    ordering = ("-uploaded_at",)
+    fieldsets = (
+        ("Document Information", {
+            "fields": ("student", "template_document", "name", "doc_type", "sub_type", "status")
+        }),
+        ("File Details", {
+            "fields": ("file_id", "file_uuid", "uploaded_at", "updated_at")
+        }),
+    )

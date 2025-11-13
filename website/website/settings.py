@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     "schema_viewer",
     "scholarship",
     "course",
-    "student",
+    # "student",
+    "student.apps.StudentConfig",
     "search",
     "exams",
     "core",  # This contains robots.txt for crawlers

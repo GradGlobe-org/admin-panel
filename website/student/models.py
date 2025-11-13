@@ -282,6 +282,7 @@ phone_regex = RegexValidator(
 otp_regex = RegexValidator(regex=r"^\d{6}$", message="OTP must be exactly 6 digits.")
 
 
+
 class Student(models.Model):
     phone_number = models.CharField(
         max_length=10,
@@ -289,12 +290,12 @@ class Student(models.Model):
         validators=[phone_regex],
         help_text="Enter a 10-digit phone number.",
     )
-    is_otp_verified = models.BooleanField(default=False)
-    full_name = models.CharField(max_length=200, null=True)
+    is_otp_verified = models.BooleanField()
+    full_name = models.CharField(max_length=200)
     authToken = models.UUIDField(default=uuid4, editable=False, unique=True)
     category = models.ForeignKey(
         Bucket,
-        on_delete=models.SET_NULL,  # If category is deleted, student still exists
+        on_delete=models.SET_NULL,
         null=True,
         related_name="students",
     )
@@ -304,7 +305,7 @@ class Student(models.Model):
         verbose_name_plural = "Students"
 
     def __str__(self):
-        return self.full_name if self.full_name else f"Student {self.id}"
+        return self.full_name
 
 
 class Email(models.Model):
@@ -854,6 +855,67 @@ class AssignedCounsellor(models.Model):
 #         return f"{self.name} ({self.doc_type})"
 
 
+class DocumentTemplate(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Document Template"
+        verbose_name_plural = "Document Templates"
+
+    def __str__(self):
+        return self.name
+
+
+class TemplateDocument(models.Model):
+    template = models.ForeignKey(
+        DocumentTemplate, related_name="documents", on_delete=models.CASCADE
+    )
+    name = models.CharField(max_length=255)
+    doc_type = models.CharField(
+        max_length=100,
+        choices=[
+            ("Passport", "Passport"),
+            ("Transcript", "Transcript"),
+            ("Degree Certificate", "Degree Certificate"),
+            ("Recommendation Letter", "Recommendation Letter"),
+            ("Statement of Purpose", "Statement of Purpose"),
+            ("Resume", "Resume"),
+            ("Test Score Report", "Test Score Report"),
+            ("ID Proof", "ID Proof"),
+            ("Marksheet", "Marksheet"),
+            ("Other", "Other"),
+        ],
+    )
+    sub_type = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        # unique_together = ("template", "doc_type")
+        verbose_name = "Template Document"
+        verbose_name_plural = "Template Documents"
+
+    def __str__(self):
+        return f"{self.name} ({self.doc_type})"
+
+
+class StudentDocumentRequirement(models.Model):
+    student = models.ForeignKey(
+        "student.Student", on_delete=models.CASCADE, related_name="required_documents"
+    )
+    template_document = models.ForeignKey(
+        TemplateDocument, on_delete=models.CASCADE, related_name="student_requirements"
+    )
+
+    class Meta:
+        unique_together = ("student", "template_document")
+        verbose_name = "Student Document Requirement"
+        verbose_name_plural = "Student Document Requirements"
+
+    def __str__(self):
+        return f"{self.student.full_name} - {self.template_document.name}"
+
+
 class Document(models.Model):
     DOC_TYPE_CHOICES = [
         ("Passport", "Passport"),
@@ -868,7 +930,6 @@ class Document(models.Model):
         ("Other", "Other"),
     ]
 
-    # Static variable for document status choices
     STATUS_CHOICES = [
         ("uploaded", "Uploaded"),
         ("verified", "Verified"),
@@ -876,25 +937,38 @@ class Document(models.Model):
         ("in_review", "In Review"),
         ("processing", "Processing"),
     ]
+
     student = models.ForeignKey(
-        Student, on_delete=models.CASCADE, related_name="documents"
+        "student.Student", on_delete=models.CASCADE, related_name="documents"
+    )
+    template_document = models.ForeignKey(
+        TemplateDocument,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_documents",
     )
     name = models.CharField(max_length=255)
     doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES)
     sub_type = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="uploaded")
+    status = models.CharField(
+        max_length=50, choices=STATUS_CHOICES, default="uploaded", db_index=True
+    )
     file_id = models.CharField(max_length=255)
-    file_uuid = models.UUIDField(default=uuid4, editable=False)
+    file_uuid = models.UUIDField(default=uuid4, editable=False, unique=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Document"
         verbose_name_plural = "Documents"
-        ordering = ["name"]
+        ordering = ["-uploaded_at"]
+        indexes = [
+            models.Index(fields=["student", "doc_type"]),
+        ]
 
-
-def __str__(self):
-    return f"{self.name} ({self.doc_type}) "
-
+    def __str__(self):
+        return f"{self.name} ({self.doc_type})"
 
 # from django.db.models.signals import post_save
 # from django.dispatch import receiver

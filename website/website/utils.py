@@ -178,7 +178,7 @@ def upload_file_to_drive_public(file_obj, ext=None):
         file_bytes.close()
 
 
-PRIVATE_ALLOWED_EXTENSIONS = {"jpg", "jpeg", "webp", "pdf"}
+PRIVATE_DOC_ALLOWED_EXTENSIONS = {"jpg", "jpeg", "webp", "pdf"}
 
 MIME_TYPES = {
     "jpg": "image/jpeg",
@@ -195,7 +195,7 @@ def upload_file_to_drive_private(file_obj, ext=None):
     if not ext:
         ext = file_obj.name.split(".")[-1].lower()
 
-    if ext not in PRIVATE_ALLOWED_EXTENSIONS:
+    if ext not in PRIVATE_DOC_ALLOWED_EXTENSIONS:
         raise ValueError(f"Unsupported file extension: {ext}")
 
     filename = f"{generated_uuid}.{ext}"
