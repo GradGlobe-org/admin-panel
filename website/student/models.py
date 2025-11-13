@@ -2,11 +2,8 @@ from uuid import uuid4
 
 from authentication.models import Employee
 from course.models import Course
-from django.core.validators import (
-    MaxLengthValidator,
-    MinLengthValidator,
-    RegexValidator,
-)
+from django.core.validators import (MaxLengthValidator, MinLengthValidator,
+                                    RegexValidator)
 from django.db import models
 from django.utils import timezone
 from university.models import university
@@ -346,6 +343,16 @@ class OTPRequest(models.Model):
         return f"{self.phone_number} - {self.otp}"
 
 
+class StudentProfilePicture(models.Model):
+    student = models.OneToOneField(
+        Student, on_delete=models.CASCADE, related_name="profile_picture"
+    )
+    image_uuid = models.UUIDField(editable=False, unique=True, null=True, blank=True)
+    google_file_id = models.CharField(max_length=255, blank=True, default="", null=True)
+
+    def __str__(self):
+        return f"{self.student.full_name}'s Profile Picture"
+
 class StudentDetails(models.Model):
     student = models.OneToOneField(
         Student, on_delete=models.CASCADE, related_name="details"
@@ -366,7 +373,7 @@ class StudentDetails(models.Model):
     zip_code = models.CharField(max_length=12)
     country = models.CharField(
         max_length=100, choices=COUNTRY_CHOICES
-    )  # Updated to use COUNTRY_CHOICES with full names
+    )
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

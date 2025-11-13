@@ -8,8 +8,6 @@ urlpatterns = [
     path("register_user/", register_and_send_otp),
     path("login_user/", send_otp),
     path("verify_otp/", verify_otp_view),
-    path("register/", RegisterView.as_view(), name="register"),
-    path("login/", LoginView.as_view(), name="login"),
     path("add_to_shortlist_university/", add_to_shortlist_university),
     path("add_to_shortlist_course/", add_to_shortlist_course),
     path("get_shortlistings/", get_shortlisted_items),
@@ -21,7 +19,10 @@ urlpatterns = [
     path("download_document/", download_document),
     # path("student_dashboard/", student_dashboard_view),
     path("apply_to_course/", apply_to_university_view),
-    path("student_applications/", student_applied_view)
+    path("student_applications/", student_applied_view),
+    path("upload_profile_picture/", upload_image_to_drive),
+    path("profile_picture/", get_profile_pic)
+
 ]
 
 #for employees

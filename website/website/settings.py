@@ -20,6 +20,7 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REFRESH_TOKEN = os.getenv("GOOGLE_REFRESH_TOKEN")
 GOOGLE_DRIVE_FOLDER_ID_PUBLIC = os.getenv("GOOGLE_DRIVE_FOLDER_ID_PUBLIC")
 GOOGLE_DRIVE_FOLDER_ID_PRIVATE = os.getenv("GOOGLE_DRIVE_FOLDER_ID_PRIVATE")
+GOOGLE_DRIVE_FOLDER_ID_PROFILE = os.getenv("GOOGLE_DRIVE_FOLDER_ID_PROFILE")
 GOOGLE_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 
 # WhatsApp secrets
@@ -50,7 +51,7 @@ INSTALLED_APPS = [
     "student",
     "search",
     "exams",
-    "core", #This contains robots.txt for crawlers
+    "core",  # This contains robots.txt for crawlers
     "django_prometheus",
     "nested_admin",
     "django.contrib.admin",
@@ -101,7 +102,9 @@ WSGI_APPLICATION = "website.wsgi.application"
 # if IS_PRODUCTION:
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL"), conn_max_age=600, ssl_require='supabase.co' in (os.getenv("DATABASE_URL") or '')
+        default=os.getenv("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require="supabase.co" in (os.getenv("DATABASE_URL") or ""),
     )
 }
 # else:

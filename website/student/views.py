@@ -352,192 +352,6 @@ def verify_otp_view(request):
         )
 
 
-@method_decorator(csrf_exempt, name="dispatch")
-@method_decorator(require_http_methods(["POST"]), name="dispatch")
-class RegisterView(View):
-    @method_decorator(api_key_required)
-    def post(self, request):
-        try:
-            data = json.loads(request.body.decode("utf-8"))
-
-            email = data.get("email")
-            password = data.get("password")
-            mobile_number = data.get("mobile_number")
-            full_name = data.get("full_name")  # Add full_name
-
-            # Validate presence of required fields
-            if not email or not password or not mobile_number or not full_name:
-                return JsonResponse(
-                    {
-                        "error": "Email, password, mobile number, and full name are required."
-                    },
-                    status=400,
-                )
-
-            # Validate email format
-            try:
-                validate_email(email)
-            except ValidationError:
-                return JsonResponse({"error": "Invalid email format."}, status=400)
-
-            # Validate mobile number format (basic validation, adjust as needed)
-            if not (8 <= len(mobile_number) <= 15 and mobile_number.isdigit()):
-                return JsonResponse(
-                    {"error": "Invalid mobile number format. Must be 8-15 digits."},
-                    status=400,
-                )
-
-            # Validate full_name (basic validation, e.g., not empty and reasonable length)
-            if not (1 <= len(full_name.strip()) <= 200):
-                return JsonResponse(
-                    {"error": "Full name must be between 1 and 200 characters."},
-                    status=400,
-                )
-
-            # Create student and associated records within a transaction
-            with transaction.atomic():
-                with connection.cursor() as cursor:
-                    hashed_password = make_password(password)
-                    auth_token = str(uuid4())
-
-                    # Insert student
-                    cursor.execute(
-                        """
-                        INSERT INTO student_student (full_name, password, "authToken")
-                        VALUES (%s, %s, %s)
-                        RETURNING id
-                        """,
-                        [full_name.strip(), hashed_password, auth_token],
-                    )
-                    student_id = cursor.fetchone()[0]
-
-                    # Insert student log
-                    cursor.execute(
-                        """
-                        INSERT INTO student_logs (student_id, logs)
-                        VALUES (%s, %s)
-                        """,
-                        [student_id, "Registered Via Email"],
-                    )
-
-                    # Insert email
-                    cursor.execute(
-                        """
-                        INSERT INTO student_email (student_id, email)
-                        VALUES (%s, %s)
-                        """,
-                        [student_id, email],
-                    )
-
-                    # Insert phone number
-                    cursor.execute(
-                        """
-                        INSERT INTO student_phonenumber (student_id, mobile_number)
-                        VALUES (%s, %s)
-                        """,
-                        [student_id, mobile_number],
-                    )
-
-            return JsonResponse(
-                {
-                    "status": "success",
-                    "email": email,
-                    "mobile_number": mobile_number,
-                    "full_name": full_name,  # Include full_name in response
-                    "authToken": auth_token,
-                },
-                status=201,
-            )
-
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON."}, status=400)
-        except Exception as e:
-            # Log the error in production
-            return JsonResponse(
-                {
-                    "error": "Internal server error.",
-                },
-                status=500,
-            )
-            # return JsonResponse({"error": str(e),}, status=500)
-
-
-# This view uses django password hashing which is difficult to do in postgres function, so leave it as it is
-@method_decorator(csrf_exempt, name="dispatch")
-@method_decorator(require_http_methods(["POST"]), name="dispatch")
-class LoginView(View):
-    @method_decorator(api_key_required)
-    def post(self, request):
-        try:
-            data = json.loads(request.body.decode("utf-8"))
-            email = data.get("email")
-            password = data.get("password")
-
-            if not email or not password:
-                return JsonResponse(
-                    {"error": "Both email and password are required."}, status=400
-                )
-
-            with transaction.atomic():
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT student_id FROM student_email WHERE email = %s LIMIT 1",
-                        [email],
-                    )
-                    row = cursor.fetchone()
-                    if not row:
-                        return JsonResponse(
-                            {"error": "Invalid credentials."}, status=400
-                        )
-
-                    student_id = row[0]
-
-                    cursor.execute(
-                        "SELECT password FROM student_student WHERE id = %s",
-                        [student_id],
-                    )
-                    row = cursor.fetchone()
-                    if not row:
-                        return JsonResponse(
-                            {"error": "Invalid credentials."}, status=400
-                        )
-
-                    db_password = row[0]
-
-                    if not check_password(password, db_password):
-                        return JsonResponse(
-                            {"error": "Invalid credentials."}, status=400
-                        )
-
-                    auth_token = str(uuid4())
-                    cursor.execute(
-                        'UPDATE student_student SET "authToken" = %s WHERE id = %s',
-                        [auth_token, student_id],
-                    )
-
-                    cursor.execute(
-                        """
-                        INSERT INTO student_logs (student_id, logs)
-                        VALUES (%s, %s)
-                        """,
-                        [student_id, "Logged in Via Email"],
-                    )
-
-            return JsonResponse(
-                {
-                    "status": "success",
-                    "email": email,
-                    "authToken": auth_token,
-                },
-                status=200,
-            )
-
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON."}, status=400)
-
-        except Exception:
-            return JsonResponse({"error": "Internal server error."}, status=500)
-
 
 @csrf_exempt
 @api_key_required
@@ -821,6 +635,20 @@ def update_student_profile(request):
                         ],
                     )
                     results[section] = "updated"
+
+                email_value = sd.get("email")
+                if email_value:
+                    cursor.execute(
+                        """
+                        INSERT INTO student_email (student_id, email)
+                        VALUES (%s, %s)
+                        ON CONFLICT (student_id)
+                        DO UPDATE SET email = EXCLUDED.email
+                        """,
+                        [student_id, email_value],
+                    )
+
+                results[section] = "updated"
 
                 # 3️⃣ EducationDetails
                 if "education_details" in data:
@@ -1688,3 +1516,82 @@ def student_applied_view(request):
             },
             status=500,
         )
+
+
+from website.utils import upload_profile_picture, delete_from_google_drive
+from .models import StudentProfilePicture
+
+@require_http_methods(["POST"])
+@csrf_exempt
+@user_token_required
+def upload_image_to_drive(request):
+    student = request.user
+    MAX_IMAGE_SIZE_KB = 500
+    upload_file = request.FILES.get("image")
+
+    if not upload_file:
+        return JsonResponse({"error": "No image provided."}, status=400)
+
+    if upload_file.size > MAX_IMAGE_SIZE_KB * 1024:
+        return JsonResponse(
+            {"error": f"Image size must be under {MAX_IMAGE_SIZE_KB} KB."}, status=400
+        )
+
+    try:
+        existing_pic = StudentProfilePicture.objects.filter(student=student).first()
+        old_google_file_id = existing_pic.google_file_id if existing_pic else None
+
+        drive_file_id, generated_uuid = upload_profile_picture(upload_file)
+        featured_image_url = f"https://admin.gradglobe.org/profile/images?id={drive_file_id}"
+
+        StudentProfilePicture.objects.update_or_create(
+            student=student,
+            defaults={
+                "google_file_id": drive_file_id,
+                "image_uuid": generated_uuid,
+            },
+        )
+
+        if old_google_file_id:
+            try:
+                delete_from_google_drive(old_google_file_id)
+            except Exception:
+                pass
+
+        return JsonResponse(
+            {
+                "success": True,
+                "featured_image": featured_image_url,
+            }
+        )
+
+    except Exception:
+        return JsonResponse(
+            {"error": "Server error while uploading the image."}, status=500
+        )
+
+from django.http import HttpResponse
+from .utils import stream_google_drive_image
+
+@user_token_required
+def get_profile_pic(request):
+    student = request.user
+    width = request.GET.get("w")
+    height = request.GET.get("h")
+
+    width = int(width) if width else 200
+    height = int(height) if height else 200
+
+    try:
+        profile_pic = StudentProfilePicture.objects.get(student=student)
+        file_id = profile_pic.google_file_id
+
+        if not file_id:
+            return HttpResponse("Profile image not found", status=404)
+
+        return stream_google_drive_image(file_id, width, height)
+
+    except StudentProfilePicture.DoesNotExist:
+        return HttpResponse("Profile image not found", status=404)
+    except Exception:
+        return JsonResponse({"error": "Error streaming profile image."}, status=500)
