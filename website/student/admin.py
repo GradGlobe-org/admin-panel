@@ -1,20 +1,21 @@
 from django.contrib import admin
+
+from .models import AppliedUniversity  # ✅ added new model
+from .models import CallRequest  # PhoneNumber,
 from .models import (
-    Student,
-    Document,
-    Bucket,
-    Email,
-    # PhoneNumber,
-    StudentDetails,
-    EducationDetails,
-    ExperienceDetails,
-    TestScores,
-    Preference,
-    ShortlistedUniversity,
-    ShortlistedCourse,
-    StudentLogs,
-    CallRequest,
     AssignedCounsellor,
+    Bucket,
+    Document,
+    EducationDetails,
+    Email,
+    ExperienceDetails,
+    Preference,
+    ShortlistedCourse,
+    ShortlistedUniversity,
+    Student,
+    StudentDetails,
+    StudentLogs,
+    TestScores,
 )
 
 # ---------------- Inlines ----------------
@@ -173,10 +174,10 @@ class StudentLogsAdmin(admin.ModelAdmin):
 
 @admin.register(CallRequest)
 class CallRequestAdmin(admin.ModelAdmin):
-    list_display = ("student", "employee", "requested_on")  # shows these columns
-    list_filter = ("employee", "requested_on")  # sidebar filters
-    search_fields = ("student__full_name", "employee__name")  # search by related fields
-    ordering = ("-requested_on",)  # newest first
+    list_display = ("student", "employee", "requested_on")
+    list_filter = ("employee", "requested_on")
+    search_fields = ("student__full_name", "employee__name")
+    ordering = ("-requested_on",)
     date_hierarchy = "requested_on"
     autocomplete_fields = ("student", "employee")
     readonly_fields = ("requested_on",)
@@ -184,13 +185,13 @@ class CallRequestAdmin(admin.ModelAdmin):
 
 @admin.register(AssignedCounsellor)
 class AssignedCounsellorAdmin(admin.ModelAdmin):
-    list_display = ("student", "employee", "assigned_on")  # columns in list view
-    list_filter = ("employee", "assigned_on")  # sidebar filters
-    search_fields = ("student__full_name", "employee__name")  # search by related fields
-    ordering = ("-assigned_on",)  # newest first
-    date_hierarchy = "assigned_on"  # date drilldown
-    autocomplete_fields = ("student", "employee")  # improves dropdown UX
-    readonly_fields = ("assigned_on",)  # prevent manual edits
+    list_display = ("student", "employee", "assigned_on")
+    list_filter = ("employee", "assigned_on")
+    search_fields = ("student__full_name", "employee__name")
+    ordering = ("-assigned_on",)
+    date_hierarchy = "assigned_on"
+    autocomplete_fields = ("student", "employee")
+    readonly_fields = ("assigned_on",)
 
 
 @admin.register(Document)
@@ -200,3 +201,33 @@ class DocumentAdmin(admin.ModelAdmin):
     list_filter = ("doc_type", "status")
     readonly_fields = ("file_id", "file_uuid", "status")
     ordering = ("name",)
+
+
+@admin.register(AppliedUniversity)
+class AppliedUniversityAdmin(admin.ModelAdmin):
+    list_display = (
+        "student",
+        "formatted_course",
+        "application_number",
+        "status",
+        "applied_at",
+    )
+    list_filter = ("status", "applied_at")
+    search_fields = (
+        "student__full_name",
+        "course__program_name",
+        "course__university__name",
+        "application_number",
+    )
+    readonly_fields = ("applied_at",)
+    ordering = ("-applied_at",)
+    autocomplete_fields = ("student", "course")
+
+    def formatted_course(self, obj):
+        """Display course name, university name, and program level neatly."""
+        course = obj.course
+        return (
+            f"{course.program_name} — {course.university.name} ({course.program_level})"
+        )
+
+    formatted_course.short_description = "Course Details"
