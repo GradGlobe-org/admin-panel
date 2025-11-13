@@ -1,38 +1,38 @@
 import json
+import os
+import random
+import re
+import secrets
+import string
+import threading
+from uuid import uuid4
+
+import requests
+from course.models import *
+from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django.db import DatabaseError, connection, transaction
 from django.http import JsonResponse, StreamingHttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.contrib.auth.hashers import make_password, check_password
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
-from uuid import uuid4
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
-from django.shortcuts import get_object_or_404
-from .models import *
-from course.models import *
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from google import genai
+
 from website.utils import (
     api_key_required,
-    user_token_required,
     has_perms,
     token_required,
+    upload_file_to_drive_private,
+    user_token_required,
 )
-from django.db import transaction
-import string
-import random
-from .utils import create_student_log
-from .models import StudentLogs
-from django.db import connection, DatabaseError
-from google import genai
-import os
-from django.conf import settings
-import secrets
-import requests
-from website.utils import upload_file_to_drive_private
-from .models import Document
-from .utils import stream_private_drive_file
-import threading
-import re
+
+from .models import *
+from .models import Document, StudentLogs
+from .utils import create_student_log, stream_private_drive_file
 
 WHATSAPP_TOKEN = settings.WHATSAPP_TOKEN
 WHATSAPP_PHONE_NUMBER_ID = settings.WHATSAPP_PHONE_NUMBER_ID
@@ -41,11 +41,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def send_whatsapp_otp(phone_number: str, otp: int):
     url = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     payload = {
         "messaging_product": "whatsapp",
@@ -55,18 +56,15 @@ def send_whatsapp_otp(phone_number: str, otp: int):
             "name": "auth",
             "language": {"code": "en"},
             "components": [
-                {
-                    "type": "body",
-                    "parameters": [{"type": "text", "text": str(otp)}]
-                },
+                {"type": "body", "parameters": [{"type": "text", "text": str(otp)}]},
                 {
                     "type": "button",
                     "sub_type": "url",
                     "index": "0",
-                    "parameters": [{"type": "text", "text": str(otp)}]
-                }
-            ]
-        }
+                    "parameters": [{"type": "text", "text": str(otp)}],
+                },
+            ],
+        },
     }
 
     try:
@@ -81,7 +79,11 @@ def send_whatsapp_otp(phone_number: str, otp: int):
         return {"status": "error", "reason": "provider_error", "code": 502}
 
     messages = data.get("messages")
-    if messages and isinstance(messages, list) and messages[0].get("message_status") == "accepted":
+    if (
+        messages
+        and isinstance(messages, list)
+        and messages[0].get("message_status") == "accepted"
+    ):
         return {"status": "success", "code": 200}
 
     logger.warning(f"Unexpected WhatsApp API response: {data}")
@@ -109,7 +111,10 @@ def register_and_send_otp(request):
         or not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email)
     ):
         return JsonResponse(
-            {"status": "error", "message": "Invalid input. All fields are required and must be valid."},
+            {
+                "status": "error",
+                "message": "Invalid input. All fields are required and must be valid.",
+            },
             status=400,
         )
 
@@ -120,18 +125,29 @@ def register_and_send_otp(request):
         with transaction.atomic():
             with connection.cursor() as cursor:
                 # Check if phone number already exists
-                cursor.execute("SELECT id FROM student_student WHERE phone_number = %s;", [phone_number])
+                cursor.execute(
+                    "SELECT id FROM student_student WHERE phone_number = %s;",
+                    [phone_number],
+                )
                 if cursor.fetchone():
                     return JsonResponse(
-                        {"status": "error", "message": "This number is already registered with an account. Kindly login using this number"},
+                        {
+                            "status": "error",
+                            "message": "This number is already registered with an account. Kindly login using this number",
+                        },
                         status=400,
                     )
 
                 # Check if email already exists
-                cursor.execute("SELECT student_id FROM student_email WHERE email = %s;", [email])
+                cursor.execute(
+                    "SELECT student_id FROM student_email WHERE email = %s;", [email]
+                )
                 if cursor.fetchone():
                     return JsonResponse(
-                        {"status": "error", "message": "This email is already in use with another account."},
+                        {
+                            "status": "error",
+                            "message": "This email is already in use with another account.",
+                        },
                         status=400,
                     )
 
@@ -152,7 +168,7 @@ def register_and_send_otp(request):
                 # Insert email into student_email table
                 cursor.execute(
                     "INSERT INTO student_email (student_id, email) VALUES (%s, %s);",
-                    [student_id, email]
+                    [student_id, email],
                 )
 
                 # Request OTP
@@ -163,20 +179,35 @@ def register_and_send_otp(request):
             send_result = send_whatsapp_otp(phone_number, otp)
             if send_result.get("status") != "success":
                 logger.error(f"Failed to send OTP to {phone_number}: {send_result}")
-                return JsonResponse({"status": "error", "message": "Could not send OTP"}, status=502)
+                return JsonResponse(
+                    {"status": "error", "message": "Could not send OTP"}, status=502
+                )
 
-            return JsonResponse({"status": "success", "message": f"OTP sent to {phone_number}"}, status=200)
+            return JsonResponse(
+                {"status": "success", "message": f"OTP sent to {phone_number}"},
+                status=200,
+            )
 
         elif result_status == "wait":
-            return JsonResponse({"status": "error", "message": "Please wait before requesting OTP again"}, status=429)
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "Please wait before requesting OTP again",
+                },
+                status=429,
+            )
 
         else:
-            return JsonResponse({"status": "error", "message": "Internal server error"}, status=500)
+            return JsonResponse(
+                {"status": "error", "message": "Internal server error"}, status=500
+            )
 
     except Exception as e:
         logger.exception(f"Error in register_and_send_otp: {e}")
-        return JsonResponse({"status": "error", "message": "An error occurred, try again later"}, status=500)
-
+        return JsonResponse(
+            {"status": "error", "message": "An error occurred, try again later"},
+            status=500,
+        )
 
 
 @csrf_exempt
@@ -185,16 +216,12 @@ def send_otp(request):
     try:
         data = json.loads(request.body.decode("utf-8"))
     except json.JSONDecodeError:
-        return JsonResponse(
-            {"status": "error", "message": "Invalid JSON"},
-            status=400
-        )
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
     phone_number = str(data.get("phone_number", "")).strip()
     if not phone_number.isdigit() or len(phone_number) != 10:
         return JsonResponse(
-            {"status": "error", "message": "Invalid phone number"},
-            status=400
+            {"status": "error", "message": "Invalid phone number"}, status=400
         )
 
     try:
@@ -202,59 +229,60 @@ def send_otp(request):
             # Check if student exists
             cursor.execute(
                 "SELECT id FROM student_student WHERE phone_number = %s;",
-                [phone_number]
+                [phone_number],
             )
             student = cursor.fetchone()
             if not student:
                 return JsonResponse(
-                    {"status": "error", "message": "Phone number not registered. Please register first."},
-                    status=400
+                    {
+                        "status": "error",
+                        "message": "Phone number not registered. Please register first.",
+                    },
+                    status=400,
                 )
 
             # Generate OTP
             otp = str(secrets.randbelow(900000) + 100000)  # 6-digit OTP
 
             # Request OTP from Postgres function
-            cursor.execute(
-                "SELECT request_otp(%s, %s);",
-                [phone_number, otp]
-            )
+            cursor.execute("SELECT request_otp(%s, %s);", [phone_number, otp])
             result_status = cursor.fetchone()[0]  # 'success', 'wait', or 'error'
 
-        if result_status == 'success':
+        if result_status == "success":
             # Send OTP
             send_result = send_whatsapp_otp(phone_number, otp)
             if send_result.get("status") != "success":
                 logger.error(f"Failed to send OTP to {phone_number}: {send_result}")
                 return JsonResponse(
-                    {"status": "error", "message": "Could not send OTP"},
-                    status=502
+                    {"status": "error", "message": "Could not send OTP"}, status=502
                 )
 
             return JsonResponse(
                 {"status": "success", "message": f"OTP sent to {phone_number}"},
-                status=200
+                status=200,
             )
 
-        elif result_status == 'wait':
+        elif result_status == "wait":
             return JsonResponse(
-                {"status": "error", "message": "Please wait before requesting OTP again"},
-                status=429
+                {
+                    "status": "error",
+                    "message": "Please wait before requesting OTP again",
+                },
+                status=429,
             )
 
         else:  # 'error'
             return JsonResponse(
-                {"status": "error", "message": "Internal server error"},
-                status=500
+                {"status": "error", "message": "Internal server error"}, status=500
             )
 
     except Exception as e:
         logger.exception(f"Error in send_otp: {e}")
         return JsonResponse(
             {"status": "error", "message": "An error occurred, try again later"},
-            status=500
+            status=500,
         )
-        
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -265,8 +293,7 @@ def verify_otp_view(request):
             data = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
             return JsonResponse(
-                {"status": "error", "message": "Invalid JSON body"},
-                status=400
+                {"status": "error", "message": "Invalid JSON body"}, status=400
             )
 
         phone_number = data.get("phone_number")
@@ -275,7 +302,7 @@ def verify_otp_view(request):
         if not phone_number or not otp:
             return JsonResponse(
                 {"status": "error", "message": "Phone number and OTP are required"},
-                status=400
+                status=400,
             )
 
         # Call Postgres function
@@ -285,39 +312,43 @@ def verify_otp_view(request):
 
         if not result:
             return JsonResponse(
-                {"status": "error", "message": "Unexpected error"},
-                status=500
+                {"status": "error", "message": "Unexpected error"}, status=500
             )
 
         status, token, is_existing, full_name, email = result
 
         # Handle database response
         if status == "expired":
-            return JsonResponse({"status": "error", "message": "OTP expired"}, status=410)
+            return JsonResponse(
+                {"status": "error", "message": "OTP expired"}, status=410
+            )
 
         elif status == "invalid":
-            return JsonResponse({"status": "error", "message": "Invalid or expired OTP"}, status=401)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid or expired OTP"}, status=401
+            )
 
         elif status == "success":
-            return JsonResponse({
-            "status": "success",
-            "message": "OTP verified",
-            "phone_number": phone_number,
-            "name": full_name,
-            "email": email,
-            "type": "login" if is_existing else "register",
-            "auth_token": str(token)
-        }, status=200)
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "message": "OTP verified",
+                    "phone_number": phone_number,
+                    "name": full_name,
+                    "email": email,
+                    "type": "login" if is_existing else "register",
+                    "auth_token": str(token),
+                },
+                status=200,
+            )
 
         return JsonResponse(
-            {"status": "error", "message": f"Unknown status: {status}"},
-            status=500
+            {"status": "error", "message": f"Unknown status: {status}"}, status=500
         )
 
     except Exception as e:
         return JsonResponse(
-            {"status": "error", "message": f"Server error: {str(e)}"},
-            status=500
+            {"status": "error", "message": f"Server error: {str(e)}"}, status=500
         )
 
 
@@ -947,18 +978,22 @@ def get_all_choices(request):
 
     return JsonResponse(choices, status=200)
 
-@require_http_methods(['GET'])
+
+@require_http_methods(["GET"])
 @token_required
 def get_all_students(request):
     employee = request.user  # comes from @token_required
 
     # Permission check
     if not has_perms(employee.id, ["student_logs_view"]):
-        return JsonResponse({
-            'status': 'error',
-            'message': 'You do not have permission to perform this task'
-        }, status=403)
-    
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "You do not have permission to perform this task",
+            },
+            status=403,
+        )
+
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT s.id, s.full_name, b.name AS bucket_name
@@ -968,7 +1003,7 @@ def get_all_students(request):
         rows = cursor.fetchall()
 
     # Convert rows -> list of dicts
-    students = [{"id": row[0], "full_name": row[1], "bucket":row[2]} for row in rows]
+    students = [{"id": row[0], "full_name": row[1], "bucket": row[2]} for row in rows]
 
     return JsonResponse(students, safe=False, status=200)
 
@@ -999,7 +1034,9 @@ def get_student_details_with_student_id(request):
         return JsonResponse(student_data, safe=False)
 
     except Exception as e:
-        return JsonResponse({"error": "An error occured, please try again later"}, status=500)
+        return JsonResponse(
+            {"error": "An error occured, please try again later"}, status=500
+        )
 
 
 @token_required
@@ -1237,10 +1274,13 @@ def set_student_bucket(request):
 
     except Exception as e:
         # return JsonResponse({"status": "error", "error": f"Unexpected error: {str(e)}"}, status=500)
-        return JsonResponse({"status": "error", "error": f"Unexpected error"}, status=500)
+        return JsonResponse(
+            {"status": "error", "error": f"Unexpected error"}, status=500
+        )
 
 
 MAX_FILE_SIZE = 1 * 1024 * 1024  # 1 MB
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1254,9 +1294,9 @@ def upload_document(request):
         student_id = request.user.id  # obtained from decorator
         student = get_object_or_404(Student, id=student_id)
 
-        file_obj = request.FILES.get('document')
-        doc_type = request.POST.get('doc_type')
-        name = request.POST.get('name') or (file_obj.name if file_obj else None)
+        file_obj = request.FILES.get("document")
+        doc_type = request.POST.get("doc_type")
+        name = request.POST.get("name") or (file_obj.name if file_obj else None)
 
         # Validate input
         if not file_obj:
@@ -1281,25 +1321,27 @@ def upload_document(request):
             student=student,
             name=name,
             doc_type=doc_type,
-            status='uploaded',
+            status="uploaded",
             file_id=file_id,
             file_uuid=file_uuid,
         )
 
-        return JsonResponse({
-            "message": "Document uploaded successfully.",
-            "document_id": document.id,
-            "file_uuid": str(document.file_uuid),
-            "file_id": document.file_id,
-        }, status=201)
+        return JsonResponse(
+            {
+                "message": "Document uploaded successfully.",
+                "document_id": document.id,
+                "file_uuid": str(document.file_uuid),
+                "file_id": document.file_id,
+            },
+            status=201,
+        )
 
     except Exception as e:
         # Catch-all to ensure JSON response
         return JsonResponse({"error": f"Unexpected error: {e}"}, status=500)
 
 
-
-@require_http_methods(['GET'])
+@require_http_methods(["GET"])
 @user_token_required
 def download_document(request):
     """
@@ -1310,10 +1352,10 @@ def download_document(request):
         try:
             document_id = request.GET.get("document_id")
         except Exception as e:
-            return JsonResponse({
-                "error": "Error in parsing document"
-            }, status=500)
-        document = get_object_or_404(Document, id=document_id, student_id=request.user.id)
+            return JsonResponse({"error": "Error in parsing document"}, status=500)
+        document = get_object_or_404(
+            Document, id=document_id, student_id=request.user.id
+        )
         response = stream_private_drive_file(document.file_id, filename=document.name)
         if isinstance(response, JsonResponse):
             return response
@@ -1321,12 +1363,17 @@ def download_document(request):
         return response
 
     except Document.DoesNotExist:
-        return JsonResponse({"error": "Document not found or access denied."}, status=404)
+        return JsonResponse(
+            {"error": "Document not found or access denied."}, status=404
+        )
 
     except Exception as e:
-        return JsonResponse({"error": f"Unable to download document: {str(e)}"}, status=500)
+        return JsonResponse(
+            {"error": f"Unable to download document: {str(e)}"}, status=500
+        )
 
-@require_http_methods(['GET'])
+
+@require_http_methods(["GET"])
 @user_token_required
 def get_student_documents_list(request):
     """
@@ -1337,13 +1384,16 @@ def get_student_documents_list(request):
 
     try:
         with connection.cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT id, name, doc_type, status
                 FROM student_document
                 WHERE student_id = %s
                 ORDER BY name
-            """, [student_id])
-            
+            """,
+                [student_id],
+            )
+
             rows = cursor.fetchall()
 
         # Build response
@@ -1351,18 +1401,23 @@ def get_student_documents_list(request):
         for row in rows:
             doc_id, name, doc_type, status = row
             download_link = f"/user/download_document/?document_id={doc_id}"
-            documents.append({
-                # "id": doc_id,
-                "name": name,
-                "doc_type": doc_type,
-                "status": status,
-                "download_link": download_link
-            })
+            documents.append(
+                {
+                    # "id": doc_id,
+                    "name": name,
+                    "doc_type": doc_type,
+                    "status": status,
+                    "download_link": download_link,
+                }
+            )
 
         return JsonResponse({"documents": documents})
 
     except Exception as e:
-        return JsonResponse({"error": f"Unable to fetch documents: {str(e)}"}, status=500)
+        return JsonResponse(
+            {"error": f"Unable to fetch documents: {str(e)}"}, status=500
+        )
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1410,7 +1465,10 @@ def remove_from_shortlist_view(request):
         # For debugging:
         # return JsonResponse({"error": str(e)}, status=500)
         # For production (user-friendly message):
-        return JsonResponse({"error": "Something went wrong on the server."}, status=500)
+        return JsonResponse(
+            {"error": "Something went wrong on the server."}, status=500
+        )
+
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1428,19 +1486,92 @@ def student_dashboard_view(request):
             result = cursor.fetchone()[0]
 
         if not result:
-            return JsonResponse({"message": "No data found for this student."}, status=404)
+            return JsonResponse(
+                {"message": "No data found for this student."}, status=404
+            )
 
         return JsonResponse(result, safe=False, status=200)
 
     except DatabaseError as db_err:
         # Debug line: Uncomment for internal debugging
         # return JsonResponse({"error": str(db_err)}, status=500)
-        return JsonResponse({"error": "A database error occurred. Please try again later."}, status=500)
+        return JsonResponse(
+            {"error": "A database error occurred. Please try again later."}, status=500
+        )
 
     except Exception as e:
         # Debug line: Uncomment for internal debugging
         # return JsonResponse({"error": str(e)}, status=500)
-        return JsonResponse({"error": "Something went wrong while fetching dashboard data."}, status=500)
+        return JsonResponse(
+            {"error": "Something went wrong while fetching dashboard data."}, status=500
+        )
+
+
+def get_application_data(course_id: int, student_id: int):
+    """
+    Fetches student, course, and university data for Telegram notification.
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 
+                    s.id AS student_id,
+                    s.full_name AS student_name,
+                    s.phone_number AS student_mobile,
+                    c.id AS course_id,
+                    c.program_name AS course_name,
+                    u.id AS university_id,
+                    u.name AS university_name
+                FROM student_student s
+                JOIN course_course c ON c.id = %s
+                JOIN university_university u ON u.id = c.university_id
+                WHERE s.id = %s
+                LIMIT 1;
+                """,
+                [course_id, student_id],
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            columns = [col[0] for col in cursor.description]
+            return dict(zip(columns, row))
+
+    except Exception as e:
+        print(f"❌ Error fetching application data: {e}")
+        return None
+
+
+def send_applications_to_telegram(
+    student_id: int,
+    student_name: str,
+    student_mobile: str,
+    course_id: int,
+    course_name: str,
+    university_id: int,
+    university_name: str,
+):
+    try:
+        text = (
+            "*📩 Student Application Received*\n\n"
+            f"*👤 Student Details:*\n"
+            f"• *ID:* `{student_id}`\n"
+            f"• *Name:* {student_name}\n"
+            f"• *Mobile:* `{student_mobile}`\n\n"
+            f"*🎓 Course Details:*\n"
+            f"• *Course ID:* `{course_id}`\n"
+            f"• *Course Name:* {course_name}\n"
+            f"• *University ID:* `{university_id}`\n"
+            f"• *University Name:* {university_name}"
+        )
+
+        url = "https://api.telegram.org/bot8468883427:AAGvyBk9hKjY42Dw0fEZH-vNz1iQU6J-GIY/sendMessage"
+        data = {"chat_id": "-1003360381829", "text": text, "parse_mode": "MarkdownV2"}
+        requests.post(url, data=data, timeout=5)
+
+    except Exception as e:
+        print(f"⚠️ Failed to send Telegram message: {e}")
 
 
 @csrf_exempt
@@ -1458,29 +1589,62 @@ def apply_to_university_view(request):
 
         if not course_id:
             return JsonResponse({"error": "course_id is required."}, status=400)
+        try:
+            course_id = int(course_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "course_id must be an integer."}, status=400)
+
+        if course_id <= 0:
+            return JsonResponse({"error": "Invalid course_id value."}, status=400)
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT apply_to_university(%s, %s);", [student_id, course_id])
+            cursor.execute(
+                "SELECT apply_to_university(%s, %s);", [student_id, course_id]
+            )
             result = cursor.fetchone()[0]
 
-        if not result:
-            return JsonResponse({"message": "Application could not be processed."}, status=400)
+        if not isinstance(result, dict):
+            return JsonResponse(
+                {"error": "Unexpected response from database."}, status=500
+            )
 
+        if "error" in result:
+            return JsonResponse(result, status=400)
+
+        app_data = get_application_data(course_id, student_id)
+
+        if app_data:
+            send_applications_to_telegram(
+                student_id=app_data["student_id"],
+                student_name=app_data["student_name"],
+                student_mobile=app_data["student_mobile"],
+                course_id=app_data["course_id"],
+                course_name=app_data["course_name"],
+                university_id=app_data["university_id"],
+                university_name=app_data["university_name"],
+            )
         return JsonResponse(result, safe=False, status=201)
 
     except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON format in request body."}, status=400)
+        return JsonResponse({"error": "Application could not be processed"}, status=400)
 
     except DatabaseError as db_err:
         # Debug line: Uncomment for internal debugging
         # return JsonResponse({"error": str(db_err)}, status=500)
-        return JsonResponse({"error": "A database error occurred while processing the application."}, status=500)
+        return JsonResponse(
+            {"error": "An unexpected error occurred. Please try again later."},
+            status=500,
+        )
 
     except Exception as e:
         # Debug line: Uncomment for internal debugging
         # return JsonResponse({"error": str(e)}, status=500)
-        return JsonResponse({"error": "An unexpected error occurred. Please try again later."}, status=500)
-    
+        return JsonResponse(
+            {"error": "An unexpected error occurred. Please try again later."},
+            status=500,
+        )
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 @user_token_required
@@ -1498,20 +1662,29 @@ def student_applied_view(request):
 
         if not result:
             return JsonResponse(
-                {"status": "error", "message": "No applied data found for this student."},
-                status=404
+                {
+                    "status": "error",
+                    "message": "No applied data found for this student.",
+                },
+                status=404,
             )
 
         return JsonResponse(result, safe=False, status=200)
 
     except DatabaseError:
         return JsonResponse(
-            {"status": "error", "message": "A database error occurred. Please try again later."},
-            status=500
+            {
+                "status": "error",
+                "message": "A database error occurred. Please try again later.",
+            },
+            status=500,
         )
 
     except Exception:
         return JsonResponse(
-            {"status": "error", "message": "Something went wrong while fetching applied items."},
-            status=500
+            {
+                "status": "error",
+                "message": "Something went wrong while fetching applied items.",
+            },
+            status=500,
         )
