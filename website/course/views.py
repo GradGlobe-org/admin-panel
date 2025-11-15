@@ -225,12 +225,12 @@ class UserFilterSearchView(View):
                 with connection.cursor() as cursor:
                     cursor.execute(
                         """
-                        SELECT * from public.filter_search_advance(
-                            %s,%s,%s,%s,%s,
-                            %s,%s,%s,%s,
-                            %s,%s,%s,%s,
-                            %s,%s,%s,%s,
-                            %s,%s
+                        SELECT public.search_courses_v2(
+                            %s, %s, %s, %s, %s,
+                            %s, %s, %s, %s,
+                            %s, %s, %s, %s,
+                            %s, %s, %s, %s,
+                            %s, %s
                         )
                         """,
                         [
@@ -238,7 +238,7 @@ class UserFilterSearchView(View):
                             p.university_name,
                             p.program_name,
                             p.program_level,
-                            p.country_name,
+                            p.country_names or [],
                             p.duration_min,
                             p.duration_max,
                             p.tuition_fees_min,
@@ -273,7 +273,7 @@ class UserFilterSearchView(View):
                     university_name=params.university_name,
                     program_name=params.program_name,
                     program_level=params.program_level,
-                    country_name=params.country_name,
+                    country_names=params.country_names,
                     duration_min=None,
                     duration_max=None,
                     tuition_fees_min=None,
@@ -336,20 +336,20 @@ class FilterSuggest(View):
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT * from public.filter_search_advance(
-                        %s,%s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s
+                    SELECT public.search_courses_v2(
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s
                     )
-                """,
+                    """,
                     [
-                        None,
+                        None,  # search_query (we use structured filters)
                         params.university_name,
                         params.program_name,
                         params.program_level,
-                        params.country_name,
+                        params.country_names or [],  # ← ARRAY!
                         params.duration_min,
                         params.duration_max,
                         params.tuition_fees_min,
@@ -362,8 +362,8 @@ class FilterSuggest(View):
                         params.act_max,
                         params.ielts_min,
                         params.ielts_max,
-                        params.limit_val,
-                        params.offset_val,
+                        200,
+                        params.offset_val or 0,
                     ],
                 )
                 result = cursor.fetchone()[0]
