@@ -192,4 +192,48 @@ class TelegramErrorLoggingMiddleware(MiddlewareMixin):
 
         # -------- 11. Standard error response --------
         return JsonResponse({"error": "Internal server error occurred."}, status=500)
+    
 
+    def process_response(self, request, response):
+        """
+        Catch manual 500 responses returned by views.
+        """
+        try:
+            if response.status_code == 500:
+                # Build a minimal log (since no traceback is available here)
+                url = request.build_absolute_uri()
+                method = getattr(request, "method", "UNKNOWN")
+
+                user = "Anonymous"
+                if hasattr(request, "user") and getattr(request.user, "is_authenticated", False):
+                    user = f"{request.user} (ID: {request.user.id})"
+
+                try:
+                    resolved = resolve(request.path)
+                    view_name = f"{resolved.func.__module__}.{resolved.func.__name__}"
+                except Exception:
+                    view_name = "Unknown"
+
+                # Body preview
+                try:
+                    raw = request.body
+                    body_preview = raw.decode("utf-8") if raw else None
+                except Exception:
+                    body_preview = "Unreadable body"
+
+                # Log to Telegram
+                message = (
+                    "*⚠️ Manual 500 Error Returned by View*\n\n"
+                    f"*View:* `{escape_md(view_name)}`\n"
+                    f"*User:* `{escape_md(user)}`\n"
+                    f"*Method:* `{method}`\n"
+                    f"*URL:* `{escape_md(url)}`\n\n"
+                    f"*Body:* ```{escape_md(str(body_preview))}```\n"
+                )
+
+                send_telegram_message(message[:MAX_TELEGRAM_LENGTH])
+
+        except Exception:
+            pass   # Never break app because of logging
+
+        return response
