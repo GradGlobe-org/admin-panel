@@ -105,7 +105,6 @@ def safe_parse(parser, text):
     try:
         return parser.parse(text)
     except ValidationError as e:
-        # Create dict with None for invalid fields
         raw = e.body if hasattr(e, "body") else {}
         safe_data = {}
         for field in SearchParams.model_fields.keys():
@@ -153,20 +152,20 @@ class FilterSearchView(View):
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT * from public.filter_search_advance(
-                        %s,%s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s,%s,%s,
-                        %s,%s
+                    SELECT public.search_courses_v2(
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s
                     )
-                """,
+                    """,
                     [
-                        None,
+                        None,  # search_query (we use structured filters)
                         params.university_name,
                         params.program_name,
                         params.program_level,
-                        params.country_name,
+                        params.country_names or [],  # ← ARRAY!
                         params.duration_min,
                         params.duration_max,
                         params.tuition_fees_min,
@@ -179,11 +178,11 @@ class FilterSearchView(View):
                         params.act_max,
                         params.ielts_min,
                         params.ielts_max,
-                        200,
-                        params.offset_val,
+                        params.limit_val or 20,
+                        params.offset_val or 0,
                     ],
                 )
-                result = cursor.fetchone()[0]
+                result = cursor.fetchone()[0]  # JSON from function
 
             return JsonResponse({"courses": result}, status=200, safe=False)
 

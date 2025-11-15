@@ -1,4 +1,3 @@
-# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel
@@ -7,7 +6,6 @@ from enum import Enum
 from pydantic import Field
 from functools import lru_cache
 import os
-from langchain_core.tools import StructuredTool
 from langchain_openai import ChatOpenAI
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -40,15 +38,14 @@ class SearchParams(BaseModel):
     university_name: Optional[str] = Field(None, description="Name of the university")
     program_name: Optional[str] = Field(None, description="Name of the program/course")
 
-    # Make program_level mandatory, allow only ProgramLevel Enum
     program_level: Annotated[
         Optional[ProgramLevel],
         Field(description="Program level, e.g., bachelors, masters"),
     ] = None
 
-    # Country restricted to Country Enum
-    country_name: Annotated[
-        Optional[Country], Field(description="Country name from allowed list")
+    country_names: Annotated[
+        Optional[list[Country]],
+        Field(description="List of countries (can be 1 or more)")
     ] = None
 
     duration_min: Annotated[
@@ -107,13 +104,8 @@ parser = PydanticOutputParser(pydantic_object=SearchParams)
 
 @lru_cache(maxsize=1)
 def get_llm():
-    # llm = ChatGoogleGenerativeAI(
-    #     model="gemini-2.5-flash-lite",
-    #     google_api_key=os.getenv("GEMINI_API_KEY"),
-    #     max_output_tokens=500,
-    # )
     llm = ChatOpenAI(
-        model="qwen/qwen2.5-vl-72b-instruct",  # or any OpenRouter model name
+        model="qwen/qwen2.5-vl-72b-instruct",
         base_url="https://openrouter.ai/api/v1",
         api_key=OPENROUTER_API_KEY,
     )
@@ -122,13 +114,8 @@ def get_llm():
 
 @lru_cache(maxsize=1)
 def get_llm_with_bigger_brains():
-    # llm = ChatGoogleGenerativeAI(
-    #     model="gemini-2.5-flash",
-    #     google_api_key=os.getenv("GEMINI_API_KEY"),
-    #     max_output_tokens=500,
-    # )
     llm = ChatOpenAI(
-        model="qwen/qwen2.5-vl-72b-instruct",  # or any OpenRouter model name
+        model="qwen/qwen2.5-vl-72b-instruct",
         base_url="https://openrouter.ai/api/v1",
         api_key=OPENROUTER_API_KEY,
     )
