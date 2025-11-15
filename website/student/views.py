@@ -1152,7 +1152,7 @@ def upload_document(request):
 
         if old_google_file_id:
             try:
-                delete_file_from_drive(old_google_file_id)
+                delete_from_google_drive(old_google_file_id)
             except Exception:
                 pass
 
@@ -1163,14 +1163,16 @@ def upload_document(request):
             return JsonResponse({"error": f"Upload failed: {e}"}, status=500)
 
         # Create Document entry
-        document = Document.objects.update_or_create(
+        document, created = Document.objects.update_or_create(
             student=student,
-            name=name,
-            doc_type=doc_type,
             template_document=template_doc,
-            status="uploaded",
-            file_id=file_id,
-            file_uuid=file_uuid,
+            defaults={
+                "name": name,
+                "doc_type": doc_type,
+                "status": "uploaded",
+                "file_id": file_id,
+                "file_uuid": file_uuid,
+            },
         )
 
         # Update or create StudentDocumentRequirement
@@ -1195,7 +1197,7 @@ def upload_document(request):
         )
 
     except Exception as e:
-        return JsonResponse({"error": f"Unexpected error: error"}, status=500)
+        return JsonResponse({"error": f"Unexpected error: Error in uploading documents"}, status=500)
 
 
 @require_http_methods(["GET"])
