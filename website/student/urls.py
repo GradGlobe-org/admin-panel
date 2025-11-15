@@ -22,7 +22,7 @@ urlpatterns = [
     path("student_applications/", student_applied_view),
     path("upload_profile_picture/", upload_image_to_drive),
     path("profile_picture/", get_profile_pic),
-    path("test_error/",test_error)
+    # path("test_error/",test_error)
 
 ]
 

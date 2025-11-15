@@ -1639,5 +1639,5 @@ def get_profile_pic(request):
     except Exception:
         return JsonResponse({"error": "Error streaming profile image."}, status=500)
     
-def test_error(request):
-    return 5 / 0
+# def test_error(request):
+#     return 5 / 0
