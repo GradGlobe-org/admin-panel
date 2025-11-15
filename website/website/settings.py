@@ -70,6 +70,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.admindocs.middleware.XViewMiddleware",
     # "authentication.middleware.RateLimitMiddleware",
+    "authentication.middleware.TelegramErrorLoggingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

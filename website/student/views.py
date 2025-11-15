@@ -1638,3 +1638,6 @@ def get_profile_pic(request):
         return HttpResponse("Profile image not found", status=404)
     except Exception:
         return JsonResponse({"error": "Error streaming profile image."}, status=500)
+    
+def test_error(request):
+    return 5 / 0
