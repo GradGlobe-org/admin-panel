@@ -33,6 +33,10 @@ from website.utils import (
 from .models import *
 from .models import Document, StudentLogs
 from .utils import create_student_log, stream_private_drive_file
+from website.utils import upload_profile_picture, delete_from_google_drive
+from .models import StudentProfilePicture
+from django.http import HttpResponse
+from .utils import stream_google_drive_image
 
 WHATSAPP_TOKEN = settings.WHATSAPP_TOKEN
 WHATSAPP_PHONE_NUMBER_ID = settings.WHATSAPP_PHONE_NUMBER_ID
@@ -1139,6 +1143,19 @@ def upload_document(request):
         doc_type = template_doc.doc_type
         name = template_doc.name
 
+        existing_document = Document.objects.filter(
+            student=student,
+            template_document=template_doc
+        ).first()
+
+        old_google_file_id = existing_document.file_id if existing_document else None
+
+        if old_google_file_id:
+            try:
+                delete_file_from_drive(old_google_file_id)
+            except Exception:
+                pass
+
         # Upload to Google Drive (private)
         try:
             file_id, file_uuid = upload_file_to_drive_private(file_obj)
@@ -1146,7 +1163,7 @@ def upload_document(request):
             return JsonResponse({"error": f"Upload failed: {e}"}, status=500)
 
         # Create Document entry
-        document = Document.objects.create(
+        document = Document.objects.update_or_create(
             student=student,
             name=name,
             doc_type=doc_type,
@@ -1548,9 +1565,6 @@ def student_applied_view(request):
         )
 
 
-from website.utils import upload_profile_picture, delete_from_google_drive
-from .models import StudentProfilePicture
-
 @require_http_methods(["POST"])
 @csrf_exempt
 @user_token_required
@@ -1599,9 +1613,6 @@ def upload_image_to_drive(request):
         return JsonResponse(
             {"error": "Server error while uploading the image."}, status=500
         )
-
-from django.http import HttpResponse
-from .utils import stream_google_drive_image
 
 @user_token_required
 def get_profile_pic(request):

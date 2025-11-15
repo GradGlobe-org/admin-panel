@@ -966,6 +966,7 @@ class Document(models.Model):
         indexes = [
             models.Index(fields=["student", "doc_type"]),
         ]
+        unique_together = ("student", "template_document")
 
     def __str__(self):
         return f"{self.name} ({self.doc_type})"
