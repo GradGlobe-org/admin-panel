@@ -17,7 +17,7 @@ urlpatterns = [
     path("upload_document/", upload_document),
     path("get_user_documents_list/", get_student_documents_list),
     path("download_document/", download_document),
-    # path("student_dashboard/", student_dashboard_view),
+    path("student_dashboard/", student_dashboard_view),
     path("apply_to_course/", apply_to_university_view),
     path("student_applications/", student_applied_view),
     path("upload_profile_picture/", upload_image_to_drive),
