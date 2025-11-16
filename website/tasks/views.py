@@ -7,6 +7,7 @@ from uuid import UUID
 import json
 from django.views import View
 from django.utils.decorators import method_decorator
+from django.utils.dateparse import parse_datetime
 
 
 @csrf_exempt
@@ -122,47 +123,62 @@ class StudentTaskView(View):
         except Student.DoesNotExist:
             return None, JsonResponse({"error": "Invalid token"}, status=401)
 
+
     def post(self, request):
         student, error = self.get_student(request)
         if error:
             return error
+        try:
+            raw = request.body.decode("utf-8")
+            body = json.loads(raw)               # ✔ FIXED
+        except UnicodeDecodeError:
+            return JsonResponse({"error": "Request body must be UTF-8 encoded"}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
 
         try:
-            body = json.loads(request.body.decode("utf-8"))
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+            title = body.get("title")
+            description = body.get("description", "")
+            priority = body.get("priority", "medium")
+            due_date_raw = body.get("due_date")
 
-        title = body.get("title")
-        description = body.get("description", "")
-        priority = body.get("priority", "medium")
-        due_date = body.get("due_date")
+            if not title:
+                return JsonResponse({"error": "Title is required"}, status=400)
 
-        if not title:
-            return JsonResponse({"error": "Title is required"}, status=400)
+            due_date = None
+            if due_date_raw:
+                due_date = parse_datetime(due_date_raw)
+                if due_date is None:
+                    return JsonResponse({"error": "Invalid datetime format"}, status=400)
 
-        task = Task.objects.create(
-            title=title,
-            description=description,
-            priority=priority,
-            status="todo",
-            creator_student=student,
-            due_date=due_date if due_date else None,
-        )
-        TaskAssignment.objects.create(task=task, student=student)
+            task = Task.objects.create(
+                title=title,
+                description=description,
+                priority=priority,
+                status="todo",
+                creator_student=student,
+                due_date=due_date,
+            )
 
-        return JsonResponse(
-            {
-                "message": "Task created and assigned successfully",
-                "task": {
-                    "id": str(task.id),
-                    "title": task.title,
-                    "priority": task.priority,
-                    "status": task.status,
-                    "due_date": task.due_date.isoformat() if task.due_date else None,
+            TaskAssignment.objects.create(task=task, student=student)
+
+            return JsonResponse(
+                {
+                    "message": "Task created and assigned successfully",
+                    "task": {
+                        "id": str(task.id),
+                        "title": task.title,
+                        "priority": task.priority,
+                        "status": task.status,
+                        "due_date": task.due_date.isoformat() if task.due_date else None,
+                    },
                 },
-            },
-            status=201,
-        )
+                status=201,
+            )
+
+        except Exception as e:
+            return JsonResponse({"error": "An error occurred while creating the task"}, status=500)
+
 
     def put(self, request, task_id):
         student, error = self.get_student(request)
