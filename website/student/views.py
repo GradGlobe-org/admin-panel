@@ -1357,7 +1357,31 @@ def get_profile_pic(request):
     
 
 @csrf_exempt
-@require_http_methods(['POST'])
+@require_http_methods(["POST"])
 @user_token_required
-def get_application_status(request):
+def get_application_status_view(request):
     student_id = request.user.id
+
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+        
+        application_number = body.get("application_number")
+
+        if not application_number:
+            return JsonResponse({
+                "status": False,
+                "error": "application_number is required"
+            }, status=400)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT get_application_status(%s, %s);",
+                [student_id, application_number]
+            )
+            row = cursor.fetchone()
+
+        return JsonResponse({"status": True, "data": row[0]}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"status": False, "error": str(e)}, status=500)
+

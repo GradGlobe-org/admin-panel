@@ -318,3 +318,301 @@ def set_student_bucket(request):
         return JsonResponse(
             {"status": "error", "error": f"Unexpected error"}, status=500
         )
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+@token_required
+def get_assigned_students(request):
+    try:
+        employee_id = request.user.id
+        if not employee_id:
+            return JsonResponse({"status": False, "error": "employee_id required"}, status=400)
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_assigned_students(%s);", [employee_id])
+            result = cursor.fetchone()[0]
+
+        return JsonResponse({
+            "status": True,
+            "data": result if result else []
+        })
+
+    except Exception as e:
+        return JsonResponse({"status": False, "error": str(e)}, status=500)
+    
+@csrf_exempt
+@require_http_methods(["POST"])
+@token_required
+def total_student_applications(request):
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+        student_id = body.get("student_id")
+        employee_id = request.user.id
+
+        if not isinstance(student_id, int):
+            return JsonResponse(
+                {"status": False, "error": "Invalid or missing student_id"},
+                status=400
+            )
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 1
+                FROM student_assignedcounsellor
+                WHERE student_id = %s AND employee_id = %s
+                LIMIT 1;
+                """,
+                [student_id, employee_id]
+            )
+            if cursor.fetchone() is None:
+                return JsonResponse(
+                    {"status": False, "error": "You are not assigned to this student"},
+                    status=403
+                )
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_student_applications(%s);", [student_id])
+            applications = cursor.fetchone()[0]
+
+        return JsonResponse({
+            "status": True,
+            "applications": applications or []
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": False, "error": "Invalid JSON body"},
+            status=400
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {"status": False, "error": str(e)},
+            status=500
+        )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@token_required
+def ask_for_documents(request):
+    try:
+        data = json.loads(request.body.decode())
+        application_number = data.get("application_number")
+        documents = data.get("documents")
+        employee_id = request.user.id
+
+        if not application_number:
+            return JsonResponse({"status": False, "error": "application_number is required"}, status=400)
+
+        if not documents or not isinstance(documents, list):
+            return JsonResponse({"status": False, "error": "documents must be a list"}, status=400)
+
+        # Get application + student
+        try:
+            application = AppliedUniversity.objects.select_related("student").get(
+                application_number=application_number
+            )
+        except AppliedUniversity.DoesNotExist:
+            return JsonResponse({"status": False, "error": "Invalid application_number"}, status=404)
+
+        student_id = application.student.id
+
+        # Verify counsellor assigned
+        assigned = AssignedCounsellor.objects.filter(
+            student_id=student_id, employee_id=employee_id
+        ).exists()
+
+        if not assigned:
+            return JsonResponse({"status": False, "error": "You are not assigned to this student"}, status=403)
+
+        created_or_assigned = []
+
+        for doc in documents:
+            doc_type_id = doc.get("document_type_id")
+            name = doc.get("name")
+            doc_type = doc.get("doc_type")
+            sub_type = doc.get("sub_type")
+            instructions = doc.get("instructions")
+
+            # Case 1: Existing DocumentType
+            if doc_type_id:
+                try:
+                    document_type = DocumentType.objects.get(id=doc_type_id)
+                except DocumentType.DoesNotExist:
+                    return JsonResponse({"status": False, "error": f"document_type_id {doc_type_id} not found"}, status=404)
+
+            # Case 2: Create new DocumentType
+            else:
+                if not name or not doc_type:
+                    return JsonResponse({
+                        "status": False,
+                        "error": "For new document types, 'name' and 'doc_type' are required"
+                    }, status=400)
+
+                document_type, created = DocumentType.objects.get_or_create(
+                    name=name,
+                    defaults={
+                        "doc_type": doc_type,
+                        "sub_type": sub_type,
+                        "is_default": False
+                    }
+                )
+
+                if not created:
+                    # If name already exists but doc_type mismatches → reject
+                    if document_type.doc_type != doc_type:
+                        return JsonResponse({
+                            "status": False,
+                            "error": f"Document name '{name}' already exists with another type"
+                        }, status=400)
+
+            # Now assign requirement to student
+            req, created_req = StudentDocumentRequirement.objects.get_or_create(
+                student_id=student_id,
+                document_type=document_type,
+                requested_for_university=application,
+                defaults={
+                    "requested_by_id": employee_id,
+                    "instructions": instructions
+                }
+            )
+
+            if not created_req:
+                req.instructions = instructions
+                req.requested_by_id = employee_id
+                req.save()
+
+            created_or_assigned.append({
+                "document_type_id": document_type.id,
+                "document_name": document_type.name,
+                "requirement_id": req.id
+            })
+
+        return JsonResponse({
+            "status": True,
+            "message": "Documents processed successfully",
+            "data": created_or_assigned
+        })
+
+    except Exception as e:
+        return JsonResponse({"status": False, "error": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+@token_required
+def get_student_application_details(request):
+    try:
+        data = json.loads(request.body.decode())
+        application_number = data.get("application_number")
+
+        if not application_number:
+            return JsonResponse({"status": False, "error": "application_number is required"}, status=400)
+
+        employee_id = request.user.id
+
+        # get student id from application_number
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT student_id 
+                FROM student_applieduniversity 
+                WHERE application_number = %s
+            """, [application_number])
+            row = cursor.fetchone()
+
+        if not row:
+            return JsonResponse({"status": False, "error": "Invalid application number"}, status=400)
+
+        student_id = row[0]
+
+        # Check counsellor assignment
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 1 
+                FROM student_assignedcounsellor
+                WHERE student_id = %s AND employee_id = %s
+                LIMIT 1
+            """, [student_id, employee_id])
+            assigned = cursor.fetchone()
+
+        if not assigned:
+            return JsonResponse({"status": False, "error": "You are not assigned to this student"}, status=403)
+
+        # CALL THE FUNCTION
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT get_student_application_details(%s);", [application_number])
+            result = cursor.fetchone()[0]
+
+        return JsonResponse({"status": True, "data": result})
+
+    except Exception as e:
+        return JsonResponse({"status": False, "error": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@token_required
+def update_document_status(request):
+    try:
+        data = json.loads(request.body.decode())
+
+        student_id = data.get("student_id")
+        doc_id = data.get("required_document_id")
+        new_status = data.get("counsellor_status")
+        new_comments = data.get("counsellor_comments")
+
+        if not student_id:
+            return JsonResponse({"status": False, "error": "student_id is required"}, status=400)
+
+        if not doc_id:
+            return JsonResponse({"status": False, "error": "required_document_id is required"}, status=400)
+
+        if not new_status and not new_comments:
+            return JsonResponse({"status": False, "error": "At least one of counsellor_status or counsellor_comments is required"}, status=400)
+
+        employee_id = request.user.id
+
+        # Check if counsellor is assigned to this student
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 1 
+                FROM student_assignedcounsellor
+                WHERE student_id = %s AND employee_id = %s
+                LIMIT 1;
+            """, [student_id, employee_id])
+            allowed = cursor.fetchone()
+
+        if not allowed:
+            return JsonResponse({"status": False, "error": "You are not assigned to this student"}, status=403)
+
+        # Ensure the document requirement belongs to the student
+        try:
+            requirement = StudentDocumentRequirement.objects.get(
+                id=doc_id,
+                student_id=student_id
+            )
+        except StudentDocumentRequirement.DoesNotExist:
+            return JsonResponse({
+                "status": False,
+                "error": "Document requirement does not belong to the student"
+            }, status=404)
+
+        # Fetch or create the actual document record
+        document, _created = Document.objects.get_or_create(required_document=requirement)
+
+        # Apply updates
+        if new_status:
+            document.counsellor_status = new_status
+
+        if new_comments:
+            document.counsellor_comments = new_comments
+
+        document.save()
+
+        return JsonResponse({"status": True, "message": "Document updated successfully"})
+
+    except Exception as e:
+        return JsonResponse({"status": False, "error": str(e)}, status=500)

@@ -923,4 +923,81 @@ class Document(models.Model):
 
     def __str__(self):
         return f"Document for {self.required_document.document_type.name}"
-    
+
+class Milestone(models.Model):
+    name = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=1)
+
+    is_default = models.BooleanField(default=True)   # optional
+
+    def __str__(self):
+        return self.name
+
+class SubMilestoneTemplate(models.Model):
+    milestone = models.ForeignKey(
+        Milestone,
+        on_delete=models.CASCADE,
+        related_name="steps"
+    )
+
+    name = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.milestone.name} → {self.name}"
+
+class StudentMilestone(models.Model):
+    application = models.ForeignKey(
+        AppliedUniversity,
+        on_delete=models.CASCADE,
+        related_name="student_milestones"
+    )
+
+    template = models.ForeignKey(
+        Milestone,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
+
+    name = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return self.name
+
+class StudentSubMilestone(models.Model):
+    milestone = models.ForeignKey(
+        StudentMilestone,
+        on_delete=models.CASCADE,
+        related_name="steps"
+    )
+
+    template = models.ForeignKey(
+        SubMilestoneTemplate,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
+
+    name = models.CharField(max_length=255)
+
+    STATUS = [
+        ("pending", "Pending"),
+        ("in_progress", "In Progress"),
+        ("completed", "Completed"),
+        ("under_review", "Under Review"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS, default="pending")
+
+    order = models.PositiveIntegerField(default=1)
+
+    counsellor_comment = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.status})"

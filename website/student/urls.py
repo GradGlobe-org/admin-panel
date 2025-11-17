@@ -25,6 +25,7 @@ urlpatterns = [
     path("upload_profile_picture/", upload_image_to_drive),
     path("profile_picture/", get_profile_pic),
     # path("test_error/",test_error)
+    path("get_application_status/", get_application_status_view)
 
 ]
 
@@ -42,5 +43,10 @@ urlpatterns += [
     path("student_details_employee/",get_student_details_with_student_id, name="complete_student_details"),
     path("get_all_buckets/", bucket_list),
     path("add_student_to_bucket/", set_student_bucket),
+    path("get_assigned_students/", get_assigned_students),
+    path("total_student_applications/", total_student_applications),
+    path("ask_for_documents/", ask_for_documents),
+    path("get_student_application_details/", get_student_application_details),
+    path("update_document_status/", update_document_status)
 ]
 
