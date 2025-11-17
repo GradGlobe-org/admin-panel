@@ -688,7 +688,7 @@ class ShortlistedCourse(models.Model):
 
 class StudentLogs(models.Model):
     student = models.ForeignKey(
-        "Student",  # safer to use string ref in case Student is defined later
+        "Student",
         on_delete=models.CASCADE,
         related_name="StudentLogs",
     )
@@ -697,8 +697,8 @@ class StudentLogs(models.Model):
     added_on = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = "student_logs"  # custom table name
-        ordering = ["-added_on"]  # newest logs first
+        db_table = "student_logs"
+        ordering = ["-added_on"]
         verbose_name = "Student Log"
         verbose_name_plural = "Student Logs"
 
@@ -764,115 +764,37 @@ class AssignedCounsellor(models.Model):
         return f"{self.employee.name} assigned to {self.student.full_name} on {self.assigned_on:%Y-%m-%d %H:%M}"
 
 
-# class Application(models.Model):
-#     STATUS_CHOICES = [
-#         ('draft', 'Draft'),
-#         ('submitted', 'Submitted'),
-#         ('under_review', 'Under Review'),
-#         ('accepted', 'Accepted'),
-#         ('rejected', 'Rejected'),
-#     ]
+class AppliedUniversity(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    applied_at = models.DateTimeField(auto_now_add=True)
 
-#     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='applications')
-#     university = models.ForeignKey(university, on_delete=models.CASCADE, related_name='applications')
-#     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='draft')
-#     applied_on = models.DateTimeField(auto_now_add=True)
+    STATUS = [
+        ("pending", "Pending"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+    ]
+    status = models.CharField(max_length=55, choices=STATUS, default="pending")
 
-#     def __str__(self):
-#         return f"{self.student.full_name} → {self.university.name}"
-
-
-# class DocumentRequirement(models.Model):
-#     LEVEL_CHOICES = [
-#         ('country', 'Country'),
-#         ('university', 'University'),
-#         ('student', 'Student'),
-#     ]
-
-#     name = models.CharField(max_length=255)
-#     doc_type = models.CharField(max_length=100)  # Could reuse Document.DOC_TYPE_CHOICES if needed
-#     description = models.TextField(blank=True)
-#     level = models.CharField(max_length=20, choices=LEVEL_CHOICES)
-
-#     # Optional links depending on level
-#     country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True, blank=True, related_name='document_requirements')
-#     university = models.ForeignKey(University, on_delete=models.CASCADE, null=True, blank=True, related_name='document_requirements')
-#     student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True, related_name='custom_document_requirements')
-
-#     is_mandatory = models.BooleanField(default=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-
-#     def __str__(self):
-#         target = self.country or self.university or self.student
-#         return f"{self.name} - {self.level} ({target})"
-
-
-# class Document(models.Model):
-#     DOC_TYPE_CHOICES = [
-#         ('Passport', 'Passport'),
-#         ('Transcript', 'Transcript'),
-#         ('Degree Certificate', 'Degree Certificate'),
-#         ('Recommendation Letter', 'Recommendation Letter'),
-#         ('Statement of Purpose', 'Statement of Purpose'),
-#         ('Resume', 'Resume'),
-#         ('Test Score Report', 'Test Score Report'),
-#         ('ID Proof', 'ID Proof'),
-#         ('Other', 'Other'),
-#     ]
-
-#     STATUS_CHOICES = [
-#         ('uploaded', 'Uploaded'),
-#         ('verified', 'Verified'),
-#         ('rejected', 'Rejected'),
-#         ('in_review', 'In Review'),
-#         ('processing', 'Processing'),
-#     ]
-
-#     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents')
-#     name = models.CharField(max_length=255)
-#     doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES)
-#     file_id = models.CharField(max_length=255)
-#     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='uploaded')
-#     file_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-#     uploaded_at = models.DateTimeField(auto_now_add=True)
-
-#     def __str__(self):
-#         return f"{self.name} ({self.doc_type})"
-
-# class DocumentType(models.Model):
-#     """Allows adding new document types from admin."""
-#     name = models.CharField(max_length=100, unique=True)
-
-#     def __str__(self):
-#         return self.name
-
-# class DocumentTemplate(models.Model):
-#     """Defines default documents each student should have."""
-#     name = models.CharField(max_length=255)
-#     doc_type = models.ForeignKey(DocumentType, on_delete=models.CASCADE)
-
-#     def __str__(self):
-#         return f"{self.name} ({self.doc_type})"
-
-
-class DocumentTemplate(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=False)
+    application_number = models.CharField(max_length=20, unique=True)
 
     class Meta:
-        verbose_name = "Document Template"
-        verbose_name_plural = "Document Templates"
+        unique_together = ("student", "course")
+        ordering = ["-applied_at"]
+        verbose_name = "Applied University"
+        verbose_name_plural = "Applied Universities"
+        indexes = [
+            models.Index(fields=["student"]),
+            models.Index(fields=["course"]),
+            models.Index(fields=["application_number"]),
+        ]
 
     def __str__(self):
-        return self.name
+        return f"{self.student} → {self.course} ({self.application_number})"
 
 
-class TemplateDocument(models.Model):
-    template = models.ForeignKey(
-        DocumentTemplate, related_name="documents", on_delete=models.CASCADE
-    )
-    name = models.CharField(max_length=255)
+class DocumentType(models.Model):
+    name = models.CharField(max_length=255, unique=True)
     doc_type = models.CharField(
         max_length=100,
         choices=[
@@ -886,49 +808,84 @@ class TemplateDocument(models.Model):
             ("ID Proof", "ID Proof"),
             ("Marksheet", "Marksheet"),
             ("Other", "Other"),
-        ],
+        ]
     )
     sub_type = models.CharField(max_length=100, blank=True, null=True)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
-        # unique_together = ("template", "doc_type")
-        verbose_name = "Template Document"
-        verbose_name_plural = "Template Documents"
+        ordering = ["name"]
+        verbose_name = "Document Type"
+        verbose_name_plural = "Document Types"
+        indexes = [
+            models.Index(fields=["doc_type"]),
+            models.Index(fields=["is_default"]),
+        ]
 
     def __str__(self):
-        return f"{self.name} ({self.doc_type})"
+        return self.name
 
 
 class StudentDocumentRequirement(models.Model):
     student = models.ForeignKey(
-        "student.Student", on_delete=models.CASCADE, related_name="required_documents"
+        Student,
+        on_delete=models.CASCADE,
+        related_name="requirements"
     )
-    template_document = models.ForeignKey(
-        TemplateDocument, on_delete=models.CASCADE, related_name="student_requirements"
+
+    document_type = models.ForeignKey(
+        DocumentType,
+        on_delete=models.CASCADE
     )
+
+    requested_by = models.ForeignKey(
+        Employee,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="requested_documents",
+        help_text="Null means this is a default required document."
+    )
+
+    requested_for_university = models.ForeignKey(
+        AppliedUniversity,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="required_documents",
+        help_text="Only set if this document is required for a specific university."
+    )
+
+    instructions = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("student", "template_document")
+        unique_together = ("student", "document_type", "requested_for_university")
+        ordering = ["-created_at"]
         verbose_name = "Student Document Requirement"
         verbose_name_plural = "Student Document Requirements"
+        indexes = [
+            models.Index(fields=["student"]),
+            models.Index(fields=["document_type"]),
+            models.Index(fields=["requested_for_university"]),
+        ]
 
     def __str__(self):
-        return f"{self.student.full_name} - {self.template_document.name}"
+        if self.requested_for_university:
+            return (
+                f"{self.student.full_name} requires {self.document_type.name} for "
+                f"{self.requested_for_university.course.program_name}"
+            )
+        return f"{self.student.full_name} requires {self.document_type.name}"
 
 
 class Document(models.Model):
-    DOC_TYPE_CHOICES = [
-        ("Passport", "Passport"),
-        ("Transcript", "Transcript"),
-        ("Degree Certificate", "Degree Certificate"),
-        ("Recommendation Letter", "Recommendation Letter"),
-        ("Statement of Purpose", "Statement of Purpose"),
-        ("Resume", "Resume"),
-        ("Test Score Report", "Test Score Report"),
-        ("ID Proof", "ID Proof"),
-        ("Marksheet", "Marksheet"),
-        ("Other", "Other"),
-    ]
+    required_document = models.OneToOneField(
+        StudentDocumentRequirement,
+        on_delete=models.PROTECT,
+        related_name="file",
+    )
+    submitted_document = models.CharField(max_length=255, blank=True, default="")
 
     STATUS_CHOICES = [
         ("uploaded", "Uploaded"),
@@ -936,79 +893,34 @@ class Document(models.Model):
         ("rejected", "Rejected"),
         ("in_review", "In Review"),
         ("processing", "Processing"),
+        ("re-do", "Upload Again")
     ]
 
-    student = models.ForeignKey(
-        "student.Student", on_delete=models.CASCADE, related_name="documents"
-    )
-    template_document = models.ForeignKey(
-        TemplateDocument,
-        on_delete=models.SET_NULL,
+    counsellor_status = models.CharField(
+        max_length=50,
+        choices=STATUS_CHOICES,
+        default="uploaded",
         null=True,
-        blank=True,
-        related_name="uploaded_documents",
+        blank=True
     )
-    name = models.CharField(max_length=255)
-    doc_type = models.CharField(max_length=100, choices=DOC_TYPE_CHOICES)
-    sub_type = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(
-        max_length=50, choices=STATUS_CHOICES, default="uploaded", db_index=True
-    )
+    counsellor_comments = models.CharField(max_length=2000, null=True, blank=True)
+
     file_id = models.CharField(max_length=255)
     file_uuid = models.UUIDField(default=uuid4, editable=False, unique=True)
+
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        ordering = ["-uploaded_at"]
         verbose_name = "Document"
         verbose_name_plural = "Documents"
-        ordering = ["-uploaded_at"]
         indexes = [
-            models.Index(fields=["student", "doc_type"]),
+            models.Index(fields=["required_document"]),
+            models.Index(fields=["counsellor_status"]),
+            models.Index(fields=["file_uuid"]),
         ]
-        unique_together = ("student", "template_document")
 
     def __str__(self):
-        return f"{self.name} ({self.doc_type})"
-
-# from django.db.models.signals import post_save
-# from django.dispatch import receiver
-
-# @receiver(post_save, sender=Student)
-# def create_default_documents(sender, instance, created, **kwargs):
-#     if created:
-#         default_docs = [
-#             ('ID Proof', 'ID Proof', None),
-#             ('10th Marksheet', 'Marksheet', None),
-#             ('12th Marksheet', 'Marksheet', None),
-#             ('Passport', 'Passport', None)
-#         ]
-
-#         for name, doc_type, sub_type in default_docs:
-#             Document.objects.create(
-#                 student=instance,
-#                 name=name,
-#                 doc_type=doc_type,
-#                 sub_type=sub_type,
-#                 status='pending'
-#             )
-
-
-class AppliedUniversity(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    applied_at = models.DateTimeField(auto_now_add=True)
-    STATUS = [
-        ("pending", "Pending"),
-        ("accepted", "Accepted"),
-        ("rejected", "Rejected"),
-    ]
-    status = models.CharField(max_length=55, choices=STATUS, default="pending")
-    application_number = models.CharField(max_length=20, unique=True)
-
-    class Meta:
-        unique_together = ("student", "course")
-        ordering = ["-applied_at"]
-
-    def __str__(self):
-        return f"{self.student} → {self.course} ({self.application_number})"
+        return f"Document for {self.required_document.document_type.name}"
+    

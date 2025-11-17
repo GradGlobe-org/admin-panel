@@ -2,6 +2,7 @@ from os import name
 from django.urls import path
 from .views import *
 from .call_requests import *
+from .views_employee import *
 
 #for students
 urlpatterns = [
@@ -13,6 +14,7 @@ urlpatterns = [
     path("get_shortlistings/", get_shortlisted_items),
     path("delete_shortlistings/", remove_from_shortlist_view),
     path("student_details/", get_student_details),
+    path("choices_in_db/", get_all_choices),
     path("update/", update_student_profile),
     path("upload_document/", upload_document),
     path("get_user_documents_list/", get_student_documents_list),
@@ -34,7 +36,6 @@ urlpatterns += [
     path("call_completed/", CompleteCallRequestView.as_view()),
 
 
-    path("choices_in_db/", get_all_choices),
     path("students_list/", get_all_students),
     path("logs/<int:student_id>/", get_student_logs, name="student-logs"),
     path("summarize_interest/", summarize_student_interest),

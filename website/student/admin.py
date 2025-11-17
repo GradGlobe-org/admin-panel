@@ -15,11 +15,9 @@ from .models import (
     StudentDetails,
     StudentLogs,
     TestScores,
-    DocumentTemplate,
-    TemplateDocument,
     StudentDocumentRequirement,
+    DocumentType,
 )
-
 
 # ---------------- Inlines ----------------
 
@@ -176,50 +174,44 @@ class AppliedUniversityAdmin(admin.ModelAdmin):
     formatted_course.short_description = "Course Details"
 
 
-# ---------------- Document-related admin ----------------
+# ---------------- NEW DOCUMENT SYSTEM ADMINS ----------------
 
-class TemplateDocumentInline(admin.TabularInline):
-    model = TemplateDocument
-    extra = 1
-    fields = ("name", "doc_type", "sub_type")
-    show_change_link = True
-
-
-@admin.register(DocumentTemplate)
-class DocumentTemplateAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_active", "description")
-    list_filter = ("is_active",)
-    search_fields = ("name", "description")
-    inlines = [TemplateDocumentInline]
-
-
-@admin.register(TemplateDocument)
-class TemplateDocumentAdmin(admin.ModelAdmin):
-    list_display = ("name", "doc_type", "sub_type", "template")
-    list_filter = ("doc_type", "template")
-    search_fields = ("name", "doc_type", "sub_type", "template__name")
-    ordering = ("template", "name")
+@admin.register(DocumentType)
+class DocumentTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "doc_type", "sub_type", "is_default")
+    list_filter = ("doc_type", "is_default")
+    search_fields = ("name", "doc_type", "sub_type")
+    ordering = ("name",)
 
 
 @admin.register(StudentDocumentRequirement)
 class StudentDocumentRequirementAdmin(admin.ModelAdmin):
-    list_display = ("student", "template_document")
-    list_filter = ("template_document__doc_type",)
-    search_fields = ("student__full_name", "template_document__name", "template_document__doc_type")
+    list_display = ("student", "document_type", "requested_by", "requested_for_university", "created_at")
+    search_fields = (
+        "student__full_name",
+        "document_type__name",
+    )
+    list_filter = ("document_type__doc_type", "requested_for_university")
+    autocomplete_fields = ("student", "document_type", "requested_by", "requested_for_university")
+    ordering = ("-created_at",)
 
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
-    list_display = ("student", "name", "doc_type", "status", "uploaded_at", "template_document")
-    list_filter = ("status", "doc_type", "uploaded_at")
-    search_fields = ("student__full_name", "name", "doc_type", "file_id", "file_uuid")
+    list_display = (
+        "required_document",
+        "submitted_document",
+        "counsellor_status",
+        "uploaded_at",
+        "file_uuid",
+    )
+    list_filter = ("counsellor_status", "uploaded_at")
+    search_fields = (
+        "required_document__student__full_name",
+        "required_document__document_type__name",
+        "file_id",
+        "file_uuid",
+    )
     readonly_fields = ("uploaded_at", "updated_at", "file_uuid")
     ordering = ("-uploaded_at",)
-    fieldsets = (
-        ("Document Information", {
-            "fields": ("student", "template_document", "name", "doc_type", "sub_type", "status")
-        }),
-        ("File Details", {
-            "fields": ("file_id", "file_uuid", "uploaded_at", "updated_at")
-        }),
-    )
+    autocomplete_fields = ("required_document",)
