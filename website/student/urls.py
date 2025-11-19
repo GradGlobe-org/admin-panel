@@ -1,10 +1,12 @@
 from os import name
+
 from django.urls import path
-from .views import *
+
 from .call_requests import *
+from .views import *
 from .views_employee import *
 
-#for students
+# for students
 urlpatterns = [
     path("register_user/", register_and_send_otp),
     path("login_user/", send_otp),
@@ -25,28 +27,29 @@ urlpatterns = [
     path("upload_profile_picture/", upload_image_to_drive),
     path("profile_picture/", get_profile_pic),
     # path("test_error/",test_error)
-    path("get_application_status/", get_application_status_view)
-
+    path("get_application_status/", get_application_status_view),
 ]
 
-#for employees
+# for employees
 urlpatterns += [
     path("get_calls/", EmployeeCallRequestsView.as_view(), name="get_calls"),
     path("get_calls_students/", StudentCallRequestsView.as_view()),
     path("request_call/", RequestCallWithCounsellorView.as_view()),
     path("call_completed/", CompleteCallRequestView.as_view()),
-
-
     path("students_list/", get_all_students),
     path("logs/<int:student_id>/", get_student_logs, name="student-logs"),
     path("summarize_interest/", summarize_student_interest),
-    path("student_details_employee/",get_student_details_with_student_id, name="complete_student_details"),
+    path(
+        "student_details_employee/",
+        get_student_details_with_student_id,
+        name="complete_student_details",
+    ),
     path("get_all_buckets/", bucket_list),
     path("add_student_to_bucket/", set_student_bucket),
     path("get_assigned_students/", get_assigned_students),
     path("total_student_applications/", total_student_applications),
     path("ask_for_documents/", ask_for_documents),
     path("get_student_application_details/", get_student_application_details),
-    path("update_document_status/", update_document_status)
+    path("update_document_status/", update_document_status),
+    path("get_available_documents_list/", get_available_documents_list),
 ]
-
