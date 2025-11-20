@@ -1,25 +1,16 @@
-from django.contrib import admin
-from .models import (
-    AppliedUniversity,
-    CallRequest,
-    AssignedCounsellor,
-    Bucket,
-    Document,
-    EducationDetails,
-    Email,
-    ExperienceDetails,
-    Preference,
-    ShortlistedCourse,
-    ShortlistedUniversity,
-    Student,
-    StudentDetails,
-    StudentLogs,
-    TestScores,
-    StudentDocumentRequirement,
-    DocumentType,
-)
+from django.contrib import admin, messages
+from django.db import transaction
+
+from .models import (AppliedUniversity, AssignedCounsellor, Bucket,
+                     CallRequest, Document, DocumentType, EducationDetails,
+                     Email, ExperienceDetails, Milestone, Preference,
+                     ShortlistedCourse, ShortlistedUniversity, Student,
+                     StudentDetails, StudentDocumentRequirement, StudentLogs,
+                     StudentMilestone, StudentSubMilestone,
+                     SubMilestoneTemplate, TestScores)
 
 # ---------------- Inlines ----------------
+
 
 class StudentDetailsInline(admin.StackedInline):
     model = StudentDetails
@@ -74,6 +65,7 @@ class ShortlistedCourseInline(admin.TabularInline):
 
 
 # ---------------- ModelAdmins ----------------
+
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
@@ -158,41 +150,33 @@ class AssignedCounsellorAdmin(admin.ModelAdmin):
     readonly_fields = ("assigned_on",)
 
 
-# @admin.register(AppliedUniversity)
-# class AppliedUniversityAdmin(admin.ModelAdmin):
-#     list_display = ("student", "formatted_course", "application_number", "status", "applied_at")
-#     list_filter = ("status", "applied_at")
-#     search_fields = ("student__full_name", "course__program_name", "course__university__name", "application_number")
-#     readonly_fields = ("applied_at",)
-#     ordering = ("-applied_at",)
-#     autocomplete_fields = ("student", "course")
+# ---------------- DOCUMENT SYSTEM ADMINS ----------------
 
-#     def formatted_course(self, obj):
-#         course = obj.course
-#         return f"{course.program_name} — {course.university.name} ({course.program_level})"
-
-#     formatted_course.short_description = "Course Details"
-
-
-# ---------------- NEW DOCUMENT SYSTEM ADMINS ----------------
 
 @admin.register(DocumentType)
 class DocumentTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "doc_type", "sub_type", "is_default")
     list_filter = ("doc_type", "is_default")
     search_fields = ("name", "doc_type", "sub_type")
-    ordering = ("name",)
 
 
 @admin.register(StudentDocumentRequirement)
 class StudentDocumentRequirementAdmin(admin.ModelAdmin):
-    list_display = ("student", "document_type", "requested_by", "requested_for_university", "created_at")
-    search_fields = (
-        "student__full_name",
-        "document_type__name",
+    list_display = (
+        "student",
+        "document_type",
+        "requested_by",
+        "requested_for_university",
+        "created_at",
     )
+    search_fields = ("student__full_name", "document_type__name")
     list_filter = ("document_type__doc_type", "requested_for_university")
-    autocomplete_fields = ("student", "document_type", "requested_by", "requested_for_university")
+    autocomplete_fields = (
+        "student",
+        "document_type",
+        "requested_by",
+        "requested_for_university",
+    )
     ordering = ("-created_at",)
 
 
@@ -217,20 +201,49 @@ class DocumentAdmin(admin.ModelAdmin):
     autocomplete_fields = ("required_document",)
 
 
-from django.contrib import messages
-from django.db import transaction
-from .models import (
-    Milestone,
-    SubMilestoneTemplate,
-    StudentMilestone,
-    StudentSubMilestone,
-)
+# ---------------- MILESTONE SYSTEM ----------------
+
+
+class StudentSubMilestoneInline(admin.TabularInline):
+    model = StudentSubMilestone
+    fields = ("name", "status", "order", "counsellor_comment", "updated_at")
+    readonly_fields = ("updated_at",)
+    extra = 0
+    ordering = ("order",)
+
+
+@admin.register(StudentMilestone)
+class StudentMilestoneAdmin(admin.ModelAdmin):
+    list_display = ("application", "name", "order")
+    ordering = ("application", "order")
+    inlines = [StudentSubMilestoneInline]
+
+
+@admin.register(StudentSubMilestone)
+class StudentSubMilestoneAdmin(admin.ModelAdmin):
+    list_display = ("milestone", "name", "status", "order", "updated_at")
+    list_filter = ("status",)
+    ordering = ("milestone", "order")
+    search_fields = ("name", "milestone__name")
+
+
+class StudentMilestoneInline(admin.TabularInline):
+    model = StudentMilestone
+    fields = ("name", "order")
+    readonly_fields = ("name", "order")
+    extra = 0
+    show_change_link = True  # ⭐ lets you open sub-milestones
+
+
+# ---------------- MILESTONE TEMPLATES ----------------
+
 
 class SubMilestoneTemplateInline(admin.TabularInline):
     model = SubMilestoneTemplate
-    extra = 3
+    extra = 2
     fields = ("name", "order")
     ordering = ("order",)
+
 
 @admin.register(Milestone)
 class MilestoneAdmin(admin.ModelAdmin):
@@ -245,38 +258,54 @@ class SubMilestoneTemplateAdmin(admin.ModelAdmin):
     ordering = ("milestone", "order")
     search_fields = ("name", "milestone__name")
 
+
+# ---------------- AppliedUniversity Admin ----------------
+
+
 @admin.register(AppliedUniversity)
 class AppliedUniversityAdmin(admin.ModelAdmin):
-    list_display = ("student", "formatted_course", "application_number", "status", "applied_at")
+    list_display = (
+        "student",
+        "formatted_course",
+        "application_number",
+        "status",
+        "applied_at",
+    )
     list_filter = ("status", "applied_at")
-    search_fields = ("student__full_name", "course__program_name", "course__university__name", "application_number")
+    search_fields = (
+        "student__full_name",
+        "course__program_name",
+        "course__university__name",
+        "application_number",
+    )
     readonly_fields = ("applied_at",)
     ordering = ("-applied_at",)
     autocomplete_fields = ("student", "course")
+
+    inlines = [StudentMilestoneInline]
 
     actions = ["assign_milestone_template"]
 
     def formatted_course(self, obj):
         course = obj.course
-        return f"{course.program_name} — {course.university.name} ({course.program_level})"
+        return (
+            f"{course.program_name} — {course.university.name} ({course.program_level})"
+        )
 
     formatted_course.short_description = "Course Details"
 
-    # -----------------------------------------
-    # ACTION: Assign Template → Student Milestones
-    # -----------------------------------------
+    # -------- ACTION: Assign default milestone templates --------
+
     def assign_milestone_template(self, request, queryset):
         created = 0
         skipped = 0
 
         for application in queryset:
-            # avoid duplicate creations
             if application.student_milestones.exists():
                 skipped += 1
                 continue
 
             with transaction.atomic():
-                # get base templates
                 templates = Milestone.objects.filter(is_default=True).order_by("order")
 
                 for m in templates:
@@ -284,25 +313,26 @@ class AppliedUniversityAdmin(admin.ModelAdmin):
                         application=application,
                         template=m,
                         name=m.name,
-                        order=m.order
+                        order=m.order,
                     )
 
-                    # add steps
                     for step in m.steps.all().order_by("order"):
                         StudentSubMilestone.objects.create(
                             milestone=sm,
                             template=step,
                             name=step.name,
                             order=step.order,
-                            status="pending"
+                            status="pending",
                         )
 
                 created += 1
 
         msg = f"Created milestones for {created} applications."
         if skipped:
-            msg += f" Skipped {skipped} (already exists)."
+            msg += f" Skipped {skipped} because they already have milestones."
 
         messages.success(request, msg)
 
-    assign_milestone_template.short_description = "Assign Milestone Template to selected Application(s)"
+    assign_milestone_template.short_description = (
+        "Assign Milestone Template to selected Applications"
+    )

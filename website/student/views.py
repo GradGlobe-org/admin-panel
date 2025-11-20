@@ -356,7 +356,6 @@ def verify_otp_view(request):
         )
 
 
-
 @csrf_exempt
 @api_key_required
 @user_token_required
@@ -810,8 +809,6 @@ def get_all_choices(request):
     return JsonResponse(choices, status=200)
 
 
-
-
 MAX_FILE_SIZE = 1 * 1024 * 1024  # 1 MB
 
 
@@ -833,20 +830,20 @@ def upload_document(request):
             return JsonResponse({"error": "No file uploaded."}, status=400)
 
         if not required_document_id:
-            return JsonResponse({"error": "required_document_id is required."}, status=400)
+            return JsonResponse(
+                {"error": "required_document_id is required."}, status=400
+            )
 
         if file_obj.size > MAX_FILE_SIZE:
             return JsonResponse({"error": "File size exceeds 1 MB."}, status=400)
 
         try:
             required_document = StudentDocumentRequirement.objects.get(
-                id=required_document_id,
-                student=student
+                id=required_document_id, student=student
             )
         except StudentDocumentRequirement.DoesNotExist:
             return JsonResponse(
-                {"error": "Invalid required_document_id or access denied."},
-                status=404
+                {"error": "Invalid required_document_id or access denied."}, status=404
             )
 
         document_name = required_document.document_type.name
@@ -870,7 +867,7 @@ def upload_document(request):
                 "counsellor_status": "uploaded",
                 "file_id": file_id,
                 "file_uuid": file_uuid,
-            }
+            },
         )
 
         return JsonResponse(
@@ -911,7 +908,7 @@ def download_document(request):
         document = get_object_or_404(
             Document,
             required_document_id=required_document_id,
-            required_document__student_id=request.user.id
+            required_document__student_id=request.user.id,
         )
 
         # Use DocumentType.name as filename
@@ -988,7 +985,8 @@ def get_student_documents_list(request):
 
             download_link = (
                 f"/user/download_document/?document_id={required_doc_id}"
-                if required_doc_id else None
+                if required_doc_id
+                else None
             )
 
             documents.append(
@@ -1304,7 +1302,9 @@ def upload_image_to_drive(request):
         old_google_file_id = existing_pic.google_file_id if existing_pic else None
 
         drive_file_id, generated_uuid = upload_profile_picture(upload_file)
-        featured_image_url = f"https://admin.gradglobe.org/profile/images?id={drive_file_id}"
+        featured_image_url = (
+            f"https://admin.gradglobe.org/profile/images?id={drive_file_id}"
+        )
 
         StudentProfilePicture.objects.update_or_create(
             student=student,
@@ -1332,6 +1332,7 @@ def upload_image_to_drive(request):
             {"error": "Server error while uploading the image."}, status=500
         )
 
+
 @user_token_required
 def get_profile_pic(request):
     student = request.user
@@ -1354,7 +1355,7 @@ def get_profile_pic(request):
         return HttpResponse("Profile image not found", status=404)
     except Exception:
         return JsonResponse({"error": "Error streaming profile image."}, status=500)
-    
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1364,19 +1365,18 @@ def get_application_status_view(request):
 
     try:
         body = json.loads(request.body.decode("utf-8"))
-        
+
         application_number = body.get("application_number")
 
         if not application_number:
-            return JsonResponse({
-                "status": False,
-                "error": "application_number is required"
-            }, status=400)
+            return JsonResponse(
+                {"status": False, "error": "application_number is required"}, status=400
+            )
 
         with connection.cursor() as cursor:
             cursor.execute(
                 "SELECT get_application_status(%s, %s);",
-                [student_id, application_number]
+                [student_id, application_number],
             )
             row = cursor.fetchone()
 
@@ -1384,4 +1384,3 @@ def get_application_status_view(request):
 
     except Exception as e:
         return JsonResponse({"status": False, "error": str(e)}, status=500)
-
