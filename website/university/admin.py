@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     location, Country, university, WhyStudyInSection, CostOfLiving,
-    AdmissionStats, Visa, WorkOpportunity, Partner_Agency, commission,
+    AdmissionStats, CountryVisa, WorkOpportunity, Partner_Agency, commission,
     mou, Uni_contact, stats, videos_links, ranking_agency,
     university_ranking, faqs, Fact, CountryFAQ
 )
@@ -41,7 +41,7 @@ class AdmissionStatsInline(admin.TabularInline):
     extra = 1
 
 class VisaInline(admin.TabularInline):
-    model = Visa
+    model = CountryVisa
     extra = 1
 
 class WorkOpportunityInline(admin.TabularInline):
@@ -72,7 +72,7 @@ class UniversityAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Basic Info', {
-            'fields': ('cover_url', 'cover_origin', 'name', 'type', 'establish_year', 'location', 'status')
+            'fields': ('cover_url', 'name', 'type', 'establish_year', 'location', 'status')
         }),
         ('Academic & Admission Info', {
             'fields': ('about', 'admission_requirements')
@@ -91,7 +91,6 @@ class UniversityAdmin(admin.ModelAdmin):
         CommissionInline,
         MouInline,
         AdmissionStatsInline,
-        VisaInline,
         WorkOpportunityInline,
     ]
 
@@ -113,7 +112,7 @@ class UniversityAdmin(admin.ModelAdmin):
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
     list_display = ('name', 'faq_count')
-    inlines = [FactInline, CountryFAQInline]
+    inlines = [FactInline, CountryFAQInline, VisaInline]
 
     def faq_count(self, obj):
         return obj.faqs.count()

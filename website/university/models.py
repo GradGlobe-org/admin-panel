@@ -119,7 +119,6 @@ class CostOfLiving(models.Model):
 
 class university(models.Model):
     cover_url = models.URLField(max_length=1000, unique=True, help_text="Primary cover image URL for the university")
-    cover_origin = models.URLField(max_length=1000, help_text="Original source of the cover image")
     name = models.CharField(max_length=1000, unique=True, db_index=True, help_text="Full name of the university")
     
     TYPE = (
@@ -237,7 +236,7 @@ class AdmissionStats(models.Model):
         verbose_name = "Admission Stats"
         verbose_name_plural = "Admission Stats"
 
-class Visa(models.Model):
+class CountryVisa(models.Model):
     # Define choices for type_of_visa
     VISA_TYPES = (
         ('TOURIST', 'Tourist Visa'),
@@ -254,10 +253,11 @@ class Visa(models.Model):
         ('E_VISA', 'e-Visa/Visa on Arrival'),
     )
 
-    university = models.ForeignKey(
-        university,
+    country = models.ForeignKey(
+        'Country',
         on_delete=models.CASCADE,
-        help_text="University this Visa is assigned to"
+        related_name='visas',
+        help_text="Country this visa belongs to"
     )
     name = models.CharField(max_length=1000)  
     cost = models.PositiveIntegerField()
@@ -267,9 +267,11 @@ class Visa(models.Model):
         help_text="Type of visa"
     )
     describe = models.TextField(max_length=10000)
+
     class Meta:
         verbose_name = "Visa"
         verbose_name_plural = "Visas"
+        unique_together = ('country', 'name')
 
     def __str__(self):
         return f"{self.name} ({self.type_of_visa})"

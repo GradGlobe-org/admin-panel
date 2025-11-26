@@ -1,14 +1,5 @@
 from django.contrib import admin
-from .models import Course, CostOfLivingBreakdown
-
-
-# === INLINE MODEL FOR COURSE ===
-class CostOfLivingBreakdownInline(admin.TabularInline):
-    model = CostOfLivingBreakdown
-    extra = 1
-    fields = ('name', 'cost')
-    verbose_name = "Cost Item"
-    verbose_name_plural = "Cost of Living Breakdown"
+from .models import Course
 
 
 # === COURSE ADMIN ===
@@ -39,16 +30,3 @@ class CourseAdmin(admin.ModelAdmin):
             'fields': ('about', 'brochure_url')
         }),
     )
-
-    inlines = [
-        CostOfLivingBreakdownInline,
-    ]
-
-
-# === COST OF LIVING BREAKDOWN ADMIN ===
-@admin.register(CostOfLivingBreakdown)
-class CostOfLivingBreakdownAdmin(admin.ModelAdmin):
-    list_display = ('course', 'name', 'cost')
-    list_filter = ('course__university',)
-    search_fields = ('course__university__name', 'course__program_name', 'name')
-    ordering = ('course', 'name')

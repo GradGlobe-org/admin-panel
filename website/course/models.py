@@ -59,25 +59,3 @@ class Course(models.Model):
     def __str__(self):
         return f"{self.university.name} - {self.program_level.title()} Program"
 
-
-class CostOfLivingBreakdown(models.Model):
-    course = models.ForeignKey(
-        Course,
-        on_delete=models.CASCADE,
-        related_name="cost_breakdown",
-        help_text="The course to which this cost is associated."
-    )
-    name = models.CharField(
-        max_length=1000,
-        help_text="Category name (e.g., Housing, Transport, Food)."
-    )
-    cost = models.PositiveIntegerField(
-        help_text="Cost in USD."
-    )
-
-    class Meta:
-        verbose_name = "Cost of Living Item"
-        verbose_name_plural = "Cost of Living Breakdown"
-
-    def __str__(self):
-        return f"{self.name} - ${self.cost} (USD)"
