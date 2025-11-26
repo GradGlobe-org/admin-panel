@@ -1,0 +1,80 @@
+﻿id,University Name,Type,Establish Year,City,State,Country,Review Rating,Status,Avg Acceptance Rate,Avg Tuition Fee (USD),FAQs Count,Admission Stats Count,Visa Count,Work Opportunities Count,Commissions Count,MoUs Count,Contacts Count,Stats Count,Videos Count,Rankings Count
+529,Imperial College London,PUBLIC,1907,London,Greater London,United Kingdom,4.5,PUBLISH,20,37000,0,2,0,0,0,0,3,0,0,0
+530,University of Oxford,PUBLIC,1096,Oxford,Oxfordshire,United Kingdom,4.8,PUBLISH,15,40000,0,2,0,0,0,0,0,0,0,0
+531,University of Cambridge,PUBLIC,1209,Cambridge,Cambridgeshire,United Kingdom,4.8,PUBLISH,18,26000,0,2,0,0,0,0,0,0,0,0
+532,University College London,PUBLIC,1826,London,Greater London,United Kingdom,4.7,PUBLISH,25,40000,0,2,0,0,0,0,0,0,0,0
+533,King's College London,PUBLIC,1829,London,Greater London,United Kingdom,4.5,PUBLISH,22,25000,0,2,0,0,0,0,0,0,0,0
+534,University of Edinburgh,PUBLIC,1582,Edinburgh,Scotland,United Kingdom,4.5,PUBLISH,20,30000,0,2,0,0,0,0,0,0,0,0
+536,The University of Manchester,PUBLIC,2004,Manchester,Greater Manchester,United Kingdom,4.3,PUBLISH,85,11562,0,2,0,0,0,0,0,0,0,0
+584,University of Bristol,PUBLIC,1925,Bristol,Bristol,United Kingdom,4.5,DRAFT,80,25000,0,2,0,0,0,0,0,0,0,0
+628,London School of Economics and Political Science (LSE),PUBLIC,1895,London,England,United Kingdom,4.5,DRAFT,25,45000,0,2,0,0,0,0,0,0,0,0
+629,The University of Warwick,PUBLIC,1965,Coventry,West Midlands,United Kingdom,0.0,DRAFT,0,30000,0,1,0,0,0,0,0,0,0,0
+630,University of Birmingham,PUBLIC,1900,Birmingham,West Midlands,United Kingdom,4.6,DRAFT,0,35000,0,2,0,0,0,0,0,0,0,0
+631,University of Glasgow,PUBLIC,1451,Glasgow,Scotland,United Kingdom,4.5,DRAFT,35,25000,0,2,0,0,0,0,0,0,0,0
+632,University of Leeds,PUBLIC,1904,Leeds,West Yorkshire,United Kingdom,4.5,DRAFT,65,12000,0,2,0,0,0,0,0,0,0,0
+633,University of Southampton,PUBLIC,1862,Southampton,Hampshire,United Kingdom,4.5,DRAFT,25,32000,0,2,0,0,0,0,0,0,0,0
+634,The University of Sheffield,PUBLIC,1828,Sheffield,South Yorkshire,United Kingdom,4.5,DRAFT,25,25000,0,2,0,0,0,0,0,0,0,0
+635,Durham University,PUBLIC,1832,Durham,County Durham,United Kingdom,4.3,DRAFT,85,32000,0,2,0,0,0,0,0,0,0,0
+636,The University of Nottingham,PUBLIC,1881,Nottingham,Nottinghamshire,United Kingdom,4.5,DRAFT,70,25000,0,2,0,0,0,0,0,0,0,0
+637,Queen Mary University of London,PUBLIC,1887,London,London,United Kingdom,4.5,DRAFT,75,25000,0,2,0,0,0,0,0,0,0,0
+638,University of St Andrews,PUBLIC,1413,St Andrews,Fife,United Kingdom,4.8,DRAFT,25,33250,0,2,0,0,0,0,0,0,0,0
+639,University of Bath,PUBLIC,1966,Bath,England,United Kingdom,4.3,DRAFT,85,30000,0,2,0,0,0,0,0,0,0,0
+640,Newcastle University,PUBLIC,1834,Newcastle Upon Tyne,Tyne and Wear,United Kingdom,4.5,DRAFT,92,0,0,2,0,0,0,0,0,0,0,0
+642,University of Liverpool,PUBLIC,1881,Liverpool,Merseyside,United Kingdom,4.5,DRAFT,22,25000,0,2,0,0,0,0,0,0,0,0
+643,University of Exeter,PUBLIC,1922,Exeter,Devon,United Kingdom,4.3,DRAFT,0,25000,0,2,0,0,0,0,0,0,0,0
+644,Lancaster University,PUBLIC,1964,Lancaster,Lancashire,United Kingdom,4.5,DRAFT,85,25000,0,2,0,0,0,0,0,0,0,0
+645,University of York,PUBLIC,1963,York,North Yorkshire,United Kingdom,4.3,DRAFT,78,25000,0,2,0,0,0,0,0,0,0,0
+646,Cardiff University,PUBLIC,1883,Cardiff,Wales,United Kingdom,4.2,DRAFT,80,25000,0,2,0,0,0,0,0,0,0,0
+647,University of Reading,PUBLIC,1892,Reading,Berkshire,United Kingdom,4.2,DRAFT,85,25000,0,2,0,0,0,0,0,0,0,0
+648,Queen's University Belfast,PUBLIC,1845,Belfast,Northern Ireland,United Kingdom,4.5,DRAFT,0,25000,0,2,0,0,0,0,0,0,0,0
+649,Loughborough University,PUBLIC,1909,Loughborough,Leicestershire,United Kingdom,4.5,DRAFT,80,35000,0,2,0,0,0,0,0,0,0,0
+650,University of Strathclyde,PUBLIC,1964,Glasgow,Scotland,United Kingdom,4.3,DRAFT,0,18000,0,2,0,0,0,0,0,0,0,0
+651,University of Aberdeen,PUBLIC,1495,Aberdeen,Aberdeenshire,United Kingdom,4.2,DRAFT,85,30000,0,2,0,0,0,0,0,0,0,0
+652,University of Surrey,PUBLIC,1966,Guildford,Surrey,United Kingdom,4.3,DRAFT,85,25000,0,2,0,0,0,0,0,0,0,0
+1009,University of Sussex,PUBLIC,1961,Brighton,East Sussex,United Kingdom,4.5,DRAFT,85,30000,0,2,0,0,0,0,0,0,0,0
+1010,Heriot-Watt University,PUBLIC,1821,Edinburgh,Scotland,United Kingdom,4.2,DRAFT,85,25000,0,2,0,0,0,0,0,0,0,0
+1011,Swansea University,PUBLIC,1920,Swansea,Wales,United Kingdom,4.2,DRAFT,75,25000,0,2,0,0,0,0,0,0,0,0
+1019,"City, University of London",PUBLIC,1836,London,London,United Kingdom,0.0,DRAFT,0,0,0,2,0,0,0,0,0,0,0,0
+1020,University of Leicester,PUBLIC,1957,Leicester,Leicestershire,United Kingdom,4.3,DRAFT,85,20000,0,2,0,0,0,0,0,0,0,0
+1021,Oxford Brookes University,PUBLIC,1992,Oxford,Oxfordshire,United Kingdom,4.1,DRAFT,65,22000,0,2,0,0,0,0,0,0,0,0
+1022,University of East Anglia,PUBLIC,1963,Norwich,Norfolk,United Kingdom,4.3,DRAFT,85,25000,0,2,0,0,0,0,0,0,0,0
+1023,Brunel University of London,PUBLIC,1966,London,Middlesex,United Kingdom,4.4,DRAFT,80,20000,0,1,0,0,0,0,0,0,0,0
+1028,"Birkbeck College, University of London",PUBLIC,1823,London,London,United Kingdom,0.0,DRAFT,0,0,0,2,0,0,0,0,0,0,0,0
+1123,University of Dundee,PUBLIC,1881,Dundee,Scotland,United Kingdom,4.2,DRAFT,85,22000,0,2,0,0,0,0,0,0,0,0
+1214,SOAS University of London,PUBLIC,1916,London,England,United Kingdom,4.2,DRAFT,80,30000,0,2,0,0,0,0,0,0,0,0
+1215,University of Bradford,PUBLIC,1966,Bradford,Yorkshire,United Kingdom,4.0,DRAFT,70,18000,0,2,0,0,0,0,0,0,0,0
+1216,University of Stirling,PUBLIC,1967,Stirling,Scotland,United Kingdom,4.2,DRAFT,85,25000,0,2,0,0,0,0,0,0,0,0
+1255,Northumbria University,PUBLIC,1969,Newcastle,Tyne and Wear,United Kingdom,4.2,DRAFT,65,18000,0,2,0,0,0,0,0,0,0,0
+1256,Coventry University,PUBLIC,1992,Coventry,West Midlands,United Kingdom,4.5,DRAFT,32,23000,0,2,0,0,0,0,0,0,0,0
+1257,Bangor University,PUBLIC,1884,Bangor,Gwynedd,United Kingdom,4.2,DRAFT,85,24000,0,2,0,0,0,0,0,0,0,0
+1260,Nottingham Trent University,PUBLIC,1970,Nottingham,Nottinghamshire,United Kingdom,4.2,DRAFT,65,25000,0,2,0,0,0,0,0,0,0,0
+1261,University of Ulster,PUBLIC,1968,Coleraine,Northern Ireland,United Kingdom,4.2,DRAFT,0,22000,0,2,0,0,0,0,0,0,0,0
+1262,University of Portsmouth,PUBLIC,1869,Portsmouth,Hampshire,United Kingdom,4.2,DRAFT,65,25000,0,2,0,0,0,0,0,0,0,0
+1263,Manchester Metropolitan University,PUBLIC,1992,Manchester,England,United Kingdom,4.3,DRAFT,75,14500,0,2,0,0,0,0,0,0,0,0
+1269,Kingston University London,PUBLIC,1992,London,London,United Kingdom,4.2,DRAFT,65,22000,0,2,0,0,0,0,0,0,0,0
+1318,University of the West of England,PUBLIC,1997,Bristol,England,United Kingdom,4.1,DRAFT,65,22000,0,1,0,0,0,0,0,0,0,0
+1319,Aberystwyth University,PUBLIC,1872,Aberystwyth,Wales,United Kingdom,4.3,DRAFT,85,20000,0,1,0,0,0,0,0,0,0,0
+1320,Bournemouth University,PUBLIC,1992,Bournemouth,Dorset,United Kingdom,4.3,DRAFT,85,25000,0,1,0,0,0,0,0,0,0,0
+1321,De Montfort University,PUBLIC,1870,Leicester,Leicestershire,United Kingdom,4.2,DRAFT,75,18000,0,1,0,0,0,0,0,0,0,0
+1322,Keele University,PUBLIC,1949,Stoke-on-Trent,Staffordshire,United Kingdom,4.5,DRAFT,85,28000,0,1,0,0,0,0,0,0,0,0
+1323,Middlesex University London,PUBLIC,1992,London,London,United Kingdom,4.2,DRAFT,75,15000,0,1,0,0,0,0,0,0,0,0
+1327,Middlesex University,PUBLIC,1992,London,London,United Kingdom,4.2,DRAFT,75,15000,0,1,0,0,0,0,0,0,0,0
+1372,University of Greenwich,PUBLIC,1894,London,London,United Kingdom,4.3,DRAFT,85,20000,0,1,0,0,0,0,0,0,0,0
+1373,University of Lincoln,PUBLIC,1994,Lincoln,Lincolnshire,United Kingdom,4.6,DRAFT,0,20000,0,1,0,0,0,0,0,0,0,0
+1374,University of Westminster,PUBLIC,1922,London,Greater London,United Kingdom,4.1,DRAFT,75,25000,0,1,0,0,0,0,0,0,0,0
+1422,Liverpool John Moores University,PUBLIC,1823,Liverpool,Merseyside,United Kingdom,4.2,DRAFT,75,18000,0,1,0,0,0,0,0,0,0,0
+1423,London South Bank University,PUBLIC,1892,London,London,United Kingdom,3.5,DRAFT,0,13000,0,1,0,0,0,0,0,0,0,0
+1424,University of Hertfordshire,PUBLIC,1967,Hatfield,Hertfordshire,United Kingdom,4.0,DRAFT,70,18000,0,1,0,0,0,0,0,0,0,0
+1425,University of Salford,PUBLIC,1967,Salford,Greater Manchester,United Kingdom,4.2,DRAFT,80,15000,0,1,0,0,0,0,0,0,0,0
+1426,Robert Gordon University,PUBLIC,1902,Aberdeen,Scotland,United Kingdom,4.2,DRAFT,85,15000,0,1,0,0,0,0,0,0,0,0
+1427,Birmingham City University,PUBLIC,1843,Birmingham,West Midlands,United Kingdom,4.1,DRAFT,75,18000,0,1,0,0,0,0,0,0,0,0
+1428,Glasgow Caledonian University,PUBLIC,1993,Glasgow,Scotland,United Kingdom,4.1,DRAFT,75,18000,0,1,0,0,0,0,0,0,0,0
+1430,Leeds Beckett University,PUBLIC,1992,Leeds,West Yorkshire,United Kingdom,4.2,DRAFT,75,18000,0,1,0,0,0,0,0,0,0,0
+1479,Sheffield Hallam University,PUBLIC,1843,Sheffield,South Yorkshire,United Kingdom,0.0,DRAFT,0,0,0,1,0,0,0,0,0,0,0,0
+1480,University of Central Lancashire,PUBLIC,1828,Preston,Lancashire,United Kingdom,0.0,DRAFT,0,0,0,1,0,0,0,0,0,0,0,0
+1527,University of Wolverhampton,PUBLIC,1828,Wolverhampton,West Midlands,United Kingdom,4.2,DRAFT,80,15000,0,1,0,0,0,0,0,0,0,0
+1528,Canterbury Christ Church University,PUBLIC,1962,Canterbury,Kent,United Kingdom,4.5,DRAFT,0,20000,0,1,0,0,0,0,0,0,0,0
+1529,"Queen Margaret University, Edinburgh",PUBLIC,1927,Edinburgh,Scotland,United Kingdom,4.0,DRAFT,45,15000,0,0,0,0,0,0,0,0,0,0
+1572,The University of Northampton,PUBLIC,1852,Northampton,Northamptonshire,United Kingdom,4.1,DRAFT,85,15000,0,0,0,0,0,0,0,0,0,0
+1573,University of Derby,PUBLIC,1851,Derby,Derbyshire,United Kingdom,4.1,DRAFT,75,25000,0,0,0,0,0,0,0,0,0,0
+1574,Harper Adams University,PUBLIC,1876,Newport,Shropshire,United Kingdom,4.3,DRAFT,85,20000,0,0,0,0,0,0,0,0,0,0

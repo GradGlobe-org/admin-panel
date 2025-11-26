@@ -232,3 +232,248 @@ class StudentTaskView(View):
 
         task.delete()
         return JsonResponse({"message": "Task deleted successfully"}, status=200)
+
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class EmployeeTaskView(View):
+    """Employee-only API to create tasks and assign either to employees OR their assigned students."""
+
+    def get_employee(self, request):
+        auth_token = request.headers.get("Authorization")
+        if not auth_token:
+            return None, JsonResponse({"error": "Authorization header missing"}, status=401)
+
+        try:
+            token = UUID(auth_token)
+        except ValueError:
+            return None, JsonResponse({"error": "Invalid auth token"}, status=400)
+
+        try:
+            employee = Employee.objects.get(authToken=token)
+            return employee, None
+        except Employee.DoesNotExist:
+            return None, JsonResponse({"error": "Invalid token"}, status=401)
+
+    def post(self, request):
+        employee, error = self.get_employee(request)
+        if error:
+            return error
+
+        # Parse JSON
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        title = body.get("title")
+        if not title:
+            return JsonResponse({"error": "Title is required"}, status=400)
+
+        description = body.get("description", "")
+        priority = body.get("priority", "medium")
+        due_date_raw = body.get("due_date")
+        assign_employees = body.get("assign_employees", [])  # list of employee IDs
+        assign_students = body.get("assign_students", [])    # list of student IDs
+
+        # XOR rule: cannot assign to both
+        if assign_employees and assign_students:
+            return JsonResponse(
+                {"error": "Task can be assigned either to employees OR students, not both"},
+                status=400
+            )
+        if not assign_employees and not assign_students:
+            return JsonResponse(
+                {"error": "Task must be assigned to at least one employee or student"},
+                status=400
+            )
+
+        # Validate priority
+        if priority not in ["high", "medium", "low"]:
+            return JsonResponse({"error": "Invalid priority"}, status=400)
+
+        # Parse due_date
+        due_date = None
+        if due_date_raw:
+            due_date = parse_datetime(due_date_raw)
+            if due_date is None:
+                return JsonResponse({"error": "Invalid datetime format"}, status=400)
+
+        # Validate employees
+        valid_employees = Employee.objects.filter(id__in=assign_employees)
+        if valid_employees.count() != len(assign_employees):
+            return JsonResponse({"error": "One or more assigned employees not found"}, status=400)
+
+        # Validate students (only assigned to this employee)
+        valid_students = Student.objects.filter(
+            id__in=assign_students,
+            assigned_counsellors__employee=employee
+        ).distinct()
+        if valid_students.count() != len(assign_students):
+            return JsonResponse(
+                {"error": "One or more assigned students are not your assigned students"},
+                status=400
+            )
+
+        # Create the task
+        task = Task.objects.create(
+            title=title,
+            description=description,
+            priority=priority,
+            status="todo",
+            creator_employee=employee,
+            due_date=due_date,
+        )
+
+        # Create assignments
+        if valid_employees:
+            for emp in valid_employees:
+                TaskAssignment.objects.create(task=task, employee=emp)
+        else:
+            for stu in valid_students:
+                TaskAssignment.objects.create(task=task, student=stu)
+
+        return JsonResponse({
+            "message": "Task created and assigned successfully",
+            "task": {
+                "id": str(task.id),
+                "title": task.title,
+                "priority": task.priority,
+                "status": task.status,
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+            }
+        }, status=201)
+    
+    def put(self, request, task_id):
+        employee, error = self.get_employee(request)
+        if error:
+            return error
+
+        # Get the task created by this employee
+        try:
+            task = Task.objects.get(id=task_id, creator_employee=employee)
+        except Task.DoesNotExist:
+            return JsonResponse(
+                {"error": "Task not found or not owned by you"}, status=404
+            )
+
+        # Parse request body
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        # Update basic fields
+        for field in ["title", "description", "priority", "status", "due_date"]:
+            if field in body:
+                if field == "due_date":
+                    due_date = parse_datetime(body["due_date"])
+                    if due_date is None:
+                        return JsonResponse({"error": "Invalid datetime format"}, status=400)
+                    setattr(task, "due_date", due_date)
+                else:
+                    setattr(task, field, body[field])
+
+        # Handle re-assignment
+        assign_employees = body.get("assign_employees")
+        assign_students = body.get("assign_students")
+
+        if assign_employees is not None or assign_students is not None:
+            # XOR rule
+            if assign_employees and assign_students:
+                return JsonResponse(
+                    {"error": "Task can be assigned either to employees OR students, not both"},
+                    status=400
+                )
+
+            # Clear previous assignments
+            task.assignments.all().delete()
+
+            if assign_employees:
+                valid_employees = Employee.objects.filter(id__in=assign_employees)
+                if valid_employees.count() != len(assign_employees):
+                    return JsonResponse({"error": "One or more assigned employees not found"}, status=400)
+                for emp in valid_employees:
+                    TaskAssignment.objects.create(task=task, employee=emp)
+
+            elif assign_students:
+                valid_students = Student.objects.filter(
+                    id__in=assign_students,
+                    assigned_counsellors__employee=employee
+                ).distinct()
+                if valid_students.count() != len(assign_students):
+                    return JsonResponse(
+                        {"error": "One or more assigned students are not your assigned students"},
+                        status=400
+                    )
+                for stu in valid_students:
+                    TaskAssignment.objects.create(task=task, student=stu)
+
+        # Save the task
+        task.save()
+
+        return JsonResponse({
+            "message": "Task updated successfully",
+            "task": {
+                "id": str(task.id),
+                "title": task.title,
+                "description": task.description,
+                "priority": task.priority,
+                "status": task.status,
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+                "assigned_employees": [
+                    {"id": a.employee.id, "name": a.employee.name} 
+                    for a in task.assignments.all() if a.employee
+                ],
+                "assigned_students": [
+                    {"id": a.student.id, "full_name": a.student.full_name} 
+                    for a in task.assignments.all() if a.student
+                ]
+            }
+        })
+    
+    def delete(self, request, task_id):
+        employee, error = self.get_employee(request)
+        if error:
+            return error
+
+        try:
+            task = Task.objects.get(id=task_id, creator_employee=employee)
+        except Task.DoesNotExist:
+            return JsonResponse({"error": "Task not found or not owned by you"}, status=404)
+
+        # Delete all assignments first (optional, Django will cascade if on_delete=CASCADE)
+        task.assignments.all().delete()
+
+        # Delete the task itself
+        task.delete()
+
+        return JsonResponse({"message": "Task deleted successfully"}, status=200)
+    
+@method_decorator(csrf_exempt, name="dispatch")
+class EmployeeTaskUnassignView(View):
+    def post(self, request, task_id):
+        employee, error = EmployeeTaskView().get_employee(request)
+        if error:
+            return error
+
+        try:
+            task = Task.objects.get(id=task_id, creator_employee=employee)
+        except Task.DoesNotExist:
+            return JsonResponse({"error": "Task not found or not owned by you"}, status=404)
+
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        unassign_employees = body.get("unassign_employees", [])
+        unassign_students = body.get("unassign_students", [])
+
+        if unassign_employees:
+            task.assignments.filter(employee_id__in=unassign_employees).delete()
+
+        if unassign_students:
+            task.assignments.filter(student_id__in=unassign_students).delete()
+
+        return JsonResponse({"message": "Assignments removed successfully"})
