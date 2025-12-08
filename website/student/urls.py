@@ -52,5 +52,4 @@ urlpatterns += [
     path("get_student_application_details/", get_student_application_details),
     path("update_document_status/", update_document_status),
     path("get_available_documents_list/", get_available_documents_list),
-    path("get_assigned_users/", get_assigned_users)
 ]

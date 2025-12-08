@@ -697,26 +697,3 @@ def get_available_documents_list(request):
             {"status": "error", "message": "Something went wrong"}, status=500
         )
 
-@require_http_methods(['GET'])
-@token_required
-def get_assigned_users(request):
-    try:
-        employee_id = request.user.id
-
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT get_assigned_students(%s);", [employee_id])
-            result = cursor.fetchone()
-
-        raw_data = result[0]
-
-        # If Postgres returns string → convert to dict
-        if isinstance(raw_data, str):
-            raw_data = json.loads(raw_data)
-
-        return JsonResponse(raw_data, safe=False)
-
-    except Exception as e:
-        return JsonResponse({
-            "status": "error",
-            "message": str(e)
-        }, status=500)
