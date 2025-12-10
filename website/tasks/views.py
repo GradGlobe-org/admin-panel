@@ -1,16 +1,19 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import Task, TaskAssignment
-from authentication.models import Employee
-from student.models import Student
-from uuid import UUID
 import json
-from django.views import View
-from django.utils.decorators import method_decorator
-from django.utils.dateparse import parse_datetime
-from django.views.decorators.http import require_http_methods
+from uuid import UUID
+
+from authentication.models import Employee
 from django.db import DatabaseError, connection, transaction
+from django.http import JsonResponse
+from django.utils.dateparse import parse_datetime
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from student.models import Student
+
 from website.utils import token_required
+
+from .models import Task, TaskAssignment
 
 
 @csrf_exempt
@@ -67,29 +70,33 @@ def my_tasks(request):
             "priority": task.priority,
             "status": task.status,
             "creator": {
-                "employee": {
-                    "id": task.creator_employee.id,
-                    "name": task.creator_employee.name,
-                }
-                if task.creator_employee
-                else None,
-                "student": {
-                    "id": task.creator_student.id,
-                    "full_name": task.creator_student.full_name,
-                }
-                if task.creator_student
-                else None,
+                "employee": (
+                    {
+                        "id": task.creator_employee.id,
+                        "name": task.creator_employee.name,
+                    }
+                    if task.creator_employee
+                    else None
+                ),
+                "student": (
+                    {
+                        "id": task.creator_student.id,
+                        "full_name": task.creator_student.full_name,
+                    }
+                    if task.creator_student
+                    else None
+                ),
             },
             "created_at": task.created_at.isoformat(),
             "due_date": task.due_date.isoformat() if task.due_date else None,
             "assignments": [],
         }
 
-        if (user_type == "employee"):
+        if user_type == "employee":
             # Employee can see ALL assignments
             visible_assignments = task.assignments.all()
 
-        elif (user_type == "student"):
+        elif user_type == "student":
             # Student can only see their own assignment
             visible_assignments = task.assignments.filter(student=user)
 
@@ -104,16 +111,22 @@ def my_tasks(request):
                     "id": assignment.id,
                     "status": assignment.status,
                     "assigned_on": assignment.assigned_on.isoformat(),
-                    "employee": {
-                        "id": assignment.employee.id,
-                        "name": assignment.employee.name,
-                    }
-                    if assignment.employee else None,
-                    "student": {
-                        "id": assignment.student.id,
-                        "full_name": assignment.student.full_name,
-                    }
-                    if assignment.student else None,
+                    "employee": (
+                        {
+                            "id": assignment.employee.id,
+                            "name": assignment.employee.name,
+                        }
+                        if assignment.employee
+                        else None
+                    ),
+                    "student": (
+                        {
+                            "id": assignment.student.id,
+                            "full_name": assignment.student.full_name,
+                        }
+                        if assignment.student
+                        else None
+                    ),
                 }
             )
 
@@ -137,16 +150,17 @@ class StudentTaskView(View):
         except Student.DoesNotExist:
             return None, JsonResponse({"error": "Invalid token"}, status=401)
 
-
     def post(self, request):
         student, error = self.get_student(request)
         if error:
             return error
         try:
             raw = request.body.decode("utf-8")
-            body = json.loads(raw)               # ✔ FIXED
+            body = json.loads(raw)  # ✔ FIXED
         except UnicodeDecodeError:
-            return JsonResponse({"error": "Request body must be UTF-8 encoded"}, status=400)
+            return JsonResponse(
+                {"error": "Request body must be UTF-8 encoded"}, status=400
+            )
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON format"}, status=400)
 
@@ -163,7 +177,9 @@ class StudentTaskView(View):
             if due_date_raw:
                 due_date = parse_datetime(due_date_raw)
                 if due_date is None:
-                    return JsonResponse({"error": "Invalid datetime format"}, status=400)
+                    return JsonResponse(
+                        {"error": "Invalid datetime format"}, status=400
+                    )
 
             task = Task.objects.create(
                 title=title,
@@ -184,15 +200,18 @@ class StudentTaskView(View):
                         "title": task.title,
                         "priority": task.priority,
                         "status": task.status,
-                        "due_date": task.due_date.isoformat() if task.due_date else None,
+                        "due_date": (
+                            task.due_date.isoformat() if task.due_date else None
+                        ),
                     },
                 },
                 status=201,
             )
 
         except Exception as e:
-            return JsonResponse({"error": "An error occurred while creating the task"}, status=500)
-
+            return JsonResponse(
+                {"error": "An error occurred while creating the task"}, status=500
+            )
 
     def put(self, request, task_id):
         student, error = self.get_student(request)
@@ -200,23 +219,36 @@ class StudentTaskView(View):
             return error
 
         try:
-            task = Task.objects.get(id=task_id, creator_student=student)
-        except Task.DoesNotExist:
-            return JsonResponse(
-                {"error": "Task not found or not owned by you"}, status=404
-            )
-
-        try:
             body = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-        # Update allowed fields
-        for field in ["title", "description", "priority", "status", "due_date"]:
-            if field in body:
-                setattr(task, field, body[field])
+        try:
+            task = Task.objects.get(id=task_id)
+        except Task.DoesNotExist:
+            return JsonResponse({"error": "Task not found"}, status=404)
 
-        task.save()
+        assignment = TaskAssignment.objects.filter(task=task, student=student).first()
+
+        if not assignment and task.creator_student != student:
+            return JsonResponse(
+                {"error": "You are neither the creator nor assigned to this task"},
+                status=403,
+            )
+
+        if task.creator_student == student:
+            allowed_fields = ["title", "description", "priority", "due_date"]
+            for field in allowed_fields:
+                if field in body:
+                    setattr(task, field, body[field])
+            task.save()
+
+        if assignment:
+            if "status" in body:
+                if body["status"] not in dict(TaskAssignment.STATUS_CHOICES):
+                    return JsonResponse({"error": "Invalid status value"}, status=400)
+                assignment.status = body["status"]
+                assignment.save(update_fields=["status"])
 
         return JsonResponse(
             {
@@ -228,6 +260,9 @@ class StudentTaskView(View):
                     "priority": task.priority,
                     "status": task.status,
                     "due_date": task.due_date.isoformat() if task.due_date else None,
+                },
+                "assignment": {
+                    "status": assignment.status if assignment else None,
                 },
             }
         )
@@ -248,7 +283,6 @@ class StudentTaskView(View):
         return JsonResponse({"message": "Task deleted successfully"}, status=200)
 
 
-
 @method_decorator(csrf_exempt, name="dispatch")
 class EmployeeTaskView(View):
     """Employee-only API to create tasks and assign either to employees OR their assigned students."""
@@ -256,7 +290,9 @@ class EmployeeTaskView(View):
     def get_employee(self, request):
         auth_token = request.headers.get("Authorization")
         if not auth_token:
-            return None, JsonResponse({"error": "Authorization header missing"}, status=401)
+            return None, JsonResponse(
+                {"error": "Authorization header missing"}, status=401
+            )
 
         try:
             token = UUID(auth_token)
@@ -305,15 +341,21 @@ class EmployeeTaskView(View):
         # Validate employees
         valid_employees = Employee.objects.filter(id__in=assign_employees)
         if valid_employees.count() != len(assign_employees):
-            return JsonResponse({"error": "One or more assigned employees not found"}, status=400)
+            return JsonResponse(
+                {"error": "One or more assigned employees not found"}, status=400
+            )
 
         # Validate students
         valid_students = Student.objects.filter(
-            id__in=assign_students,
-            assigned_counsellors__employee=employee
+            id__in=assign_students, assigned_counsellors__employee=employee
         ).distinct()
         if valid_students.count() != len(assign_students):
-            return JsonResponse({"error": "One or more assigned students are not your assigned students"}, status=400)
+            return JsonResponse(
+                {
+                    "error": "One or more assigned students are not your assigned students"
+                },
+                status=400,
+            )
 
         # Create the task
         task = Task.objects.create(
@@ -333,18 +375,20 @@ class EmployeeTaskView(View):
         for stu in valid_students:
             TaskAssignment.objects.create(task=task, student=stu)
 
-        return JsonResponse({
-            "message": "Task created and assigned successfully",
-            "task": {
-                "id": str(task.id),
-                "title": task.title,
-                "priority": task.priority,
-                "status": task.status,
-                "due_date": task.due_date.isoformat() if task.due_date else None,
-            }
-        }, status=201)
-                            
-    
+        return JsonResponse(
+            {
+                "message": "Task created and assigned successfully",
+                "task": {
+                    "id": str(task.id),
+                    "title": task.title,
+                    "priority": task.priority,
+                    "status": task.status,
+                    "due_date": task.due_date.isoformat() if task.due_date else None,
+                },
+            },
+            status=201,
+        )
+
     def put(self, request, task_id):
         employee, error = self.get_employee(request)
         if error:
@@ -353,7 +397,9 @@ class EmployeeTaskView(View):
         try:
             task = Task.objects.get(id=task_id, creator_employee=employee)
         except Task.DoesNotExist:
-            return JsonResponse({"error": "Task not found or not owned by you"}, status=404)
+            return JsonResponse(
+                {"error": "Task not found or not owned by you"}, status=404
+            )
 
         try:
             body = json.loads(request.body.decode("utf-8"))
@@ -366,7 +412,9 @@ class EmployeeTaskView(View):
                 if field == "due_date":
                     due_date = parse_datetime(body["due_date"])
                     if due_date is None:
-                        return JsonResponse({"error": "Invalid datetime format"}, status=400)
+                        return JsonResponse(
+                            {"error": "Invalid datetime format"}, status=400
+                        )
                     task.due_date = due_date
                 else:
                     setattr(task, field, body[field])
@@ -383,36 +431,44 @@ class EmployeeTaskView(View):
             if assign_employees:
                 valid_employees = Employee.objects.filter(id__in=assign_employees)
                 if valid_employees.count() != len(assign_employees):
-                    return JsonResponse({"error": "One or more assigned employees not found"}, status=400)
+                    return JsonResponse(
+                        {"error": "One or more assigned employees not found"},
+                        status=400,
+                    )
                 for emp in valid_employees:
                     TaskAssignment.objects.create(task=task, employee=emp)
 
             # Reassign students
             if assign_students:
                 valid_students = Student.objects.filter(
-                    id__in=assign_students,
-                    assigned_counsellors__employee=employee
+                    id__in=assign_students, assigned_counsellors__employee=employee
                 ).distinct()
                 if valid_students.count() != len(assign_students):
-                    return JsonResponse({"error": "One or more assigned students are not your assigned students"}, status=400)
+                    return JsonResponse(
+                        {
+                            "error": "One or more assigned students are not your assigned students"
+                        },
+                        status=400,
+                    )
                 for stu in valid_students:
                     TaskAssignment.objects.create(task=task, student=stu)
 
         task.save()
 
-        return JsonResponse({
-            "message": "Task updated successfully",
-            "task": {
-                "id": str(task.id),
-                "title": task.title,
-                "description": task.description,
-                "priority": task.priority,
-                "status": task.status,
-                "due_date": task.due_date.isoformat() if task.due_date else None,
+        return JsonResponse(
+            {
+                "message": "Task updated successfully",
+                "task": {
+                    "id": str(task.id),
+                    "title": task.title,
+                    "description": task.description,
+                    "priority": task.priority,
+                    "status": task.status,
+                    "due_date": task.due_date.isoformat() if task.due_date else None,
+                },
             }
-        })
+        )
 
-    
     def delete(self, request, task_id):
         employee, error = self.get_employee(request)
         if error:
@@ -421,7 +477,9 @@ class EmployeeTaskView(View):
         try:
             task = Task.objects.get(id=task_id, creator_employee=employee)
         except Task.DoesNotExist:
-            return JsonResponse({"error": "Task not found or not owned by you"}, status=404)
+            return JsonResponse(
+                {"error": "Task not found or not owned by you"}, status=404
+            )
 
         # Delete all assignments first (optional, Django will cascade if on_delete=CASCADE)
         task.assignments.all().delete()
@@ -430,7 +488,8 @@ class EmployeeTaskView(View):
         task.delete()
 
         return JsonResponse({"message": "Task deleted successfully"}, status=200)
-    
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class EmployeeTaskUnassignView(View):
     def post(self, request, task_id):
@@ -441,7 +500,9 @@ class EmployeeTaskUnassignView(View):
         try:
             task = Task.objects.get(id=task_id, creator_employee=employee)
         except Task.DoesNotExist:
-            return JsonResponse({"error": "Task not found or not owned by you"}, status=404)
+            return JsonResponse(
+                {"error": "Task not found or not owned by you"}, status=404
+            )
 
         try:
             body = json.loads(request.body.decode("utf-8"))
@@ -458,9 +519,9 @@ class EmployeeTaskUnassignView(View):
             task.assignments.filter(student_id__in=unassign_students).delete()
 
         return JsonResponse({"message": "Assignments removed successfully"})
-    
 
-@require_http_methods(['GET'])
+
+@require_http_methods(["GET"])
 @token_required
 def get_assigned_users(request):
     try:
@@ -479,7 +540,11 @@ def get_assigned_users(request):
         return JsonResponse(raw_data, safe=False)
 
     except Exception as e:
-        return JsonResponse({
-            "status": "error",
-            # "message": str(e)
-        }, status=500)
+        return JsonResponse(
+            {
+                "status": "error",
+                # "message": str(e)
+            },
+            status=500,
+        )
+

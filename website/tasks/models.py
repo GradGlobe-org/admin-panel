@@ -1,8 +1,9 @@
-from django.db import models
-from authentication.models import Employee
-from student.models import Student
-from django.utils import timezone
 from uuid import uuid4
+
+from authentication.models import Employee
+from django.db import models
+from django.utils import timezone
+from student.models import Student
 
 
 class Task(models.Model):
@@ -72,6 +73,7 @@ class TaskAssignment(models.Model):
     STATUS_CHOICES = [
         ("todo", "To Do"),
         ("inprogress", "In Progress"),
+        ("overdue", "Overdue"),
         ("completed", "Completed"),
     ]
 
