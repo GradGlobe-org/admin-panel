@@ -528,7 +528,7 @@ def get_assigned_users(request):
         employee_id = request.user.id
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT get_assigned_students(%s);", [employee_id])
+            cursor.execute("SELECT get_assigned_students_employee(%s);", [employee_id])
             result = cursor.fetchone()
 
         raw_data = result[0]
@@ -547,4 +547,3 @@ def get_assigned_users(request):
             },
             status=500,
         )
-
