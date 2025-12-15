@@ -59,7 +59,7 @@ def stream_private_drive_file(file_id, filename=None):
         return response
 
     except Exception as e:
-        return JsonResponse({"error": f"Unable to fetch file: {e}"}, status=500)
+        return JsonResponse({"error": f"Unable to fetch file."}, status=500)
 
 
 import requests
@@ -83,7 +83,7 @@ def stream_google_drive_image(file_id, width=None, height=None):
             url, headers={"User-Agent": "Mozilla/5.0"}, stream=True, timeout=10
         )
     except requests.RequestException as e:
-        return HttpResponse(f"Error fetching image: {e}", status=500)
+        return HttpResponse(f"Error fetching image", status=500)
 
     if resp.status_code != 200:
         return HttpResponse("Image not found", status=resp.status_code)

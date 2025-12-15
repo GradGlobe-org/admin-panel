@@ -6,6 +6,7 @@ import secrets
 import string
 import threading
 from uuid import uuid4
+from uuid import UUID
 
 import requests
 from course.models import *
@@ -891,30 +892,77 @@ def upload_document(request):
         )
 
 
-@require_http_methods(["GET"])
-@user_token_required
 def download_document(request):
     """
-    Download a document using required_document_id instead of document_id.
-    Filename comes from DocumentType.name.
+    Download a document by required_document_id.
+    Accessible by:
+      - The student who uploaded it
+      - Any counsellor (Employee) assigned to that student
+    Filename is taken from DocumentType.name
     """
-    required_document_id = request.GET.get("required_document_id")
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        return JsonResponse({"error": "Authorization header missing"}, status=401)
 
+    token_str = auth_header.strip()
+
+    try:
+        token = UUID(token_str)
+    except ValueError:
+        return JsonResponse({"error": "Invalid auth token format"}, status=400)
+
+    user = None
+    user_type = None
+    user_id = None
+
+    try:
+        employee = Employee.objects.get(authToken=token)
+        user = employee
+        user_type = "employee"
+        user_id = employee.id
+    except Employee.DoesNotExist:
+        try:
+            student = Student.objects.get(authToken=token)
+            user = student
+            user_type = "student"
+            user_id = student.id
+        except Student.DoesNotExist:
+            return JsonResponse({"error": "Invalid token"}, status=401)
+
+    required_document_id = request.GET.get("required_document_id")
     if not required_document_id:
         return JsonResponse({"error": "required_document_id is required."}, status=400)
 
     try:
-        # Validate ownership + fetch document
+        # Fetch the Document and its related requirement
         document = get_object_or_404(
             Document,
-            required_document_id=required_document_id,
-            required_document__student_id=request.user.id,
+            required_document__id=required_document_id
         )
 
-        # Use DocumentType.name as filename
+        student = document.required_document.student
+
+        if user_type == "student":
+            # Student can only download their own documents
+            if student.id != user_id:
+                return JsonResponse({"error": "Document not found."}, status=403)
+
+        elif user_type == "employee":
+            # Employee (counsellor) can download if assigned to the student
+            is_assigned = AssignedCounsellor.objects.filter(
+                student=student,
+                employee=user
+            ).exists()
+
+            if not is_assigned:
+                return JsonResponse(
+                    {"error": "Access denied: You are not assigned to this student."},
+                    status=403
+                )
+            
         filename = document.required_document.document_type.name
 
-        # Stream Google Drive file
+        # Stream the file from Google Drive
         response = stream_private_drive_file(document.file_id, filename=filename)
 
         if isinstance(response, JsonResponse):
@@ -923,17 +971,12 @@ def download_document(request):
         return response
 
     except Document.DoesNotExist:
-        return JsonResponse(
-            {"error": "Document not found or access denied."},
-            status=404,
-        )
-
+        return JsonResponse({"error": "Document not found."}, status=404)
     except Exception as e:
         return JsonResponse(
             {"error": f"Unable to download document: {str(e)}"},
             status=500,
         )
-
 
 @require_http_methods(["GET"])
 @user_token_required
@@ -1145,24 +1188,38 @@ def send_applications_to_telegram(
 ):
     try:
         text = (
-            "*📩 Student Application Received*\n\n"
-            f"*👤 Student Details:*\n"
-            f"• *ID:* `{student_id}`\n"
-            f"• *Name:* {student_name}\n"
-            f"• *Mobile:* `{student_mobile}`\n\n"
-            f"*🎓 Course Details:*\n"
-            f"• *Course ID:* `{course_id}`\n"
-            f"• *Course Name:* {course_name}\n"
-            f"• *University ID:* `{university_id}`\n"
-            f"• *University Name:* {university_name}"
+            "📩 <b>Student Application Received</b>\n\n"
+            "<b>👤 Student Details:</b>\n"
+            f"• <b>ID:</b> <code>{student_id}</code>\n"
+            f"• <b>Name:</b> {student_name}\n"
+            f"• <b>Mobile:</b> <code>{student_mobile}</code>\n\n"
+            "<b>🎓 Course Details:</b>\n"
+            f"• <b>Course ID:</b> <code>{course_id}</code>\n"
+            f"• <b>Course Name:</b> {course_name}\n"
+            f"• <b>University ID:</b> <code>{university_id}</code>\n"
+            f"• <b>University Name:</b> {university_name}"
         )
 
         url = "https://api.telegram.org/bot8468883427:AAGvyBk9hKjY42Dw0fEZH-vNz1iQU6J-GIY/sendMessage"
-        data = {"chat_id": "-1003360381829", "text": text, "parse_mode": "MarkdownV2"}
-        requests.post(url, data=data, timeout=5)
+        data = {
+            "chat_id": "-1003360381829",
+            "text": text,
+            "parse_mode": "HTML"
+        }
 
+        response = requests.post(url, data=data, timeout=5)
+        response.raise_for_status()
+
+        result = response.json()
+        if not result.get("ok"):
+            print(f"Failed to send message: {result.get('description', result)}")
+        else:
+            print("Message sent successfully!")
+
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Request failed: {e}")
     except Exception as e:
-        print(f"⚠️ Failed to send Telegram message: {e}")
+        print(f"⚠️ Unexpected error: {e}")
 
 
 @csrf_exempt
