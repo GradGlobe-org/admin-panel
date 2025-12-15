@@ -697,3 +697,101 @@ def get_available_documents_list(request):
             {"status": "error", "message": "Something went wrong"}, status=500
         )
 
+@csrf_exempt
+@require_http_methods(["POST"])
+@token_required
+def employee_update_milestone(request):
+    employee_id = request.user.id
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"error": "Invalid JSON payload"},
+            status=400
+        )
+
+    application_number = data.get("application_number")
+    template_id = data.get("template_id")
+    status = data.get("status")
+    comment = data.get("comment")
+
+    if not application_number or not template_id or not status:
+        return JsonResponse(
+            {"error": "application_number, template_id and status are required"},
+            status=400
+        )
+
+    if status not in dict(StudentSubMilestone.STATUS):
+        return JsonResponse(
+            {"error": "Invalid status value"},
+            status=400
+        )
+
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE student_studentsubmilestone ssm
+                    SET
+                        status = %s,
+                        counsellor_comment = %s,
+                        updated_at = NOW()
+                    FROM student_studentmilestone sm
+                    JOIN student_applieduniversity au
+                        ON au.id = sm.application_id
+                    JOIN student_assignedcounsellor ac
+                        ON ac.student_id = au.student_id
+                    WHERE
+                        ssm.milestone_id = sm.id
+                        AND au.application_number = %s
+                        AND ssm.template_id = %s
+                        AND ac.employee_id = %s
+                    RETURNING ssm.id
+                    """,
+                    [
+                        status,
+                        comment,
+                        application_number,
+                        template_id,
+                        employee_id,
+                    ]
+                )
+
+                row = cursor.fetchone()
+
+                if not row:
+                    return JsonResponse(
+                        {
+                            "error": (
+                                "Milestone not found or "
+                                "you are not authorized"
+                            )
+                        },
+                        status=403
+                    )
+
+    except DatabaseError:
+        return JsonResponse(
+            {"error": "Database error occurred"},
+            status=500
+        )
+    except Exception:
+        return JsonResponse(
+            {"error": "Unexpected server error"},
+            status=500
+        )
+
+    return JsonResponse(
+        {
+            "message": "Milestone updated successfully",
+            "data": {
+                "application_number": application_number,
+                "template_id": template_id,
+                "status": status,
+                "comment": comment,
+            },
+        },
+        status=200
+    )

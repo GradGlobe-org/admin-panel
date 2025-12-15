@@ -924,6 +924,8 @@ class Document(models.Model):
     def __str__(self):
         return f"Document for {self.required_document.document_type.name}"
 
+
+# Milestones trigger has been added via postgres. is_default=true are assigned directly to new applications
 class Milestone(models.Model):
     name = models.CharField(max_length=255)
     order = models.PositiveIntegerField(default=1)
