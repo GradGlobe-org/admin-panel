@@ -20,7 +20,9 @@ urlpatterns = [
     path("update/", update_student_profile),
     path("upload_document/", upload_document),
     path("get_user_documents_list/", get_student_documents_list),
-    path("download_document/", download_document), #this is valid both for student and employee
+    path(
+        "download_document/", download_document
+    ),  # this is valid both for student and employee
     path("student_dashboard/", student_dashboard_view),
     path("apply_to_course/", apply_to_university_view),
     path("student_applications/", student_applied_view),
@@ -52,5 +54,6 @@ urlpatterns += [
     path("get_student_application_details/", get_student_application_details),
     path("update_document_status/", update_document_status),
     path("get_available_documents_list/", get_available_documents_list),
-    path("update_milestone/", employee_update_milestone)
+    path("update_milestone/", employee_update_milestone),
+    path("student_profile_picture/", get_student_profile_pic),
 ]

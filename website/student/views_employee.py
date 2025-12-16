@@ -12,6 +12,9 @@ from website.utils import api_key_required, has_perms, token_required
 
 from .models import *
 
+from django.http import HttpResponse
+from .utils import stream_google_drive_image
+
 
 @require_http_methods(["GET"])
 @token_required
@@ -795,3 +798,30 @@ def employee_update_milestone(request):
         },
         status=200
     )
+
+
+@token_required
+def get_student_profile_pic(request):
+    student_id = request.GET.get("student_id")
+    if not student_id:
+        return JsonResponse({"error": "student_id is required"}, status=400)
+
+    width = int(request.GET.get("w", 200))
+    height = int(request.GET.get("h", 200))
+
+    try:
+        profile_pic = StudentProfilePicture.objects.get(student_id=student_id)
+        file_id = profile_pic.google_file_id
+
+        if not file_id:
+            return HttpResponse("Profile image not found", status=404)
+
+        return stream_google_drive_image(file_id, width, height)
+
+    except StudentProfilePicture.DoesNotExist:
+        return HttpResponse("Profile image not found", status=404)
+    except Exception as e:
+        return JsonResponse(
+            {"error": "Error streaming profile image."},
+            status=500
+        )
