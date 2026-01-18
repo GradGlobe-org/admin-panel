@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
+from django.views.decorators.csrf import csrf_exempt
+from strawberry.django.views import GraphQLView
 import os
+from authentication.Schema import employee_schema
 
 IS_PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 
@@ -21,6 +24,12 @@ urlpatterns = [
     path("exams/", include("exams.urls")),
     path("events/", include("events.urls")),
     path("tasks/", include("tasks.urls")),
+]
+
+urlpatterns += [
+    path(
+        'employee_management/', csrf_exempt(GraphQLView.as_view(schema=employee_schema)),
+    )
 ]
 
 if not IS_PRODUCTION:
