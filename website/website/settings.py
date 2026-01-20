@@ -70,7 +70,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.admindocs.middleware.XViewMiddleware",
     # "authentication.middleware.RateLimitMiddleware",
-    "authentication.middleware.TelegramErrorLoggingMiddleware",
+    # "authentication.middleware.TelegramErrorLoggingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -129,6 +129,7 @@ DATABASES = {
 
 
 if IS_PRODUCTION:
+    print("Warning Running with prod settings")
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -136,6 +137,7 @@ if IS_PRODUCTION:
     SECURE_HSTS_PRELOAD = True
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 else:
+    print("Safe environment")
     # Optional: explicitly disable them in dev to avoid surprises
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
@@ -214,27 +216,11 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Welcome to the GradGlobe Admin Panel",
     "copyright": "GradGlobe © 2025",
     "user_avatar": None,
-    # Top menu links
-    # "topmenu_links": [
-    #     {"name": "Home", "url": "/", "permissions": ["auth.view_user"]},
-    #     {"model": "users.customuser"},
-    #     {"model": "projects.project"},
-    #     {"model": "tasks.task"},
-    # ],
-    # Side menu
     "show_sidebar": True,
     "navigation_expanded": True,
     "hide_apps": [],
     "hide_models": [],
-    # Custom links in the user menu
-    "user_menu_links": [
-        {
-            "name": "Support",
-            "url": "https://your-support-link.com",
-            "icon": "fas fa-life-ring",
-            "new_window": True,
-        },
-    ],
+    "show_ui_builder": True
 }
 
 SCHEMA_VIEWER = {

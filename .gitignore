@@ -12,3 +12,5 @@ __pycache__/
 .env
 missing_faqs_uni.py
 new_university.py
+
+.idea
