@@ -12,20 +12,21 @@ from strawberry.exceptions import GraphQLError
 
 import uuid
 from website.utils import EmployeeAuthorization
+from django.shortcuts import get_object_or_404
 
 @strawberry.type
 class PostSchema(EmployeeAuthorization):
     id: int
     title: str
     content: str
-    featured_image: str
+    featured_image: Optional[str] = None
     author: JSON
     created_at: datetime
     modified_at: datetime
     status: str
-    meta_keyword: str
-    meta_description: str
-    slug: str
+    meta_keyword: Optional[str] = None
+    meta_description: Optional[str] = None
+    slug: Optional[str] = None
     view_count: int
 
     @classmethod
@@ -34,12 +35,13 @@ class PostSchema(EmployeeAuthorization):
         try:
             employee = EmployeeAuthorization.check_employee_token(auth_token)
         except Exception as e:
-            raise GraphQLError("Failed to get all blogs")
+            raise GraphQLError("Failed to authenticate")
 
-        if not employee:
-            raise GraphQLError("Not Authorized")
+        has_permission = EmployeeAuthorization.check_employee_permission(
+            employee.id, ["Blog_view"]
+        )
 
-        if not EmployeeAuthorization.check_employee_permission(employee.id, ["Blog_view"]):
+        if not employee.is_superuser and not has_permission:
             raise GraphQLError("You do not have permission to do this")
 
         offset = (page - 1) * limit
@@ -88,7 +90,63 @@ class PostSchema(EmployeeAuthorization):
         return blog_lst
 
     @classmethod
+    def create_blog(cls,
+                auth_token: uuid.UUID,
+                title: str,
+                content: str,
+                featured_image: str,
+                status: str,
+                meta_keyword: Optional[str] = None,
+                meta_description: Optional[str] = None,
+                slug: Optional[str] = None,
+                ):
+        try:
+            employee = EmployeeAuthorization.check_employee_token(auth_token)
+        except Exception as e:
+            raise GraphQLError("Failed to authenticate")
+
+        has_permission = EmployeeAuthorization.check_employee_permission(
+            employee.id, ["Blog_create"]
+        )
+
+        if not employee.is_superuser and not has_permission:
+            raise GraphQLError("You do not have permission to do this")
+
+        if title == Post.objects.get(title=title).title:
+            raise GraphQLError("Blog with this title already exists")
+
+        blog = Post.objects.create(
+            title=title,
+            content=content,
+            featured_image=featured_image,
+            author_id=employee.id,
+            status=status,
+            meta_keyword=meta_keyword,
+            meta_description=meta_description,
+            slug=slug,
+        )
+
+        return cls(
+            id=blog.id,
+            title=blog.title,
+            content=blog.content,
+            featured_image=blog.featured_image,
+            author={
+                "id": blog.author.id,
+                "name": blog.author.name,
+            },
+            created_at=blog.created_at,
+            modified_at=blog.modified_at,
+            status=blog.status,
+            meta_keyword=blog.meta_keyword,
+            meta_description=blog.meta_description,
+            slug=blog.slug,
+            view_count=blog.view_count,
+        )
+
+    @classmethod
     def update_blog(cls,
+                  auth_token: uuid.UUID,
                   id: int,
                   updated_title: Optional[str] = None,
                   updated_content: Optional[str] = None,
@@ -99,8 +157,22 @@ class PostSchema(EmployeeAuthorization):
                   updated_slug: Optional[str] = None,
                   ):
 
-        if not updated_title and not updated_content and not updated_image and not updated_status and not updated_meta_keyword and not updated_meta_description and not updated_slug:
-            raise GraphQLError("Nothing to Update")
+        try:
+            employee = EmployeeAuthorization.check_employee_token(auth_token)
+        except Exception as e:
+            raise GraphQLError("Failed to authenticate")
+
+        has_permission = EmployeeAuthorization.check_employee_permission(
+            employee.id, ["Blog_update"]
+        )
+
+        if not employee.is_superuser and not has_permission:
+            raise GraphQLError("You do not have permission to do this")
+
+        blog = Post.objects.get(id=id)
+
+        if not (employee.is_superuser or blog.author_id == employee.id):
+            raise GraphQLError("You did not created the blog")
 
         try:
             blog = Post.objects.get(id=id)
@@ -112,9 +184,9 @@ class PostSchema(EmployeeAuthorization):
         if updated_title:
             blog.title = updated_title
         if updated_content:
-            blog.updated_content = updated_content
+            blog.content = updated_content
         if updated_image:
-            blog.updated_image = updated_image
+            blog.featured_image = updated_image
         if updated_status:
             blog.status = updated_status
         if updated_meta_keyword:
@@ -148,30 +220,34 @@ class PostSchema(EmployeeAuthorization):
         )
 
     @classmethod
-    def delete_blog(cls, id: int) -> bool:
+    def delete_blog(cls, auth_token:uuid.UUID, id: int) -> bool:
+        try:
+            employee = EmployeeAuthorization.check_employee_token(auth_token)
+        except Exception as e:
+            raise GraphQLError("Failed to authenticate")
+
+        has_permission = EmployeeAuthorization.check_employee_permission(
+            employee.id, ["Blog_delete"]
+        )
+
+        if not employee.is_superuser and not has_permission:
+            raise GraphQLError("You do not have permission to do this")
+
         try:
             blog = Post.objects.get(id=id)
         except Post.DoesNotExist:
             raise GraphQLError("Blog does not exist")
         except Exception as e:
-            raise GraphQLError("Failed to Delete Blog")
+            raise GraphQLError("Error fetching blog")
+
+        if not (employee.is_superuser or blog.author_id == employee.id):
+            raise GraphQLError("You did not created this blog")
 
         try:
             blog.delete()
             return True
         except Exception as e:
             raise GraphQLError("Failed to Delete Blog")
-
-    # @classmethod
-    # def create_blog(cls,
-    #             title: str,
-    #             content: str,
-    #             image: str,
-    #             status: str,
-    #             meta_keyword: Optional[str] = None,
-    #             meta_description: Optional[str] = None,
-    #             slug: Optional[str] = None,
-    #             ):
 
 
 @strawberry.type
@@ -182,12 +258,14 @@ class BlogQuery:
 
 @strawberry.type
 class BlogMutation:
-    # create_blog: PostSchema = strawberry.field()
+    create_blog: PostSchema = strawberry.field(
+        resolver=PostSchema.create_blog
+    )
     update_blog: PostSchema = strawberry.field(
         resolver=PostSchema.update_blog
     )
 
-    delete_blog: PostSchema = strawberry.field(
+    delete_blog: bool = strawberry.field(
         resolver=PostSchema.delete_blog
     )
 
