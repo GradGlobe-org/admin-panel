@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 # Load .env
 load_dotenv()
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 IS_PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
@@ -37,6 +36,7 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "authentication",
     "blogs",
     "seo",
@@ -98,8 +98,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "website.wsgi.application"
-
+# WSGI_APPLICATION = "website.wsgi.application"
+ASGI_APPLICATION = "website.asgi.application"
 
 # if IS_PRODUCTION:
 DATABASES = {
@@ -144,7 +144,6 @@ else:
     SECURE_HSTS_PRELOAD = False
     SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -162,7 +161,6 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -238,7 +236,6 @@ JAZZMIN_SETTINGS = {
         },
     ],
 }
-
 
 SCHEMA_VIEWER = {
     "exclude": {
