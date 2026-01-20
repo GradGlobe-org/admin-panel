@@ -25,6 +25,7 @@ class Employee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     modified_at = models.DateTimeField(auto_now=True, verbose_name="Last Modified At")
     authToken = models.UUIDField(default=uuid.uuid4, editable=False)
+    is_superuser = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Employee"

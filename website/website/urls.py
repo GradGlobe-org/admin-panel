@@ -5,7 +5,6 @@ from django.views.decorators.csrf import csrf_exempt
 from strawberry.django.views import GraphQLView
 import os
 from authentication.Schema import employee_schema
-from blogs.Schema import blog_schema
 
 IS_PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 
@@ -30,9 +29,6 @@ urlpatterns = [
 urlpatterns += [
     path(
         'employee_management/', csrf_exempt(GraphQLView.as_view(schema=employee_schema)),
-    ),
-    path(
-        'blog_management/', csrf_exempt(GraphQLView.as_view(schema=blog_schema)),
     )
 ]
 
