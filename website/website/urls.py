@@ -4,8 +4,7 @@ from django.views.generic import RedirectView
 from django.views.decorators.csrf import csrf_exempt
 from strawberry.django.views import GraphQLView
 import os
-from authentication.Schema import employee_schema
-from blogs.Schema import blog_schema
+from .GlobalSchema import schema
 
 IS_PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 
@@ -28,12 +27,8 @@ urlpatterns = [
 ]
 
 urlpatterns += [
-    path(
-        'employee_management/', csrf_exempt(GraphQLView.as_view(schema=employee_schema)),
-    ),
-    path(
-        'blog_management/', csrf_exempt(GraphQLView.as_view(schema=blog_schema))
-    )
+    path("graphql/", csrf_exempt(GraphQLView.as_view(schema=schema)))
+    #     The only fucking endpoint we need to care for
 ]
 
 if not IS_PRODUCTION:
