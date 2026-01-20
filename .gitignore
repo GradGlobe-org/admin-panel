@@ -9,6 +9,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
+.env
 missing_faqs_uni.py
 new_university.py

@@ -22,7 +22,7 @@ class EmployeeAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Account Information', {
-            'fields': ('username', 'password')
+            'fields': ('username', 'password', 'is_superuser')
         }),
         ('Personal Details', {
             'fields': ('name', 'phone_number', 'email')
