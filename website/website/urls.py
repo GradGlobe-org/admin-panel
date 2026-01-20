@@ -28,7 +28,7 @@ urlpatterns = [
 
 urlpatterns += [
     path(
-        'employee_management/', csrf_exempt(GraphQLView.as_view(schema=employee_schema)),
+        'employee_management/', csrf_exempt(GraphQLView.as_view(schema=employee_schema, graphiql=False)),
     )
 ]
 

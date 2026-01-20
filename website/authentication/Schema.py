@@ -342,13 +342,13 @@ class EmployeeSchema(SchemaMixin):
     @classmethod
     def update_employee(cls,
                         authkey: str,
+                        id: Annotated[int, strawberry.argument(description="Employee id to update")],
                         updated_username: Optional[str] = None,
                         updated_name: Optional[str] = None,
                         updated_phone_number: Optional[str] = None,
                         updated_email: Optional[str] = None,
                         remove_job_role_ids: Optional[list[int]] = None,
                         add_job_role_ids: Optional[list[int]] = None,
-                        id: int = strawberry.field(description="Employee id to update"),
                         ) -> "EmployeeSchema":
         if not cls.is_superuser(authkey):
             raise GraphQLError("Not Permitted or incorrect AuthToken")
