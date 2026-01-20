@@ -14,6 +14,7 @@ import uuid
 from website.utils import EmployeeAuthorization
 from django.shortcuts import get_object_or_404
 
+
 @strawberry.type
 class PostSchema(EmployeeAuthorization):
     id: int
@@ -31,7 +32,7 @@ class PostSchema(EmployeeAuthorization):
 
     @classmethod
     # @strawberry.field(permission_classes=[EmployeeAuthentication])
-    def get_all_blogs(cls, auth_token:uuid.UUID, page:int, limit: Optional[int]=20) -> List["PostSchema"]:
+    def get_all_blogs(cls, auth_token: uuid.UUID, page: int, limit: Optional[int] = 20) -> List["PostSchema"]:
         try:
             employee = EmployeeAuthorization.check_employee_token(auth_token)
         except Exception as e:
@@ -91,15 +92,15 @@ class PostSchema(EmployeeAuthorization):
 
     @classmethod
     def create_blog(cls,
-                auth_token: uuid.UUID,
-                title: str,
-                content: str,
-                featured_image: str,
-                status: str,
-                meta_keyword: Optional[str] = None,
-                meta_description: Optional[str] = None,
-                slug: Optional[str] = None,
-                ):
+                    auth_token: uuid.UUID,
+                    title: str,
+                    content: str,
+                    featured_image: str,
+                    status: str,
+                    meta_keyword: Optional[str] = None,
+                    meta_description: Optional[str] = None,
+                    slug: Optional[str] = None,
+                    ):
         try:
             employee = EmployeeAuthorization.check_employee_token(auth_token)
         except Exception as e:
@@ -146,16 +147,16 @@ class PostSchema(EmployeeAuthorization):
 
     @classmethod
     def update_blog(cls,
-                  auth_token: uuid.UUID,
-                  id: int,
-                  updated_title: Optional[str] = None,
-                  updated_content: Optional[str] = None,
-                  updated_image: Optional[str] = None,
-                  updated_status: Optional[str] = None,
-                  updated_meta_keyword: Optional[str] = None,
-                  updated_meta_description: Optional[str] = None,
-                  updated_slug: Optional[str] = None,
-                  ):
+                    auth_token: uuid.UUID,
+                    id: int,
+                    updated_title: Optional[str] = None,
+                    updated_content: Optional[str] = None,
+                    updated_image: Optional[str] = None,
+                    updated_status: Optional[str] = None,
+                    updated_meta_keyword: Optional[str] = None,
+                    updated_meta_description: Optional[str] = None,
+                    updated_slug: Optional[str] = None,
+                    ):
 
         try:
             employee = EmployeeAuthorization.check_employee_token(auth_token)
@@ -220,7 +221,7 @@ class PostSchema(EmployeeAuthorization):
         )
 
     @classmethod
-    def delete_blog(cls, auth_token:uuid.UUID, id: int) -> bool:
+    def delete_blog(cls, auth_token: uuid.UUID, id: int) -> bool:
         try:
             employee = EmployeeAuthorization.check_employee_token(auth_token)
         except Exception as e:
@@ -256,6 +257,7 @@ class BlogQuery:
         resolver=PostSchema.get_all_blogs
     )
 
+
 @strawberry.type
 class BlogMutation:
     create_blog: PostSchema = strawberry.field(
@@ -268,6 +270,3 @@ class BlogMutation:
     delete_blog: bool = strawberry.field(
         resolver=PostSchema.delete_blog
     )
-
-
-blog_schema = strawberry.Schema(query=BlogQuery, mutation=BlogMutation)
