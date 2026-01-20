@@ -1,6 +1,7 @@
 import strawberry
 from authentication.Schema import EmployeeQuery, EmployeeMutation, EmployeeSubscription
 from blogs.Schema import BlogQuery, BlogMutation
+from tasks.Schema import TaskQuery
 
 
 @strawberry.type
@@ -12,6 +13,10 @@ class Query:
     @strawberry.field
     def blog(self) -> BlogQuery:
         return BlogQuery()
+
+    @strawberry.field
+    def task(self) -> TaskQuery:
+        return TaskQuery()
 
 
 @strawberry.type
