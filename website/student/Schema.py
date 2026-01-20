@@ -1,4 +1,5 @@
 # import strawberry
+# import typing
 #
-# @strawberry.type
-# class Student:
+# strawberry.type
+# class

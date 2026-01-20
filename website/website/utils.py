@@ -2,6 +2,8 @@ import os
 import uuid
 from functools import wraps
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from authentication.models import Employee, Permission
 from django.http import JsonResponse
 from student.models import Student
@@ -280,3 +282,34 @@ def delete_from_google_drive(file_id: str):
         # Optional: log the error instead of raising
         print(f"Failed to delete file from Drive: {e}")
         return False
+
+
+class EmployeeAuthorization:
+    @classmethod
+    def check_employee_token(cls, token:uuid.UUID) -> Employee | None:
+        try:
+            employee = Employee.objects.get(authToken=token)
+        except(ValueError, ObjectDoesNotExist):
+            return None
+        return employee
+
+    @classmethod
+    def check_employee_permission(cls, id:int, perms_list: list) -> bool:
+        try:
+            employee = Employee.objects.prefetch_related("job_roles__permissions").get(
+                id=id
+            )
+        except Employee.DoesNotExist:
+            return False
+
+        assigned_perms = set(
+            perm.name
+            for role in employee.job_roles.all()
+            for perm in role.permissions.all()
+        )
+
+        for perm_name in perms_list:
+            if perm_name not in assigned_perms:
+                return False
+
+        return True

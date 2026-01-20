@@ -434,16 +434,10 @@ class EmployeeMutation:
     delete_employee: bool = strawberry.field(resolver=EmployeeSchema.delete_employee)
 
 
-# @strawberry.type
-# class EmployeeSubscription:
-#     @strawberry.subscription
-#     async def hello(self) -> AsyncGenerator[str, None]:
-#         while True:
-#             yield "Hello"
-#             await asyncio.sleep(1)
-
-
-employee_schema = strawberry.Schema(query=EmployeeQuery, mutation=EmployeeMutation,
-                                    extensions=[QueryDepthLimiter(max_depth=3), MaxAliasesLimiter(max_alias_count=10),
-                                                MaxTokensLimiter(max_token_count=1000)]
-                                    )
+@strawberry.type
+class EmployeeSubscription:
+    @strawberry.subscription
+    async def hello_world_stream(self, iterations: int = 5) -> AsyncGenerator[str, None]:
+        for i in range(iterations):
+            yield f"Update {i + 1}"
+            await asyncio.sleep(1)
