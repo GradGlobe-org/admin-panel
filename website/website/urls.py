@@ -10,7 +10,6 @@ IS_PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 
 urlpatterns = [
     path("", RedirectView.as_view(url="/admin/", permanent=False)),
-    path("", include("django_prometheus.urls")),
     path("", include("core.urls")),
     path("admin/", admin.site.urls),
     path("auth/", include("authentication.urls")),

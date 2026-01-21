@@ -53,7 +53,6 @@ INSTALLED_APPS = [
     "search",
     "exams",
     "core",  # This contains robots.txt for crawlers
-    "django_prometheus",
     "nested_admin",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -64,13 +63,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.admindocs.middleware.XViewMiddleware",
-    # "authentication.middleware.RateLimitMiddleware",
-    # "authentication.middleware.TelegramErrorLoggingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -78,7 +74,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "website.urls"

@@ -4,7 +4,7 @@ from authentication.models import Employee
 
 class SchemaMixin:
     @classmethod
-    def is_superuser(cls, authkey: str):
+    def get_employee(cls, authkey: str):
         try:
             try:
                 uuid.UUID(authkey)
@@ -12,8 +12,6 @@ class SchemaMixin:
                 return False
             emp = Employee.objects.get(authToken=authkey)
         except Exception as e:
+            print(e)
             return False
-        if emp.is_superuser:
-            return True
-        return False
-
+        return emp

@@ -1,4 +1,5 @@
 from .models import Employee, JobRole, Permission, LoginLog
+from django.db import transaction
 from django.db import connection
 from typing import Optional, Annotated, List
 import strawberry
@@ -6,8 +7,12 @@ from strawberry.exceptions import GraphQLError
 import uuid
 import asyncio
 from typing import AsyncGenerator
-from strawberry.extensions import QueryDepthLimiter, MaxAliasesLimiter, MaxTokensLimiter
 from .Utils import SchemaMixin
+
+"""
+Heavily Optimized by AI 
+- by the man who saw (N+1)*2 DB Calls
+"""
 
 
 @strawberry.type
@@ -16,113 +21,173 @@ class PermissionSchema(SchemaMixin):
     name: str = strawberry.field(description="Permission as READ WRITE DELETE UPDATE")
 
     @classmethod
-    def get_all_permissions(cls, authkey: str) -> List["PermissionSchema"]:
-        if not cls.is_superuser(authkey):
-            raise GraphQLError("Not Permitted or incorrect AuthToken")
-        permissions = Permission.objects.all()
-        lst = []
-        for x in permissions:
-            lst.append(cls(id=x.id, name=x.name))
-        return lst
+    def get_all_permissions(cls, authkey: str) -> list["PermissionSchema"]:
+        try:
+            emp = cls.get_employee(authkey)
+            if not emp.is_superuser:
+                raise GraphQLError("Not permitted")
+            permissions = Permission.objects.only("id", "name")
+            return [
+                PermissionSchema(id=p.id, name=p.name)
+                for p in permissions
+            ]
+        except:
+            raise GraphQLError("Internal Server Error")
 
 
 @strawberry.type
 class JobRoleSchema(SchemaMixin):
     id: int
-    role: str
+    role: str = strawberry.field(description="Name of the job role")
     permission: Optional[list[PermissionSchema]] = strawberry.field(description="List of permissions per job role")
 
     @classmethod
-    def get_all_job_roles(cls, authkey: str) -> List["JobRoleSchema"]:
-        if not cls.is_superuser(authkey):
-            raise GraphQLError("Not Permitted or incorrect AuthToken")
-        job_roles = JobRole.objects.all()
-        lst = []
-        for x in job_roles:
-            lst2 = []
-            for y in x.permissions.all():
-                lst2.append(PermissionSchema(id=y.id, name=y.name))
-            lst.append(cls(id=x.id, role=x.role, permission=lst2))
-        return lst
+    def get_all_job_roles(cls, authkey: str) -> list["JobRoleSchema"]:
+        try:
+            emp = cls.get_employee(authkey)
+            if not emp.is_superuser:
+                raise GraphQLError("Not permitted")
+            job_roles = (
+                JobRole.objects
+                .prefetch_related("permissions")
+                .all()
+            )
+            result: list[JobRoleSchema] = []
+            for role in job_roles:
+                permissions = [
+                    PermissionSchema(id=p.id, name=p.name)
+                    for p in role.permissions.all()
+                ]
+                result.append(
+                    JobRoleSchema(
+                        id=role.id,
+                        role=role.role,
+                        permission=permissions
+                    )
+                )
+            return result
+        except:
+            raise GraphQLError("Internal Server Error")
 
     @classmethod
-    def create_job_role(cls,
-                        name: Annotated[str, strawberry.argument(description="Job role name")],
-                        ids: Annotated[List[int], strawberry.argument(description="List of Permission ids")],
-                        authkey: str
-                        ) -> "JobRoleSchema":
-        if not cls.is_superuser(authkey):
-            raise GraphQLError("Not Permitted or incorrect AuthToken")
-        jobrole_obj = JobRole.objects.create(role=name)
-        permission_objs = []
-        for x in ids:
+    def create_job_role(
+            cls,
+            name: Annotated[str, strawberry.argument(description="Job role name")],
+            ids: Annotated[list[int], strawberry.argument(description="List of Permission ids")],
+            authkey: str
+    ) -> "JobRoleSchema":
+        try:
+
+            emp = cls.get_employee(authkey)
+            if not emp.is_superuser:
+                raise GraphQLError("Not permitted")
+            if not name.strip():
+                raise GraphQLError("Job role name cannot be empty")
+            permission_ids = ids or []
+            permissions = list(
+                Permission.objects
+                .filter(id__in=permission_ids)
+            )
+            existing_ids = {p.id for p in permissions}
+            missing_ids = set(permission_ids) - existing_ids
+            if missing_ids:
+                raise GraphQLError(f"Invalid permission IDs: {missing_ids}")
+            with transaction.atomic():
+                job_role = JobRole.objects.create(role=name)
+                if permissions:
+                    job_role.permissions.add(*permissions)
+            permission_schemas = [
+                PermissionSchema(id=p.id, name=p.name)
+                for p in permissions
+            ]
+            return JobRoleSchema(
+                id=job_role.id,
+                role=job_role.role,
+                permission=permission_schemas
+            )
+        except:
+            raise GraphQLError("Internal Server Error")
+
+    @classmethod
+    def update_job_role(
+            cls,
+            id: int,
+            authkey: str,
+            updated_name: Optional[str] = None,
+            remove_permission_ids: Optional[list[int]] = None,
+            add_permission_ids: Optional[list[int]] = None,
+    ) -> "JobRoleSchema":
+        try:
+            emp = cls.get_employee(authkey)
+            if not emp.is_superuser:
+                raise GraphQLError("Not permitted")
             try:
-                perm_obj = Permission.objects.get(id=x)
-            except Exception as e:
-                perm_obj = None
-                print(e)
-
-            if perm_obj:
-                permission_objs.append(PermissionSchema(id=perm_obj.id, name=perm_obj.name))
-                jobrole_obj.permissions.add(perm_obj)
-        try:
-            jobrole_obj.save()
-        except Exception as e:
-            raise GraphQLError("Job role creation failed")
-        return cls(id=jobrole_obj.id, role=name, permission=permission_objs)
-
-    @classmethod
-    def update_job_role(cls,
-                        id: int,
-                        authkey: str,
-                        updated_name: Optional[str] = None,
-                        remove_permission_ids: Optional[list[int]] = None,
-                        add_permission_ids: Optional[List[int]] = None,
-                        ) -> "JobRoleSchema":
-        if not cls.is_superuser(authkey):
-            raise GraphQLError("Not Permitted or incorrect AuthToken")
-        try:
-            job_role = JobRole.objects.get(id=id)
-        except Exception as e:
-            raise GraphQLError("Job role does not exists")
-
-        if remove_permission_ids:
-            for x in remove_permission_ids:
-                job_role.permissions.remove(x)
-        if add_permission_ids:
-            for x in add_permission_ids:
-                job_role.permissions.add(x)
-
-        if updated_name:
-            job_role.role = updated_name
-
-        try:
-            job_role.save()
-        except Exception as e:
-            raise GraphQLError("Job role creation failed")
-
-        lst_of_perm = []
-        for x in job_role.permissions.all():
-            lst_of_perm.append(PermissionSchema(id=x.id, name=x.name))
-
-        return JobRoleSchema(id=job_role.id, role=job_role.role, permission=lst_of_perm)
+                job_role = JobRole.objects.prefetch_related("permissions").get(id=id)
+            except JobRole.DoesNotExist:
+                raise GraphQLError("Job role does not exist")
+            with transaction.atomic():
+                # ---- update name ----
+                if updated_name is not None:
+                    job_role.role = updated_name
+                    job_role.save(update_fields=["role"])
+                # ---- permissions logic ----
+                if remove_permission_ids:
+                    job_role.permissions.remove(*remove_permission_ids)
+                if add_permission_ids:
+                    existing_perm_ids = set(
+                        Permission.objects
+                        .filter(id__in=add_permission_ids)
+                        .values_list("id", flat=True)
+                    )
+                    missing = set(add_permission_ids) - existing_perm_ids
+                    if missing:
+                        raise GraphQLError(f"Invalid permission IDs: {missing}")
+                    job_role.permissions.add(*existing_perm_ids)
+            permissions = [
+                PermissionSchema(id=p.id, name=p.name)
+                for p in job_role.permissions.all()
+            ]
+            return JobRoleSchema(
+                id=job_role.id,
+                role=job_role.role,
+                permission=permissions
+            )
+        except:
+            raise GraphQLError("Internal Server Error")
 
     @classmethod
-    def delete_job_role(cls,
-                        ids: Annotated[list[int], strawberry.argument(description="Job role ids to delete")],
-                        authkey: str
-                        ) -> list[int]:
-        if not cls.is_superuser(authkey):
-            raise GraphQLError("Not Permitted or incorrect AuthToken")
-        lst = []
-        for x in ids:
-            try:
-                JobRole.objects.get(id=x).delete()
-                lst.append(x)
-            except Exception as e:
-                pass
+    def delete_job_role(
+            cls,
+            ids: Annotated[list[int], strawberry.argument(description="Job role ids to delete")],
+            authkey: str
+    ) -> list[int]:
 
-        return lst
+        emp = cls.get_employee(authkey)
+
+        if not emp.is_superuser:
+            raise GraphQLError("Not permitted")
+
+        if not ids:
+            return []
+
+        with transaction.atomic():
+            # Fetch only existing IDs
+            existing_ids = list(
+                JobRole.objects
+                .filter(id__in=ids)
+                .values_list("id", flat=True)
+            )
+
+            if not existing_ids:
+                return []
+
+            deleted_count, _ = (
+                JobRole.objects
+                .filter(id__in=existing_ids)
+                .delete()
+            )
+
+        return existing_ids
 
 
 @strawberry.type
@@ -138,61 +203,56 @@ class EmployeeSchema(SchemaMixin):
     authToken: Optional[str] = None
 
     @classmethod
-    def get_job_roles(cls, obj: Employee) -> Optional[list[JobRoleSchema]]:
-        roles: list[JobRoleSchema] = []
-
-        for role in obj.job_roles.all():
-            permissions: list[PermissionSchema] = [
-                PermissionSchema(id=p.id, name=p.name)
-                for p in role.permissions.all()
-            ]
-
-            roles.append(
-                JobRoleSchema(
-                    id=role.id,
-                    role=role.role,
-                    permission=permissions
-                )
+    def get_job_roles(cls, obj: Employee) -> list[JobRoleSchema]:
+        try:
+            roles = []
+            job_roles = (
+                obj.job_roles
+                .prefetch_related("permissions")
+                .all()
             )
-
-        return roles
+            for role in job_roles:
+                permissions = [
+                    PermissionSchema(id=p.id, name=p.name)
+                    for p in role.permissions.all()
+                ]
+                roles.append(
+                    JobRoleSchema(
+                        id=role.id,
+                        role=role.role,
+                        permission=permissions
+                    )
+                )
+            return roles
+        except Exception:
+            raise GraphQLError("Internal Server Error")
 
     @classmethod
-    def get_employee(
+    def get_employee_login(
             cls,
             info,
-            username: Annotated[str, strawberry.argument(description="Employee username")],
-            password: Annotated[Optional[str], strawberry.argument(description="Employee password")] = None,
-            authtoken: Annotated[Optional[str], strawberry.argument(description="Employee auth token")] = None,
+            username: str,
+            password: Optional[str] = None,
+            authtoken: Optional[str] = None,
     ) -> "EmployeeSchema":
 
-        if not password and not authtoken:
-            raise GraphQLError("Please provide a password or auth token")
-
         try:
-            employee = Employee.objects.get(username=username)
-        except Employee.DoesNotExist:
-            raise GraphQLError("Employee not found")
-
-        is_authenticated = False
-
-        if password:
-            if employee.password == password:
-                is_authenticated = True
-
-        if not is_authenticated and authtoken:
-            if str(employee.authToken) == authtoken:
-                is_authenticated = True
-
-        if not is_authenticated:
-            raise GraphQLError("Employee authentication failed")
-
-        LoginLog.objects.create(employee=employee)
-        new_auth_token = uuid.uuid4()
-        employee.authToken = new_auth_token
-        employee.save()
-
-        if employee.is_superuser:
+            if not password and not authtoken:
+                raise GraphQLError("Please provide password or auth token")
+            employee = Employee.objects.prefetch_related(
+                "job_roles__permissions"
+            ).get(username=username)
+            authenticated = False
+            if password and employee.password == password:
+                authenticated = True
+            if authtoken and str(employee.authToken) == authtoken:
+                authenticated = True
+            if not authenticated:
+                raise GraphQLError("Authentication failed")
+            with transaction.atomic():
+                LoginLog.objects.create(employee=employee)
+                employee.authToken = uuid.uuid4()
+                employee.save(update_fields=["authToken"])
             return cls(
                 id=employee.id,
                 username=employee.username,
@@ -202,9 +262,70 @@ class EmployeeSchema(SchemaMixin):
                 job_roles=cls.get_job_roles(employee),
                 created_at=str(employee.created_at),
                 modified_at=str(employee.modified_at),
-                authToken=str(new_auth_token)
+                authToken=str(employee.authToken)
             )
-        else:
+        except Employee.DoesNotExist:
+            raise GraphQLError("Employee not found")
+        except Exception:
+            raise GraphQLError("Internal Server Error")
+
+    @classmethod
+    def get_all_employees(
+            cls,
+            authkey: str,
+            page: int = 1,
+            limit: Optional[int] = 10,
+    ) -> list["EmployeeSchema"]:
+
+        offset = (page - 1) * limit
+        emp = cls.get_employee(authkey)
+        if not emp:
+            raise GraphQLError("Employee not found")
+        is_super = emp.is_superuser if authkey else False
+        employees = Employee.objects.prefetch_related(
+            "job_roles__permissions"
+        ).order_by("name")[offset:offset + limit]
+        result = []
+        for e in employees:
+            roles = cls.get_job_roles(e) if is_super else None
+            result.append(
+                cls(
+                    id=e.id,
+                    username=e.username,
+                    name=e.name,
+                    phone_number=e.phone_number if is_super else None,
+                    email=e.email if is_super else None,
+                    job_roles=roles,
+                    created_at=str(e.created_at) if is_super else None,
+                    modified_at=str(e.modified_at) if is_super else None,
+                )
+            )
+        return result
+
+    @classmethod
+    def create_employee(
+            cls,
+            username: str,
+            name: str,
+            phone_number: str,
+            email: str,
+            authkey: str,
+            job_roles_id: Optional[list[int]] = None,
+    ) -> "EmployeeSchema":
+        try:
+            admin = cls.get_employee(authkey)
+            if not admin.is_superuser:
+                raise GraphQLError("Not permitted")
+            with transaction.atomic():
+                employee = Employee.objects.create(
+                    username=username,
+                    name=name,
+                    phone_number=phone_number,
+                    email=email,
+                    authToken=uuid.uuid4()
+                )
+                if job_roles_id:
+                    employee.job_roles.add(*job_roles_id)
             return cls(
                 id=employee.id,
                 username=employee.username,
@@ -212,202 +333,83 @@ class EmployeeSchema(SchemaMixin):
                 phone_number=employee.phone_number,
                 email=employee.email,
                 job_roles=cls.get_job_roles(employee),
-                authToken=str(new_auth_token)
+                created_at=str(employee.created_at),
+                modified_at=str(employee.modified_at),
+                authToken=str(employee.authToken)
             )
-
-    @classmethod
-    def get_all_employees(cls, page: int = 1, limit: Optional[int] = 10, authkey: Optional[str] = None) -> List[
-        "EmployeeSchema"]:
-        offset = (page - 1) * limit
-
-        emp_table = Employee._meta.db_table
-        role_table = JobRole._meta.db_table
-        perm_table = Permission._meta.db_table
-
-        emp_role_m2m = Employee.job_roles.through._meta.db_table
-        role_perm_m2m = JobRole.permissions.through._meta.db_table
-
-        list_employees = []
-
-        with connection.cursor() as cursor:
-            sql_emp = f"""
-                        SELECT id, username, name, phone_number, email, created_at, modified_at 
-                        FROM {emp_table}
-                        ORDER BY name
-                        LIMIT %s OFFSET %s
-                    """
-            cursor.execute(sql_emp, [limit, offset])
-
-            columns = [col[0] for col in cursor.description]
-            employees_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-            for emp in employees_data:
-                sql_roles = f"""
-                            SELECT r.id, r.role 
-                            FROM {role_table} r
-                            INNER JOIN {emp_role_m2m} map ON r.id = map.jobrole_id
-                            WHERE map.employee_id = %s
-                            ORDER BY r.role
-                        """
-                cursor.execute(sql_roles, [emp['id']])
-
-                role_columns = [col[0] for col in cursor.description]
-                roles_data = [dict(zip(role_columns, row)) for row in cursor.fetchall()]
-
-                job_role_schemas = []
-
-                for role in roles_data:
-                    sql_perms = f"""
-                            SELECT p.id, p.name
-                            FROM {perm_table} p
-                            INNER JOIN {role_perm_m2m} map ON p.id = map.permission_id
-                            WHERE map.jobrole_id = %s
-                        """
-                    cursor.execute(sql_perms, [role['id']])
-
-                    perm_columns = [col[0] for col in cursor.description]
-                    perms_data = [dict(zip(perm_columns, row)) for row in cursor.fetchall()]
-
-                    permission_schemas = [
-                        PermissionSchema(id=p['id'], name=p['name'])
-                        for p in perms_data
-                    ]
-
-                    job_role_schemas.append(
-                        JobRoleSchema(
-                            id=role['id'],
-                            role=role['role'],
-                            permission=permission_schemas
-                        )
-                    )
-                if authkey:
-                    if cls.is_superuser(authkey):
-                        list_employees.append(cls(
-                            id=emp["id"],
-                            username=emp['username'],
-                            name=emp['name'],
-                            phone_number=emp['phone_number'],
-                            email=emp['email'],
-                            job_roles=job_role_schemas,
-                            created_at=str(emp['created_at']),
-                            modified_at=str(emp['modified_at'])
-                        ))
-                    else:
-                        list_employees.append(cls(
-                            id=emp["id"],
-                            username=emp['username'],
-                            name=emp['name'],
-                        ))
-                else:
-                    list_employees.append(cls(
-                        id=emp["id"],
-                        username=emp['username'],
-                        name=emp['name'],
-                    ))
-
-        return list_employees
-
-    @classmethod
-    def create_employee(cls,
-                        username: str,
-                        name: str,
-                        phone_number: str,
-                        email: str,
-                        authkey: str,
-                        job_roles_id: Optional[list[int]] = None,
-                        ) -> "EmployeeSchema":
-        if not cls.is_superuser(authkey):
-            raise GraphQLError("Not Permitted or incorrect AuthToken")
-
-        emp = Employee(username=username, name=name, phone_number=phone_number, email=email, authToken=uuid.uuid4())
-        if job_roles_id:
-            for x in job_roles_id:
-                emp.job_roles.add(x)
-
-        try:
-            emp.save()
-        except Exception as e:
+        except GraphQLError:
+            raise
+        except Exception:
             raise GraphQLError("Failed to create employee")
 
-        return cls(id=emp.id,
-                   username=username,
-                   name=name,
-                   phone_number=phone_number,
-                   email=email,
-                   authToken=emp.authToken,
-                   job_roles=cls.get_job_roles(emp),
-                   created_at=str(emp.created_at),
-                   modified_at=str(emp.modified_at))
+    @classmethod
+    def update_employee(
+            cls,
+            authkey: str,
+            id: int,
+            updated_username: Optional[str] = None,
+            updated_name: Optional[str] = None,
+            updated_phone_number: Optional[str] = None,
+            updated_email: Optional[str] = None,
+            remove_job_role_ids: Optional[list[int]] = None,
+            add_job_role_ids: Optional[list[int]] = None,
+    ) -> "EmployeeSchema":
+        try:
+            admin = cls.get_employee(authkey)
+            if not admin.is_superuser:
+                raise GraphQLError("Not permitted")
+            employee = Employee.objects.get(id=id)
+            if updated_username:
+                employee.username = updated_username
+            if updated_name:
+                employee.name = updated_name
+            if updated_phone_number:
+                employee.phone_number = updated_phone_number
+            if updated_email:
+                employee.email = updated_email
+            with transaction.atomic():
+                employee.save()
+                if remove_job_role_ids:
+                    employee.job_roles.remove(*remove_job_role_ids)
+                if add_job_role_ids:
+                    employee.job_roles.add(*add_job_role_ids)
+
+            return cls(
+                id=employee.id,
+                username=employee.username,
+                name=employee.name,
+                phone_number=employee.phone_number,
+                email=employee.email,
+                job_roles=cls.get_job_roles(employee),
+                created_at=str(employee.created_at),
+                modified_at=str(employee.modified_at)
+            )
+
+        except GraphQLError:
+            raise
+        except Employee.DoesNotExist:
+            raise GraphQLError("Employee not found")
+        except Exception:
+            raise GraphQLError("Internal Server Error")
 
     @classmethod
-    def update_employee(cls,
-                        authkey: str,
-                        id: Annotated[int, strawberry.argument(description="Employee id to update")],
-                        updated_username: Optional[str] = None,
-                        updated_name: Optional[str] = None,
-                        updated_phone_number: Optional[str] = None,
-                        updated_email: Optional[str] = None,
-                        remove_job_role_ids: Optional[list[int]] = None,
-                        add_job_role_ids: Optional[list[int]] = None,
-                        ) -> "EmployeeSchema":
-        if not cls.is_superuser(authkey):
-            raise GraphQLError("Not Permitted or incorrect AuthToken")
+    def delete_employee(cls, authkey: str, emp_id: int) -> bool:
         try:
-            emp = Employee.objects.get(id=id)
-        except Exception as e:
-            raise GraphQLError("Employee not found")
-
-        if updated_username:
-            emp.username = updated_username
-        if updated_name:
-            emp.name = updated_name
-        if updated_phone_number:
-            emp.phone_number = updated_phone_number
-        if updated_email:
-            emp.email = updated_email
-
-        if remove_job_role_ids:
-            for x in remove_job_role_ids:
-                emp.job_roles.remove(x)
-
-        if add_job_role_ids:
-            for x in add_job_role_ids:
-                emp.job_roles.add(x)
-        try:
-            emp.save()
-        except Exception as e:
-            raise GraphQLError("Failed to Update employee")
-        return cls(id=emp.id,
-                   username=emp.username,
-                   name=emp.name,
-                   phone_number=emp.phone_number,
-                   email=emp.email,
-                   authToken=None,
-                   job_roles=cls.get_job_roles(emp),
-                   created_at=str(emp.created_at),
-                   modified_at=str(emp.modified_at)
-                   )
-
-    @classmethod
-    def delete_employee(cls, authkey: str,
-                        emp_id: int) -> bool:
-        if not cls.is_superuser(authkey):
-            raise GraphQLError("Not Permitted or incorrect AuthToken")
-        try:
-            emp = Employee.objects.get(id=emp_id)
-        except Exception as e:
-            raise GraphQLError("Employee not found")
-        try:
-            emp.delete()
+            admin = cls.get_employee(authkey)
+            if not admin.is_superuser:
+                raise GraphQLError("Not permitted")
+            Employee.objects.filter(id=emp_id).delete()
             return True
-        except Exception as e:
+        except GraphQLError:
+            raise
+        except Exception:
             raise GraphQLError("Failed to delete employee")
 
 
 @strawberry.type
 class EmployeeQuery:
     employee: EmployeeSchema = strawberry.field(
-        resolver=EmployeeSchema.get_employee
+        resolver=EmployeeSchema.get_employee_login
     )
     all_employee: list[EmployeeSchema] = strawberry.field(
         resolver=EmployeeSchema.get_all_employees
@@ -425,8 +427,8 @@ class EmployeeMutation:
     # Job Role
     create_job_role: JobRoleSchema = strawberry.field(resolver=JobRoleSchema.create_job_role)
     update_job_role: JobRoleSchema = strawberry.field(resolver=JobRoleSchema.update_job_role)
-    delete_job_role: Annotated[list[int], "Ids That were successfully deleted"] = strawberry.field(
-        resolver=JobRoleSchema.delete_job_role)
+    delete_job_role: list[int] = strawberry.field(
+        resolver=JobRoleSchema.delete_job_role, description="Returns The IDs that were successfully deleted")
 
     # Employee
     create_employee: EmployeeSchema = strawberry.field(resolver=EmployeeSchema.create_employee)
