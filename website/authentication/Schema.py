@@ -1,6 +1,6 @@
 from .models import Employee, JobRole, Permission, LoginLog
 from django.db import transaction
-from django.db import connection
+from website.event_bus import event_bus
 from typing import Optional, Annotated, List
 import strawberry
 from strawberry.exceptions import GraphQLError
@@ -193,12 +193,13 @@ class JobRoleSchema(SchemaMixin):
 @strawberry.type
 class EmployeeSchema(SchemaMixin):
     id: int
-    username: str
-    name: str
+    username: Optional[str] = None
+    name: Optional[str] = None
     phone_number: Optional[str] = None
     email: Optional[str] = None
     job_roles: Optional[List[JobRoleSchema]] = None
     created_at: Optional[str] = None
+    is_superuser: Optional[bool] = None
     modified_at: Optional[str] = None
     authToken: Optional[str] = None
 
@@ -260,6 +261,7 @@ class EmployeeSchema(SchemaMixin):
                 phone_number=employee.phone_number,
                 email=employee.email,
                 job_roles=cls.get_job_roles(employee),
+                is_superuser=employee.is_superuser,
                 created_at=str(employee.created_at),
                 modified_at=str(employee.modified_at),
                 authToken=str(employee.authToken)
@@ -286,20 +288,31 @@ class EmployeeSchema(SchemaMixin):
             "job_roles__permissions"
         ).order_by("name")[offset:offset + limit]
         result = []
-        for e in employees:
-            roles = cls.get_job_roles(e) if is_super else None
-            result.append(
-                cls(
-                    id=e.id,
-                    username=e.username,
-                    name=e.name,
-                    phone_number=e.phone_number if is_super else None,
-                    email=e.email if is_super else None,
-                    job_roles=roles,
-                    created_at=str(e.created_at) if is_super else None,
-                    modified_at=str(e.modified_at) if is_super else None,
+        if emp.is_superuser:
+            for e in employees:
+                result.append(
+                    cls(
+                        id=e.id,
+                        username=e.username,
+                        name=e.name,
+                        phone_number=e.phone_number,
+                        email=e.email,
+                        is_superuser=e.is_superuser,
+                        job_roles=cls.get_job_roles(e),
+                        created_at=str(e.created_at),
+                        modified_at=str(e.modified_at),
+                    )
                 )
-            )
+        else:
+            for e in employees:
+                result.append(
+                    cls(
+                        id=e.id,
+                        username=e.username,
+                        name=e.name,
+                    )
+                )
+
         return result
 
     @classmethod
@@ -310,6 +323,7 @@ class EmployeeSchema(SchemaMixin):
             phone_number: str,
             email: str,
             authkey: str,
+            is_superuser: Optional[bool] = False,
             job_roles_id: Optional[list[int]] = None,
     ) -> "EmployeeSchema":
         try:
@@ -321,6 +335,7 @@ class EmployeeSchema(SchemaMixin):
                     username=username,
                     name=name,
                     phone_number=phone_number,
+                    is_superuser=is_superuser,
                     email=email,
                     authToken=uuid.uuid4()
                 )
@@ -331,6 +346,7 @@ class EmployeeSchema(SchemaMixin):
                 username=employee.username,
                 name=employee.name,
                 phone_number=employee.phone_number,
+                is_superuser=employee.is_superuser,
                 email=employee.email,
                 job_roles=cls.get_job_roles(employee),
                 created_at=str(employee.created_at),
@@ -348,6 +364,7 @@ class EmployeeSchema(SchemaMixin):
             authkey: str,
             id: int,
             updated_username: Optional[str] = None,
+            is_superuser: Optional[bool] = None,
             updated_name: Optional[str] = None,
             updated_phone_number: Optional[str] = None,
             updated_email: Optional[str] = None,
@@ -365,6 +382,8 @@ class EmployeeSchema(SchemaMixin):
                 employee.name = updated_name
             if updated_phone_number:
                 employee.phone_number = updated_phone_number
+            if is_superuser is not None:
+                employee.is_superuser = is_superuser
             if updated_email:
                 employee.email = updated_email
             with transaction.atomic():
@@ -379,6 +398,7 @@ class EmployeeSchema(SchemaMixin):
                 username=employee.username,
                 name=employee.name,
                 phone_number=employee.phone_number,
+                is_superuser=employee.is_superuser,
                 email=employee.email,
                 job_roles=cls.get_job_roles(employee),
                 created_at=str(employee.created_at),
@@ -436,10 +456,14 @@ class EmployeeMutation:
     delete_employee: bool = strawberry.field(resolver=EmployeeSchema.delete_employee)
 
 
+from asgiref.sync import sync_to_async
+
+
 @strawberry.type
 class EmployeeSubscription:
+
     @strawberry.subscription
-    async def hello_world_stream(self, iterations: int = 5) -> AsyncGenerator[str, None]:
-        for i in range(iterations):
-            yield f"Update {i + 1}"
-            await asyncio.sleep(1)
+    async def employee(self) -> AsyncGenerator[str, None]:
+        for x in range(10):
+            yield f"Not Implemented yet #{x}"
+            asyncio.sleep(1)
