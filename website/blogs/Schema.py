@@ -12,6 +12,8 @@ from strawberry.exceptions import GraphQLError
 
 import uuid
 from website.utils import EmployeeAuthorization
+from slugify import slugify
+from django.db.models import Q
 
 
 @strawberry.type
@@ -302,10 +304,15 @@ class PostSchema(EmployeeAuthorization):
         if not employee.is_superuser and not has_permission:
             raise GraphQLError("You do not have permission to do this")
 
-        if title == Post.objects.get(title=title).title:
-            raise GraphQLError("Blog with this title already exists")
+        query = Q(title=title)
 
-        blog = Post.objects.create(
+        if slug:
+            query |= Q(slug=slug)
+
+        if Post.objects.filter(query).exists():
+            raise GraphQLError("Blog with this title or slug already exists")
+
+        blog = Post(
             title=title,
             content=content,
             featured_image=featured_image,
@@ -315,6 +322,12 @@ class PostSchema(EmployeeAuthorization):
             meta_description=meta_description,
             slug=slug,
         )
+
+        slug_source = slug or title
+        blog.slug = slugify(slug_source)
+
+        blog.full_clean()
+        blog.save()
 
         return cls(
             id=blog.id,
