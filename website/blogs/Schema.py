@@ -14,7 +14,9 @@ import uuid
 from website.utils import EmployeeAuthorization
 from slugify import slugify
 from django.db.models import Q
-
+from strawberry.file_uploads import Upload
+from website.utils import upload_file_to_drive_public
+from django.db import transaction
 
 @strawberry.type
 class PostSchema(EmployeeAuthorization):
@@ -281,21 +283,27 @@ class PostSchema(EmployeeAuthorization):
         return blog_lst
 
     @classmethod
-    def create_blog(cls,
-                    auth_token: str,
-                    title: str,
-                    content: str,
-                    featured_image: str,
-                    status: str,
-                    meta_keyword: Optional[str] = None,
-                    meta_description: Optional[str] = None,
-                    slug: Optional[str] = None,
-                    ) -> "PostSchema":
+    def create_blog(
+            cls,
+            auth_token: str,
+            title: str,
+            content: str,
+            status: str,
+            image_url: Optional[str] = None,
+            image_file: Optional[Upload] = None,
+            meta_keyword: Optional[str] = None,
+            meta_description: Optional[str] = None,
+            slug: Optional[str] = None,
+    ) -> "PostSchema":
+
         try:
             auth_token = uuid.UUID(auth_token)
             employee = EmployeeAuthorization.check_employee_token(auth_token)
-        except Exception as e:
+        except Exception:
             raise GraphQLError("Failed to authenticate")
+
+        if not employee:
+            raise GraphQLError("Invalid or expired auth token")
 
         has_permission = EmployeeAuthorization.check_employee_permission(
             employee.id, ["Blog_create"]
@@ -304,36 +312,65 @@ class PostSchema(EmployeeAuthorization):
         if not employee.is_superuser and not has_permission:
             raise GraphQLError("You do not have permission to do this")
 
-        query = Q(title=title)
+        if image_file and image_url:
+            raise GraphQLError("Provide either image_url or image_file, not both")
 
-        if slug:
-            query |= Q(slug=slug)
+        ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
+        if image_file and image_file.content_type not in ALLOWED_TYPES:
+            raise GraphQLError("Unsupported image type")
 
-        if Post.objects.filter(query).exists():
+        MAX_FILE_SIZE_MB = 5
+        if image_file and image_file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+            raise GraphQLError("Image file should not exceed 5 MB")
+
+        if status not in ["DRAFT","PUBLISHED","PRIVATE"]:
+            raise GraphQLError("Status should be DRAFT, PUBLISHED or PRIVATE")
+
+        # Generate slug early
+        final_slug = slugify(slug or title)
+
+        if Post.objects.filter(Q(title=title) | Q(slug=final_slug)).exists():
             raise GraphQLError("Blog with this title or slug already exists")
 
-        blog = Post(
-            title=title,
-            content=content,
-            featured_image=featured_image,
-            author_id=employee.id,
-            status=status,
-            meta_keyword=meta_keyword,
-            meta_description=meta_description,
-            slug=slug,
-        )
+        with transaction.atomic():
+            blog = Post(
+                title=title,
+                content=content,
+                featured_image=image_url,
+                author_id=employee.id,
+                status=status,
+                meta_keyword=meta_keyword,
+                meta_description=meta_description,
+                slug=final_slug,
+            )
 
-        slug_source = slug or title
-        blog.slug = slugify(slug_source)
+            blog.full_clean()
+            blog.save()
 
-        blog.full_clean()
-        blog.save()
+            drive_file_id = None
+
+            if image_file:
+                try:
+                    drive_file_id, generated_uuid = upload_file_to_drive_public(image_file)
+                except Exception:
+                    raise GraphQLError("Failed to upload image")
+
+                blog.image_uuid = generated_uuid
+                blog.google_file_id = drive_file_id
+                blog.save(update_fields=["image_uuid", "google_file_id"])
+
+            featured_image = (
+                blog.featured_image
+                or f"https://admin.gradglobe.org/blog/images?id={drive_file_id}"
+                if drive_file_id
+                else None
+            )
 
         return cls(
             id=blog.id,
             title=blog.title,
             content=blog.content,
-            featured_image=blog.featured_image,
+            featured_image=featured_image,
             author={
                 "id": blog.author.id,
                 "name": blog.author.name,
@@ -348,23 +385,28 @@ class PostSchema(EmployeeAuthorization):
         )
 
     @classmethod
-    def update_blog(cls,
-                    auth_token: str,
-                    id: int,
-                    updated_title: Optional[str] = None,
-                    updated_content: Optional[str] = None,
-                    updated_image: Optional[str] = None,
-                    updated_status: Optional[str] = None,
-                    updated_meta_keyword: Optional[str] = None,
-                    updated_meta_description: Optional[str] = None,
-                    updated_slug: Optional[str] = None,
-                    ) -> "PostSchema":
+    def update_blog(
+            cls,
+            auth_token: str,
+            id: int,
+            updated_title: Optional[str] = None,
+            updated_content: Optional[str] = None,
+            updated_image_url: Optional[str] = None,
+            updated_image_file: Optional[Upload] = None,
+            updated_status: Optional[str] = None,
+            updated_meta_keyword: Optional[str] = None,
+            updated_meta_description: Optional[str] = None,
+            updated_slug: Optional[str] = None,
+    ) -> "PostSchema":
 
         try:
-            auth_token = uuid.UUID(auth_token)
-            employee = EmployeeAuthorization.check_employee_token(auth_token)
-        except Exception as e:
+            auth_uuid = uuid.UUID(auth_token)
+            employee = EmployeeAuthorization.check_employee_token(auth_uuid)
+        except Exception:
             raise GraphQLError("Failed to authenticate")
+
+        if not employee:
+            raise GraphQLError("Invalid or expired auth token")
 
         has_permission = EmployeeAuthorization.check_employee_permission(
             employee.id, ["Blog_update"]
@@ -373,46 +415,104 @@ class PostSchema(EmployeeAuthorization):
         if not employee.is_superuser and not has_permission:
             raise GraphQLError("You do not have permission to do this")
 
-        blog = Post.objects.get(id=id)
-
-        if not (employee.is_superuser or blog.author_id == employee.id):
-            raise GraphQLError("You did not created the blog")
-
         try:
             blog = Post.objects.get(id=id)
         except Post.DoesNotExist:
             raise GraphQLError("Blog does not exist")
-        except Exception as e:
+        except Exception:
             raise GraphQLError("Failed to get Blog")
 
-        if updated_title:
-            blog.title = updated_title
-        if updated_content:
-            blog.content = updated_content
-        if updated_image:
-            blog.featured_image = updated_image
-        if updated_status:
-            blog.status = updated_status
-        if updated_meta_keyword:
-            blog.meta_keyword = updated_meta_keyword
-        if updated_meta_description:
-            blog.meta_description = updated_meta_description
-        if updated_slug:
-            blog.slug = updated_slug
+        if not (employee.is_superuser or blog.author_id == employee.id):
+            raise GraphQLError("Only blog owner can edit blog")
 
-        try:
-            blog.save()
-        except Exception as e:
-            raise GraphQLError("Failed to Update Blog")
+        if not any([
+            updated_title,
+            updated_content,
+            updated_image_url,
+            updated_image_file,
+            updated_status,
+            updated_meta_keyword,
+            updated_meta_description,
+            updated_slug,
+        ]):
+            raise GraphQLError("No update fields provided")
+
+        if updated_image_file and updated_image_url:
+            raise GraphQLError("Provide either image_url or image_file, not both")
+
+        if updated_status and updated_status not in ["DRAFT", "PUBLISHED", "PRIVATE"]:
+            raise GraphQLError("Status should be DRAFT, PUBLISHED or PRIVATE")
+
+        ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
+        if updated_image_file and updated_image_file.content_type not in ALLOWED_TYPES:
+            raise GraphQLError("Unsupported image type")
+
+        if updated_image_file and updated_image_file.size > 5 * 1024 * 1024:
+            raise GraphQLError("Image file should not exceed 5 MB")
+
+        if updated_slug:
+            final_slug = slugify(updated_slug)
+            if Post.objects.filter(slug=final_slug).exclude(id=blog.id).exists():
+                raise GraphQLError("Blog with this slug already exists")
+        else:
+            final_slug = None
+
+        drive_file_id = None
+
+        with transaction.atomic():
+
+            if updated_title:
+                blog.title = updated_title
+
+            if updated_content:
+                blog.content = updated_content
+
+            if updated_image_url:
+                blog.featured_image = updated_image_url
+
+            if updated_status:
+                blog.status = updated_status
+
+            if updated_meta_keyword:
+                blog.meta_keyword = updated_meta_keyword
+
+            if updated_meta_description:
+                blog.meta_description = updated_meta_description
+
+            if final_slug:
+                blog.slug = final_slug
+
+            if updated_image_file:
+                try:
+                    drive_file_id, generated_uuid = upload_file_to_drive_public(updated_image_file)
+                except Exception:
+                    raise GraphQLError("Failed to upload image")
+
+                blog.image_uuid = generated_uuid
+                blog.google_file_id = drive_file_id
+
+            try:
+                blog.full_clean()
+                blog.save()
+            except Exception:
+                raise GraphQLError("Failed to update Blog")
+
+            featured_image = (
+                    blog.featured_image
+                    or (
+                        f"https://admin.gradglobe.org/blog/images?id={drive_file_id}"
+                        if drive_file_id else None
+                    )
+            )
 
         return cls(
             id=blog.id,
             title=blog.title,
             content=blog.content,
-            featured_image=blog.featured_image,
+            featured_image=featured_image,
             author={
-                "id": blog.author.id,
-                "name": blog.author.name,
+                "id": blog.author_id,
+                "name": employee.name,
             },
             created_at=blog.created_at,
             modified_at=blog.modified_at,
@@ -425,11 +525,15 @@ class PostSchema(EmployeeAuthorization):
 
     @classmethod
     def delete_blog(cls, auth_token: str, id: int) -> bool:
+
         try:
-            auth_token = uuid.UUID(auth_token)
-            employee = EmployeeAuthorization.check_employee_token(auth_token)
-        except Exception as e:
+            auth_uuid = uuid.UUID(auth_token)
+            employee = EmployeeAuthorization.check_employee_token(auth_uuid)
+        except Exception:
             raise GraphQLError("Failed to authenticate")
+
+        if not employee:
+            raise GraphQLError("Invalid or expired auth token")
 
         has_permission = EmployeeAuthorization.check_employee_permission(
             employee.id, ["Blog_delete"]
@@ -442,18 +546,19 @@ class PostSchema(EmployeeAuthorization):
             blog = Post.objects.get(id=id)
         except Post.DoesNotExist:
             raise GraphQLError("Blog does not exist")
-        except Exception as e:
+        except Exception:
             raise GraphQLError("Error fetching blog")
 
         if not (employee.is_superuser or blog.author_id == employee.id):
-            raise GraphQLError("You did not created this blog")
+            raise GraphQLError("Only the blog owner can delete this blog")
 
-        try:
-            blog.delete()
-            return True
-        except Exception as e:
-            raise GraphQLError("Failed to Delete Blog")
+        with transaction.atomic():
+            try:
+                blog.delete()
+            except Exception:
+                raise GraphQLError("Failed to delete blog")
 
+        return True
 
 @strawberry.type
 class BlogQuery:

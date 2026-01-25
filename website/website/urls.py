@@ -26,7 +26,7 @@ urlpatterns = [
 ]
 
 urlpatterns += [
-    path("graphql/", csrf_exempt(GraphQLView.as_view(schema=schema)))
+    path("graphql/", csrf_exempt(GraphQLView.as_view(schema=schema, multipart_uploads_enabled=True)))
     #     The only fucking endpoint we need to care for
 ]
 
