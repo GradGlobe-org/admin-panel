@@ -49,7 +49,7 @@ schema = strawberry.Schema(
     query=Query,
     mutation=Mutation,
     subscription=Subscription,
-    extensions=[QueryDepthLimiter(max_depth=3), MaxAliasesLimiter(max_alias_count=10),
+    extensions=[QueryDepthLimiter(max_depth=6), MaxAliasesLimiter(max_alias_count=10),
                 MaxTokensLimiter(max_token_count=1000)],
     config=config,
 )
