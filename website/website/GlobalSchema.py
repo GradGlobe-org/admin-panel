@@ -4,7 +4,8 @@ from strawberry.schema.config import StrawberryConfig
 from authentication.Schema import EmployeeQuery, EmployeeMutation, EmployeeSubscription
 from blogs.Schema import BlogQuery, BlogMutation
 from tasks.Schema import TaskQuery, TaskMutation
-from university.Schema import UniversityQuery
+from university.Schema import UniversityQuery, UniversityMutation
+
 
 @strawberry.type
 class Query:
@@ -38,6 +39,10 @@ class Mutation:
     @strawberry.field
     def task(self) -> TaskMutation:
         return TaskMutation()
+
+    @strawberry.field
+    def university(self) -> UniversityMutation:
+        return UniversityMutation()
 
 
 @strawberry.type
