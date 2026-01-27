@@ -1,21 +1,18 @@
-import decimal
+import math
 import uuid
-import strawberry
-from typing import Optional, Annotated, List, Any, Awaitable
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import connection, transaction
-from sqlalchemy import false
-from twisted._threads._team import Statistics
-
+from django.db import connection, transaction, IntegrityError
+from authentication.Utils import SchemaMixin
 from authentication.models import Employee
 from strawberry.exceptions import GraphQLError
 from university.models import *
 from .AllSchemas import *
 from django.db.models import Q
+from website.utils import EmployeeAuthorization
 
 
 @strawberry.type
-class UniversitySchema:
+class UniversitySchema(SchemaMixin):
     id: int
     cover_url: str
     name: str
@@ -39,114 +36,7 @@ class UniversitySchema:
     faqs: Optional[List[UniversityFAQSchema]] = None
 
     @classmethod
-    def get_universities(
-            cls,
-            auth_token: str,
-            page: int,
-            limit: Optional[int] = 50,
-            country: Optional[str] = None,
-            query: Optional[str] = None,
-            sort_by_id_asc: Optional[bool] = False,
-    ) -> List["UniversitySchema"]:
-
-        try:
-            auth_token = uuid.UUID(auth_token)
-            Employee.objects.get(authToken=auth_token)
-        except ValueError:
-            raise GraphQLError("Invalid auth token")
-        except Employee.DoesNotExist:
-            raise GraphQLError("Employee does not exist")
-
-        if page < 1:
-            raise GraphQLError("Page must be greater than 0")
-
-        limit = min(limit or 50, 100)
-        offset = (page - 1) * limit
-
-        country = country.strip() if country else None
-        query = query.strip() if query else None
-
-        university_table = university._meta.db_table
-        location_table = location._meta.db_table
-
-        order_by = "u.id ASC" if sort_by_id_asc else "u.id DESC"
-
-        sql = f"""
-            SELECT
-                u.id,
-                u.cover_url,
-                u.name,
-                u.type,
-                u.establish_year,
-                u.status,
-                u.about,
-                u.review_rating,
-                u.avg_acceptance_rate,
-                u.avg_tution_fee,
-                u.location_map_link,
-                
-                l.id,
-                l.city,
-                l.state,
-                l.country
-
-            FROM {university_table} u
-            JOIN {location_table} l ON u.location_id = l.id
-            WHERE
-                (%s IS NULL OR LOWER(l.country) = LOWER(%s))
-                AND (%s IS NULL OR LOWER(u.name) LIKE LOWER(%s))
-            ORDER BY {order_by}
-            LIMIT %s OFFSET %s
-        """
-
-        params = [
-            country,
-            country,
-            query,
-            f"%{query}%" if query else None,
-            limit,
-            offset,
-        ]
-
-        with connection.cursor() as cursor:
-            cursor.execute(sql, params)
-            columns = [col[0] for col in cursor.description]
-            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-        return [
-            UniversitySchema(
-                id=row["id"],
-                cover_url=row["cover_url"],
-                name=row["name"],
-                type=row["type"],
-                establish_year=row["establish_year"],
-                status=row["status"],
-                about=row["about"],
-                review_rating=row["review_rating"],
-                avg_acceptance_rate=row["avg_acceptance_rate"],
-                avg_tution_fee=row["avg_tution_fee"],
-                location_map_link=row["location_map_link"],
-
-                location=LocationSchema(
-                    id=row["id"],
-                    city=row["city"],
-                    state=row["state"],
-                    country=row["country"],
-                ),
-
-                admission_stats=None,
-                work_opportunities=None,
-                contacts=None,
-                statistics=None,
-                video_links=None,
-                rankings=None,
-                faqs=None,
-            )
-            for row in rows
-        ]
-
-    @staticmethod
-    def university_schema_builder(data: dict) -> "UniversitySchema":
+    def university_schema_builder(cls,data: dict) -> "UniversitySchema":
         try:
             return UniversitySchema(
                 id=data["id"],
@@ -247,19 +137,27 @@ class UniversitySchema:
         except Exception:
             raise GraphQLError("Internal server error")
 
+
     @classmethod
     def get_detailed_university(cls,
                                 auth_token: str,
                                 uni_id: int,
-                                ):
+                                ) -> "UniversitySchema":
 
-        try:
-            auth_token = uuid.UUID(auth_token)
-            Employee.objects.get(authToken=auth_token)
-        except ValueError:
-            raise GraphQLError("Invalid auth token")
-        except Employee.DoesNotExist:
-            raise GraphQLError("Employee does not exist")
+        if not cls.get_employee(auth_token):
+            raise GraphQLError("Invalid Auth token")
+
+        # emp = cls.get_employee(auth_token)
+        #
+        # print(emp.job_roles.all())
+        # permission_names = set()
+        #
+        # for role in emp.job_roles.all():
+        #     permission_names.update(
+        #         role.permissions.values_list("name", flat=True)
+        #     )
+        #
+        # print(list(permission_names))
 
         try:
             with connection.cursor() as cursor:
@@ -275,7 +173,7 @@ class UniversitySchema:
             raise GraphQLError("University not found")
 
         try:
-            return UniversitySchema.university_schema_builder(data=row[0])
+            return cls.university_schema_builder(data=row[0])
         except Exception as e:
             raise (GraphQLError(str(e)))
 
@@ -295,20 +193,15 @@ class UniversitySchema:
             uni_faqs: Optional[List[UniversityFAQInput]] = None,
     ) -> "UniversitySchema":
 
-        # -------- AUTH --------
-        try:
-            Employee.objects.get(authToken=uuid.UUID(auth_token))
-        except Exception:
-            raise GraphQLError("Invalid auth token")
+        if not cls.get_employee(auth_token):
+            raise GraphQLError("Invalid Auth Token")
 
-        # -------- LOCATION VALIDATION --------
         if loc_id and loc:
             raise GraphQLError("Provide either loc_id or loc, not both")
 
         if not loc_id and not loc:
             raise GraphQLError("Location is required")
 
-        # -------- DUPLICATE UNIVERSITY CHECK --------
         if university.objects.filter(
                 Q(name__iexact=basic_details.name.strip()) |
                 Q(cover_url=basic_details.cover_url.strip()) |
@@ -316,10 +209,25 @@ class UniversitySchema:
         ).exists():
             raise GraphQLError("University already exists")
 
+        for field, value in vars(basic_details).items():
+            if value is None:
+                continue
+
+            if field == "type" and value not in ("PUBLIC", "PRIVATE"):
+                raise GraphQLError("University type must be PUBLIC or PRIVATE")
+
+            if field == "status" and value not in ("DRAFT", "PUBLISH"):
+                raise GraphQLError("Invalid status")
+
+            if field == "review_rating" and not (0 <= value <= 5):
+                raise GraphQLError("Rating must be between 0 and 5")
+
+            if field == "avg_acceptance_rate" and not (0 <= value <= 100):
+                raise GraphQLError("Acceptance rate must be 0–100")
+
         try:
             with transaction.atomic():
 
-                # -------- LOCATION HANDLING --------
                 if loc_id:
                     try:
                         new_location = location.objects.get(id=loc_id)
@@ -337,7 +245,6 @@ class UniversitySchema:
                         }
                     )
 
-                # -------- UNIVERSITY CREATE --------
                 new_university = university.objects.create(
                     name=basic_details.name.strip(),
                     cover_url=basic_details.cover_url.strip(),
@@ -353,21 +260,23 @@ class UniversitySchema:
                     location=new_location,
                 )
 
-                # -------- RELATED TABLES --------
+                def nz(value, default):
+                    return value if value is not None else default
+
                 if admission_stats:
                     AdmissionStats.objects.bulk_create([
                         AdmissionStats(
                             university=new_university,
-                            application_fee=a.application_fee,
-                            admission_type=a.admission_type,
-                            GPA_min=a.gpa_min,
-                            GPA_max=a.gpa_max,
-                            SAT_min=a.sat_min,
-                            SAT_max=a.sat_max,
-                            ACT_min=a.act_min,
-                            ACT_max=a.act_max,
-                            IELTS_min=a.ielts_min,
-                            IELTS_max=a.ielts_max,
+                            application_fee=nz(a.application_fee, 0),
+                            admission_type=nz(a.admission_type, ""),
+                            GPA_min=nz(a.gpa_min, decimal.Decimal("0")),
+                            GPA_max=nz(a.gpa_max, decimal.Decimal("0")),
+                            SAT_min=nz(a.sat_min, decimal.Decimal("0")),
+                            SAT_max=nz(a.sat_max, decimal.Decimal("0")),
+                            ACT_min=nz(a.act_min, decimal.Decimal("0")),
+                            ACT_max=nz(a.act_max, decimal.Decimal("0")),
+                            IELTS_min=nz(a.ielts_min, decimal.Decimal("0")),
+                            IELTS_max=nz(a.ielts_max, decimal.Decimal("0")),
                         )
                         for a in admission_stats
                     ])
@@ -422,7 +331,6 @@ class UniversitySchema:
                         for f in uni_faqs
                     ])
 
-            # -------- FETCH FINAL DATA --------
             with connection.cursor() as cursor:
                 cursor.execute("SELECT get_detailed_university(%s)", [new_university.id])
                 row = cursor.fetchone()
@@ -430,10 +338,9 @@ class UniversitySchema:
             if not row or not row[0]:
                 raise GraphQLError("University created but could not be fetched")
 
-            return UniversitySchema.university_schema_builder(data=row[0])
+            return cls.university_schema_builder(data=row[0])
 
         except IntegrityError:
-            # Covers unique=True & unique_together
             raise GraphQLError("Duplicate entry violates a unique constraint")
 
         except GraphQLError:
@@ -455,17 +362,14 @@ class UniversitySchema:
             videolinks: Optional[UniversityVideoLinkUpdateInput] = None,
             rankings: Optional[UniversityRankingUpdateInput] = None,
             uni_faqs: Optional[UniversityFAQUpdateInput] = None,
-    ):
-        # ---------------- AUTH ----------------
-        try:
-            employee = Employee.objects.get(authToken=uuid.UUID(auth_token))
-        except Exception:
-            raise GraphQLError("Invalid auth token")
+    ) -> "UniversitySchema":
+
+        if not cls.get_employee(auth_token):
+            raise GraphQLError("Invalid Auth Token")
 
         try:
             with transaction.atomic():
 
-                # ---------------- LOCK UNIVERSITY ----------------
                 uni = (
                     university.objects
                     .select_for_update()
@@ -494,7 +398,6 @@ class UniversitySchema:
                             raise GraphQLError("Acceptance rate must be 0–100")
 
                         setattr(uni, field, value)
-
                     uni.save()
 
                 # ---------------- GENERIC HANDLER ----------------
@@ -550,6 +453,7 @@ class UniversitySchema:
                         added = len(created)
 
                     return {"added": added, "updated": updated, "deleted": deleted}
+
                 # ---------------- ADMISSION STATS (SPECIAL MAP) ----------------
                 admission_map = {
                     "application_fee": "application_fee",
@@ -563,7 +467,6 @@ class UniversitySchema:
                     "IELTS_min": "ielts_min",
                     "IELTS_max": "ielts_max",
                 }
-
 
                 # ---------------- SIMPLE TABLES ----------------
                 simple = lambda *f: ({x: x for x in f}, {x: x for x in f})
@@ -626,18 +529,132 @@ class UniversitySchema:
             if not row or not row[0]:
                 raise GraphQLError("University not found")
 
-            return UniversitySchema.university_schema_builder(data=row[0])
+            return cls.university_schema_builder(data=row[0])
 
         except GraphQLError:
             raise
         except Exception as e:
             raise GraphQLError(f"Update failed: {str(e)}")
 
+@strawberry.type
+class UniversityOutputSchema(EmployeeAuthorization, SchemaMixin):
+    limit : int
+    current_page: int
+    total_count: int
+    universities: List[UniversitySchema]
+
+
+    @classmethod
+    def get_universities(
+            cls,
+            auth_token: str,
+            country: Optional[str] = None,
+            query: Optional[str] = None,
+            sort_by_id_asc: Optional[bool] = False,
+            page: int = 1,
+            limit: Optional[int] = 50,
+    ) -> "UniversityOutputSchema":
+
+        if not cls.get_employee(auth_token):
+            raise GraphQLError("Invalid Auth Token")
+        if page < 1:
+            raise GraphQLError("Page must be greater than 0")
+
+        limit = min(limit or 50, 100)
+        offset = (page - 1) * limit
+        country = country.strip() if country else None
+        query = query.strip() if query else None
+        university_table = university._meta.db_table
+        location_table = location._meta.db_table
+        order_by = "u.id ASC" if sort_by_id_asc else "u.id DESC"
+        sql = f"""
+        SELECT
+            u.id              AS university_id,
+            u.cover_url,
+            u.name,
+            u.type,
+            u.establish_year,
+            u.status,
+            u.about,
+            u.review_rating,
+            u.avg_acceptance_rate,
+            u.avg_tution_fee,
+            u.location_map_link,
+
+            l.id              AS location_id,
+            l.city,
+            l.state,
+            l.country,
+
+            COUNT(*) OVER()   AS total_count
+        FROM {university_table} u
+        JOIN {location_table} l ON u.location_id = l.id
+        WHERE
+            (%s IS NULL OR LOWER(l.country) = LOWER(%s))
+            AND (%s IS NULL OR LOWER(u.name) LIKE LOWER(%s))
+        ORDER BY {order_by}
+        LIMIT %s OFFSET %s;
+        """
+        params = [
+            country,
+            country,
+            query,
+            f"%{query}%" if query else None,
+            limit,
+            offset,
+        ]
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            columns = [col[0] for col in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        total_count = rows[0]["total_count"] if rows else 0
+
+        universities = [
+            UniversitySchema(
+                id=row["university_id"],
+                cover_url=row["cover_url"],
+                name=row["name"],
+                type=row["type"],
+                establish_year=row["establish_year"],
+                status=row["status"],
+                about=row["about"],
+                review_rating=row["review_rating"],
+                avg_acceptance_rate=row["avg_acceptance_rate"],
+                avg_tution_fee=row["avg_tution_fee"],
+                location_map_link=row["location_map_link"],
+
+                location=LocationSchema(
+                    id=row["location_id"],
+                    city=row["city"],
+                    state=row["state"],
+                    country=row["country"],
+                ),
+
+                admission_stats=None,
+                work_opportunities=None,
+                contacts=None,
+                statistics=None,
+                video_links=None,
+                rankings=None,
+                faqs=None,
+            )
+            for row in rows
+        ]
+
+        return cls(
+            limit=limit,
+            current_page=page,
+            total_count=total_count,
+            universities=universities,
+        )
+
 
 @strawberry.type
 class UniversityQuery:
-    get_university_list : List[UniversitySchema] = strawberry.field(
-        resolver= UniversitySchema.get_universities,
+    get_university_list : UniversityOutputSchema = strawberry.field(
+        resolver= UniversityOutputSchema.get_universities,
     )
 
     get_detailed_university : UniversitySchema = strawberry.field(

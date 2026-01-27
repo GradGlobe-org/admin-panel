@@ -6,67 +6,102 @@ from  dataclasses import dataclass
 # This file exists because GraphQL makes you be explicit about everything.
 
 
-# -------------------------------------------------------------------
-# COUNTRY RELATED
-# -------------------------------------------------------------------
+# ==========================================================
+# COUNTRY – FAQ
+# ==========================================================
 @dataclass
 class CountryFaqBase:
     question: str
     answer: str
 
+
 @strawberry.input
 class CountryFaqInput(CountryFaqBase):
     pass
+
 
 @strawberry.input
 class CountryFaqUpdate(CountryFaqBase):
     id: int
 
+
 @strawberry.type
-class CountryFaq(CountryFaqBase):
+class CountryFaqSchema(CountryFaqBase):
     id: int
 
-# WHY STUDY
 
+@strawberry.input
+class CountryFaqUpdateInput:
+    add: Optional[List[CountryFaqInput]] = None
+    update: Optional[List[CountryFaqUpdate]] = None
+    delete_ids: Optional[List[int]] = None
+
+
+# ==========================================================
+# WHY STUDY IN
+# ==========================================================
 @dataclass
 class WhyStudyInSectionBase:
     content: str
+
 
 @strawberry.input
 class WhyStudyInSectionInput(WhyStudyInSectionBase):
     pass
 
+
 @strawberry.input
 class WhyStudyInSectionUpdate(WhyStudyInSectionBase):
     id: int
 
+
 @strawberry.type
-class WhyStudyInSection(WhyStudyInSectionBase):
+class WhyStudyInSectionSchema(WhyStudyInSectionBase):
     id: int
 
-# FACTS
 
+@strawberry.input
+class WhyStudyInSectionUpdateInput:
+    add: Optional[List[WhyStudyInSectionInput]] = None
+    update: Optional[List[WhyStudyInSectionUpdate]] = None
+    delete_ids: Optional[List[int]] = None
+
+
+# ==========================================================
+# COUNTRY FACTS
+# ==========================================================
 @dataclass
 class CountryFactBase:
     name: str
+
 
 @strawberry.input
 class CountryFactInput(CountryFactBase):
     pass
 
+
 @strawberry.input
 class CountryFactUpdate(CountryFactBase):
     id: int
 
+
 @strawberry.type
-class CountryFact(CountryFactBase):
+class CountryFactSchema(CountryFactBase):
     id: int
 
+
+@strawberry.input
+class CountryFactUpdateInput:
+    add: Optional[List[CountryFactInput]] = None
+    update: Optional[List[CountryFactUpdate]] = None
+    delete_ids: Optional[List[int]] = None
+
+
+# ==========================================================
 # COST OF LIVING
-
-@strawberry.type
-class CostOfLivingSchema:
-    id: int
+# ==========================================================
+@dataclass
+class CostOfLivingBase:
     rent_min: decimal.Decimal
     rent_max: decimal.Decimal
     food_min: decimal.Decimal
@@ -78,46 +113,105 @@ class CostOfLivingSchema:
     total_min: decimal.Decimal
     total_max: decimal.Decimal
 
-# VISA SCHEMA
+
+@strawberry.input
+class CostOfLivingInput(CostOfLivingBase):
+    pass
+
+
+@strawberry.input
+class CostOfLivingUpdate(CostOfLivingBase):
+    id: int
+
 
 @strawberry.type
-class VisaSchema:
+class CostOfLivingSchema(CostOfLivingBase):
     id: int
+
+
+@strawberry.input
+class CostOfLivingUpdateInput:
+    add: Optional[List[CostOfLivingInput]] = None
+    update: Optional[List[CostOfLivingUpdate]] = None
+    delete_ids: Optional[List[int]] = None
+
+
+# ==========================================================
+# VISA
+# ==========================================================
+@dataclass
+class VisaBase:
     name: str
     type_of_visa: str
     cost: int
     describe: str
 
 
-# -------------------------------------------------------------------
-# UNIVERSITY RELATED
-# -------------------------------------------------------------------
+@strawberry.input
+class VisaInput(VisaBase):
+    pass
+
+
+@strawberry.input
+class VisaUpdate(VisaBase):
+    id: int
+
+
+@strawberry.type
+class VisaSchema(VisaBase):
+    id: int
+
+
+@strawberry.input
+class VisaUpdateInput:
+    add: Optional[List[VisaInput]] = None
+    update: Optional[List[VisaUpdate]] = None
+    delete_ids: Optional[List[int]] = None
+
+
+# ==========================================================
+# COUNTRY CORE
+# ==========================================================
 @dataclass
 class CountryBase:
     name: str
 
+
 @strawberry.input
 class CountryInput(CountryBase):
     pass
+
+
+@strawberry.input
+class CountryItemUpdate(CountryBase):
+    id: int
+
 
 @strawberry.type
 class CountrySchema(CountryBase):
     id: int
 
 
+@strawberry.input
+class CountryUpdateInput:
+    add: Optional[List[CountryInput]] = None
+    update: Optional[List[CountryItemUpdate]] = None
+    delete_ids: Optional[List[int]] = None
+
+
 # ---------------- Admission Stats ----------------
 @dataclass
 class AdmissionStatsBase:
-    application_fee: int
-    admission_type: str
-    gpa_min: decimal.Decimal
-    gpa_max: decimal.Decimal
-    sat_min: decimal.Decimal
-    sat_max: decimal.Decimal
-    act_min: decimal.Decimal
-    act_max: decimal.Decimal
-    ielts_min: decimal.Decimal
-    ielts_max: decimal.Decimal
+    application_fee: Optional[int] = None
+    admission_type: Optional[str] = None
+    gpa_min: Optional[decimal.Decimal] = None
+    gpa_max: Optional[decimal.Decimal] = None
+    sat_min: Optional[decimal.Decimal] = None
+    sat_max: Optional[decimal.Decimal] = None
+    act_min: Optional[decimal.Decimal] = None
+    act_max: Optional[decimal.Decimal] = None
+    ielts_min: Optional[decimal.Decimal] = None
+    ielts_max: Optional[decimal.Decimal] = None
 
 @strawberry.input
 class AdmissionStatsInput(AdmissionStatsBase):
