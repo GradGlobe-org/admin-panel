@@ -1,5 +1,7 @@
 import math
 import uuid
+
+import strawberry
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection, transaction, IntegrityError
 from authentication.Utils import SchemaMixin
@@ -144,20 +146,17 @@ class UniversitySchema(SchemaMixin):
                                 uni_id: int,
                                 ) -> "UniversitySchema":
 
-        if not cls.get_employee(auth_token):
-            raise GraphQLError("Invalid Auth token")
+        emp = cls.get_employee(auth_token)
 
-        # emp = cls.get_employee(auth_token)
-        #
-        # print(emp.job_roles.all())
-        # permission_names = set()
-        #
-        # for role in emp.job_roles.all():
-        #     permission_names.update(
-        #         role.permissions.values_list("name", flat=True)
-        #     )
-        #
-        # print(list(permission_names))
+        if not emp:
+            raise GraphQLError("Unauthorized")
+
+        has_permission = emp.job_roles.filter(
+            permissions__name="university_view"
+        ).exists()
+
+        if not has_permission and not emp.is_superuser:
+            raise GraphQLError("You do not have permission to view university")
 
         try:
             with connection.cursor() as cursor:
@@ -193,8 +192,17 @@ class UniversitySchema(SchemaMixin):
             uni_faqs: Optional[List[UniversityFAQInput]] = None,
     ) -> "UniversitySchema":
 
-        if not cls.get_employee(auth_token):
-            raise GraphQLError("Invalid Auth Token")
+        emp = cls.get_employee(auth_token)
+
+        if not emp:
+            raise GraphQLError("Unauthorized")
+
+        has_permission = emp.job_roles.filter(
+            permissions__name="university_create"
+        ).exists()
+
+        if not has_permission and not emp.is_superuser:
+            raise GraphQLError("You do not have permission to create university")
 
         if loc_id and loc:
             raise GraphQLError("Provide either loc_id or loc, not both")
@@ -355,6 +363,8 @@ class UniversitySchema(SchemaMixin):
             uni_id: int,
             auth_token: str,
             uni_data: Optional[UniversityPatch] = None,
+            location_id: Optional[int] = None,
+            uni_location: Optional[LocationInput] = None,
             admission_stats: Optional[AdmissionStatsUpdateInput] = None,
             work_opportunities: Optional[WorkOpportunityUpdateInput] = None,
             contacts: Optional[UniversityContactUpdateInput] = None,
@@ -364,8 +374,20 @@ class UniversitySchema(SchemaMixin):
             uni_faqs: Optional[UniversityFAQUpdateInput] = None,
     ) -> "UniversitySchema":
 
-        if not cls.get_employee(auth_token):
-            raise GraphQLError("Invalid Auth Token")
+        emp = cls.get_employee(auth_token)
+
+        if not emp:
+            raise GraphQLError("Unauthorized")
+
+        has_permission = emp.job_roles.filter(
+            permissions__name="university_update"
+        ).exists()
+
+        if not has_permission and not emp.is_superuser:
+            raise GraphQLError("You do not have permission to update university")
+
+        if location_id and uni_location:
+            raise GraphQLError("Provide either location_id or uni_location, not both")
 
         try:
             with transaction.atomic():
@@ -399,6 +421,38 @@ class UniversitySchema(SchemaMixin):
 
                         setattr(uni, field, value)
                     uni.save()
+
+                if location_id:
+                    loc = location.objects.filter(id=location_id).first()
+                    if not loc:
+                        raise GraphQLError("Invalid location_id")
+
+                    uni.location = loc
+                    uni.save(update_fields=["location"])
+
+                if uni_location:
+                    city = uni_location.city.strip()
+                    state = uni_location.state.strip()
+                    country = uni_location.country.strip()
+
+                    if not city or not state or not country:
+                        raise GraphQLError(
+                            "City, state and country are required"
+                        )
+
+                    loc, _ = location.objects.get_or_create(
+                        city__iexact=city,
+                        state__iexact=state,
+                        country__iexact=country,
+                        defaults={
+                            "city": city,
+                            "state": state,
+                            "country": country,
+                        }
+                    )
+
+                uni.location = loc
+                uni.save(update_fields=["location"])
 
                 # ---------------- GENERIC HANDLER ----------------
                 def handle_update(model, payload, create_map, update_map, label: str):
@@ -543,7 +597,6 @@ class UniversityOutputSchema(EmployeeAuthorization, SchemaMixin):
     total_count: int
     universities: List[UniversitySchema]
 
-
     @classmethod
     def get_universities(
             cls,
@@ -555,8 +608,18 @@ class UniversityOutputSchema(EmployeeAuthorization, SchemaMixin):
             limit: Optional[int] = 50,
     ) -> "UniversityOutputSchema":
 
-        if not cls.get_employee(auth_token):
-            raise GraphQLError("Invalid Auth Token")
+        emp = cls.get_employee(auth_token)
+
+        if not emp:
+            raise GraphQLError("Unauthorized")
+
+        has_permission = emp.job_roles.filter(
+            permissions__name="university_view"
+        ).exists()
+
+        if not has_permission and not emp.is_superuser:
+            raise GraphQLError("You do not have permission to view university")
+
         if page < 1:
             raise GraphQLError("Page must be greater than 0")
 
@@ -650,6 +713,120 @@ class UniversityOutputSchema(EmployeeAuthorization, SchemaMixin):
             universities=universities,
         )
 
+@strawberry.type
+class CitySchema:
+    id: int
+    city_name: str
+
+@strawberry.type
+class StateSchema:
+    name: str
+    cities: Optional[List[CitySchema]] = None
+
+@strawberry.type
+class CountrySchema(SchemaMixin):
+    name: str
+    states: Optional[List[StateSchema]] = None
+
+    @classmethod
+    def country(
+            cls,
+            auth_token: str,
+            country_name: str | None = None,
+            state_name: str | None = None
+    ) -> List["CountrySchema"]:
+
+        emp = cls.get_employee(auth_token)
+
+        if not emp:
+            raise GraphQLError("Unauthorized")
+
+        has_permission = emp.job_roles.filter(
+            permissions__name="university_view"
+        ).exists()
+
+        if not has_permission and not emp.is_superuser:
+            raise GraphQLError("You do not have permission to view university(location)")
+
+        if not country_name and state_name:
+            raise GraphQLError("Country name is required with state name")
+
+        table = location._meta.db_table
+
+        try:
+
+            if not country_name:
+                sql = f"""
+                        SELECT DISTINCT country
+                        FROM {table}
+                        ORDER BY country
+                    """
+
+                with connection.cursor() as cursor:
+                    cursor.execute(sql)
+                    rows = cursor.fetchall()
+
+                return [
+                    cls(name=row[0], states=None)
+                    for row in rows
+                ]
+
+            if country_name and not state_name:
+                sql = f"""
+                        SELECT DISTINCT state
+                        FROM {table}
+                        WHERE country = %s
+                        ORDER BY state
+                    """
+
+                with connection.cursor() as cursor:
+                    cursor.execute(sql, [country_name])
+                    rows = cursor.fetchall()
+
+                states = [
+                    StateSchema(name=row[0], cities=None)
+                    for row in rows
+                ]
+
+                return [
+                    cls(
+                        name=country_name,
+                        states=states
+                    )
+                ]
+
+            sql = f"""
+                    SELECT id, city
+                    FROM {table}
+                    WHERE country = %s AND state = %s
+                    ORDER BY city
+                """
+
+            with connection.cursor() as cursor:
+                cursor.execute(sql, [country_name, state_name])
+                rows = cursor.fetchall()
+
+            cities = [
+                CitySchema(id=row[0], city_name=row[1])
+                for row in rows
+            ]
+
+            return [
+                cls(
+                    name=country_name,
+                    states=[
+                        StateSchema(
+                            name=state_name,
+                            cities=cities
+                        )
+                    ]
+                )
+            ]
+
+        except:
+            raise GraphQLError("An error occurred")
+
+
 
 @strawberry.type
 class UniversityQuery:
@@ -659,6 +836,10 @@ class UniversityQuery:
 
     get_detailed_university : UniversitySchema = strawberry.field(
         resolver= UniversitySchema.get_detailed_university,
+    )
+
+    location : List[CountrySchema] = strawberry.field(
+        resolver= CountrySchema.country,
     )
 
 @strawberry.type

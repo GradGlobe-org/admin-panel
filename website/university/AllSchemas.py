@@ -189,8 +189,7 @@ class CountryItemUpdate(CountryBase):
 
 @strawberry.type
 class CountrySchema(CountryBase):
-    id: int
-
+    pass
 
 @strawberry.input
 class CountryUpdateInput:
