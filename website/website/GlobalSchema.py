@@ -5,7 +5,7 @@ from authentication.Schema import EmployeeQuery, EmployeeMutation, EmployeeSubsc
 from blogs.Schema import BlogQuery, BlogMutation
 from tasks.Schema import TaskQuery, TaskMutation
 from university.Schema import UniversityQuery, UniversityMutation
-
+from course.Schema import CourseQuery, CourseMutation
 
 @strawberry.type
 class Query:
@@ -25,6 +25,10 @@ class Query:
     def university(self) -> UniversityQuery:
         return UniversityQuery()
 
+    @strawberry.field
+    def course(self) -> CourseQuery:
+        return CourseQuery()
+
 
 @strawberry.type
 class Mutation:
@@ -43,6 +47,10 @@ class Mutation:
     @strawberry.field
     def university(self) -> UniversityMutation:
         return UniversityMutation()
+
+    @strawberry.field
+    def course(self) -> CourseMutation:
+        return CourseMutation()
 
 
 @strawberry.type

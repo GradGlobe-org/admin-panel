@@ -3,13 +3,18 @@ from university.models import university
 
 class Course(models.Model):
     PROGRAM_LEVEL_CHOICES = (
+        ('foundation', 'Foundation / Pathway'),
+        ('associate', 'Associate'),
         ('bachelors', 'Bachelors'),
+        ('honours', 'Honours'),
+        ('graduate_certificate', 'Graduate Certificate'),
+        ('graduate_diploma', 'Graduate Diploma'),
+        ('postgraduate_diploma', 'Postgraduate Diploma'),
         ('masters', 'Masters'),
+        ('professional_doctorate', 'Professional Doctorate'),
+        ('phd', 'PhD'),
         ('diploma', 'Diploma'),
         ('certificate', 'Certificate'),
-        ('phd', 'PhD'),
-        ('associate', 'Associate'),
-        ('postgraduate_diploma', 'Postgraduate Diploma'),
     )
 
     university = models.ForeignKey(
