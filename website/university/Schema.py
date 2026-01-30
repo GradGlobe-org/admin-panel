@@ -181,8 +181,7 @@ class UniversitySchema(SchemaMixin):
             cls,
             auth_token: str,
             basic_details: UniversityInput,
-            loc_id: Optional[int] = None,
-            loc: Optional[LocationInput] = None,
+            loc_id: int,
             admission_stats: Optional[List[AdmissionStatsInput]] = None,
             work_opportunities: Optional[List[WorkOpportunityInput]] = None,
             contacts: Optional[List[UniversityContactInput]] = None,
@@ -203,12 +202,6 @@ class UniversitySchema(SchemaMixin):
 
         if not has_permission and not emp.is_superuser:
             raise GraphQLError("You do not have permission to create university")
-
-        if loc_id and loc:
-            raise GraphQLError("Provide either loc_id or loc, not both")
-
-        if not loc_id and not loc:
-            raise GraphQLError("Location is required")
 
         if university.objects.filter(
                 Q(name__iexact=basic_details.name.strip()) |
@@ -244,23 +237,11 @@ class UniversitySchema(SchemaMixin):
 
         try:
             with transaction.atomic():
-
                 if loc_id:
                     try:
                         new_location = location.objects.get(id=loc_id)
                     except location.DoesNotExist:
                         raise GraphQLError("Invalid location id")
-                else:
-                    new_location, _ = location.objects.get_or_create(
-                        city__iexact=loc.city.strip(),
-                        state__iexact=loc.state.strip(),
-                        country__iexact=loc.country.strip(),
-                        defaults={
-                            "city": loc.city.strip(),
-                            "state": loc.state.strip(),
-                            "country": loc.country.strip(),
-                        }
-                    )
 
                 new_university = university.objects.create(
                     name=basic_details.name.strip(),
@@ -373,7 +354,6 @@ class UniversitySchema(SchemaMixin):
             auth_token: str,
             uni_data: Optional[UniversityPatch] = None,
             location_id: Optional[int] = None,
-            uni_location: Optional[LocationInput] = None,
             admission_stats: Optional[AdmissionStatsUpdateInput] = None,
             work_opportunities: Optional[WorkOpportunityUpdateInput] = None,
             contacts: Optional[UniversityContactUpdateInput] = None,
@@ -394,9 +374,6 @@ class UniversitySchema(SchemaMixin):
 
         if not has_permission and not emp.is_superuser:
             raise GraphQLError("You do not have permission to update university")
-
-        if location_id and uni_location:
-            raise GraphQLError("Provide either location_id or uni_location, not both")
 
         try:
             with transaction.atomic():
@@ -455,30 +432,6 @@ class UniversitySchema(SchemaMixin):
 
                     uni.location = loc
                     uni.save(update_fields=["location"])
-
-                if uni_location:
-                    city = uni_location.city.strip()
-                    state = uni_location.state.strip()
-                    country = uni_location.country.strip()
-
-                    if not city or not state or not country:
-                        raise GraphQLError(
-                            "City, state and country are required"
-                        )
-
-                    loc, _ = location.objects.get_or_create(
-                        city__iexact=city,
-                        state__iexact=state,
-                        country__iexact=country,
-                        defaults={
-                            "city": city,
-                            "state": state,
-                            "country": country,
-                        }
-                    )
-
-                uni.location = loc
-                uni.save(update_fields=["location"])
 
                 # ---------------- GENERIC HANDLER ----------------
                 def handle_update(model, payload, create_map, update_map, label: str):

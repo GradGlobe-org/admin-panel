@@ -96,4 +96,7 @@
 #     category: str
 #     email: str
 #     google_file_uuid: str
-#     # details
+#     student_details: StudentDetailsSchema
+#
+#     @classmethod
+#     def student
