@@ -616,6 +616,42 @@ class UniversitySchema(SchemaMixin):
         except Exception as e:
             raise GraphQLError(f"Update failed: {str(e)}")
 
+    @classmethod
+    def ranking_agency(cls,
+                       auth_token: str
+                       ) -> List[RankingSchema]:
+
+        emp = cls.get_employee(auth_token)
+
+        if not emp:
+            raise GraphQLError("Unauthorized")
+
+        has_permission = emp.job_roles.filter(
+            permissions__name__in=["university_update", "university_add"]
+        ).exists()
+
+        if not has_permission and not emp.is_superuser:
+            raise GraphQLError("You do not have permission to view ranking agencies")
+
+        try:
+            agencies = ranking_agency.objects.all().order_by("name")
+
+            ranking_agencies = []
+
+            for agency in agencies:
+                ranking_agencies.append(RankingSchema(
+                    id=agency.id,
+                    name=agency.name,
+                    description=agency.description,
+                    logo=agency.logo,
+                ))
+
+            return ranking_agencies
+
+        except:
+            raise GraphQLError("An unexpected error occurred")
+
+
 @strawberry.type
 class UniversityOutputSchema(EmployeeAuthorization, SchemaMixin):
     limit : int
@@ -866,6 +902,10 @@ class UniversityQuery:
 
     location : List[CountrySchema] = strawberry.field(
         resolver= CountrySchema.country,
+    )
+
+    ranking_agency : List[RankingSchema] = strawberry.field(
+        resolver= UniversitySchema.ranking_agency,
     )
 
 @strawberry.type
