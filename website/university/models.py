@@ -164,7 +164,7 @@ class university(models.Model):
 
 class AdmissionStats(models.Model):
     university = models.ForeignKey(university, on_delete=models.CASCADE, help_text="University this Admission stats is assigned to")
-    TYPE = (("UNDERGRADUATE","UNDERGRADUATE"), ("GRADUATE","GRADUATE"))
+    TYPE = (("UNDERGRADUATE","UNDERGRADUATE"), ("GRADUATE","GRADUATE"), ("PHD","Doctorate(PhD)"))
     application_fee = models.PositiveIntegerField(help_text="Application fee for this university")
     admission_type = models.CharField(max_length=50, choices=TYPE)
     GPA_min = models.DecimalField(

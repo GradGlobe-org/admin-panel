@@ -233,6 +233,15 @@ class UniversitySchema(SchemaMixin):
             if field == "avg_acceptance_rate" and not (0 <= value <= 100):
                 raise GraphQLError("Acceptance rate must be 0–100")
 
+        if admission_stats:
+            valid_types = [choice[0] for choice in AdmissionStats.TYPE]
+
+            for stat in admission_stats:
+                if stat.admission_type not in valid_types:
+                    raise GraphQLError(
+                        f"Invalid admission type: {stat.admission_type}"
+                    )
+
         try:
             with transaction.atomic():
 
@@ -421,6 +430,23 @@ class UniversitySchema(SchemaMixin):
 
                         setattr(uni, field, value)
                     uni.save()
+
+                if admission_stats:
+                    valid_types = [choice[0] for choice in AdmissionStats.TYPE]
+
+                    if admission_stats.add:
+                        for stat in admission_stats.add:
+                            if stat.admission_type and stat.admission_type not in valid_types:
+                                raise GraphQLError(
+                                    f"Invalid admission type: {stat.admission_type}"
+                                )
+
+                    if admission_stats.update:
+                        for stat in admission_stats.update:
+                            if stat.admission_type and stat.admission_type not in valid_types:
+                                raise GraphQLError(
+                                    f"Invalid admission type: {stat.admission_type}"
+                                )
 
                 if location_id:
                     loc = location.objects.filter(id=location_id).first()

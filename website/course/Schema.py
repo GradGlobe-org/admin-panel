@@ -1,6 +1,6 @@
 from typing import Optional, List
 import strawberry
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection, transaction, IntegrityError
 from graphql import GraphQLError
 
@@ -14,18 +14,18 @@ from university.models import university
 @strawberry.type
 class CourseSchema(SchemaMixin):
     id: int
-    university_id : Optional[int]
-    university_name : Optional[str]
-    program_name: Optional[str]
-    program_level: Optional[str]
-    duration_in_years: Optional[int]
-    next_intake: Optional[datetime.date]
-    about: Optional[str]
-    start_date: Optional[datetime.date]
-    submission_deadline: Optional[datetime.date]
-    offshore_onshore_deadline: Optional[datetime.date]
-    brochure_url: Optional[str]
-    tution_fees: Optional[int]
+    university_id : Optional[int] = None
+    university_name : Optional[str] = None
+    program_name: Optional[str] = None
+    program_level: Optional[str] = None
+    duration_in_years: Optional[int] = None
+    next_intake: Optional[datetime.date] = None
+    about: Optional[str] = None
+    start_date: Optional[datetime.date] = None
+    submission_deadline: Optional[datetime.date] = None
+    offshore_onshore_deadline: Optional[datetime.date] = None
+    brochure_url: Optional[str] = None
+    tution_fees: Optional[int] = None
 
     @classmethod
     def course(cls,
@@ -198,7 +198,7 @@ class CourseSchema(SchemaMixin):
 
                 if level not in valid_levels:
                     raise GraphQLError(
-                        f"Invalid program level. Allowed values: {', '.join(valid_levels)}"
+                        f"Invalid program level: {level}"
                     )
 
                 course.program_level = level
