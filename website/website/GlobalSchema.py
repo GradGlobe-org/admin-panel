@@ -6,7 +6,7 @@ from blogs.Schema import BlogQuery, BlogMutation
 from tasks.Schema import TaskQuery, TaskMutation
 from university.Schema import UniversityQuery, UniversityMutation
 from course.Schema import CourseQuery, CourseMutation
-from student.Schema import StudentsQuery
+from student.Schema import StudentsQuery, StudentMutation
 
 @strawberry.type
 class Query:
@@ -56,6 +56,10 @@ class Mutation:
     @strawberry.field
     def course(self) -> CourseMutation:
         return CourseMutation()
+
+    @strawberry.field
+    def student(self) -> StudentMutation:
+        return StudentMutation()
 
 
 @strawberry.type

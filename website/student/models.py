@@ -1,4 +1,7 @@
 from uuid import uuid4
+
+from django.db.models import F
+
 from authentication.models import Employee
 from course.models import Course
 from django.core.validators import (MaxLengthValidator, MinLengthValidator,
@@ -99,7 +102,7 @@ class StudentProfilePicture(models.Model):
 
 class StudentDetails(models.Model):
     student = models.OneToOneField(
-        Student, on_delete=models.CASCADE, related_name="details"
+        Student, on_delete=models.CASCADE, related_name="student_details"
     )
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -140,7 +143,7 @@ class EducationDetails(models.Model):
 
 class ExperienceDetails(models.Model):
     student = models.ForeignKey(
-        "Student", on_delete=models.CASCADE, related_name="experiences"
+        "Student", on_delete=models.CASCADE, related_name="experience_details"
     )
     company_name = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
@@ -335,7 +338,7 @@ class AppliedUniversity(models.Model):
     ]
     status = models.CharField(max_length=55, choices=STATUS, default="pending")
 
-    application_number = models.CharField(max_length=20, unique=True)
+    application_number = models.CharField(max_length=20, unique=True, null=True)
 
     class Meta:
         unique_together = ("student", "course")
@@ -350,6 +353,16 @@ class AppliedUniversity(models.Model):
 
     def __str__(self):
         return f"{self.student} → {self.course} ({self.application_number})"
+
+    def save(self, *args, **kwargs):
+        if self.application_number is None:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT nextval('applied_university_app_no_seq')"
+                )
+                self.application_number = cursor.fetchone()[0]
+
+        super().save(*args, **kwargs)
 
 
 class DocumentType(models.Model):
