@@ -207,7 +207,7 @@ class StudentSchema(SchemaMixin):
     phone_number: str
     category: Optional[str]
     email: Optional[str]
-    google_file_uuid: Optional[str] = None
+    image_id: Optional[str] = None
 
     student_details: Optional[StudentDetailsSchema] = None
     education_details: Optional[EducationDetailsSchema] = None
@@ -245,7 +245,7 @@ class StudentSchema(SchemaMixin):
                 phone_number=student["phone_number"],
                 category=student.get("category"),
                 email=student.get("email"),
-                google_file_uuid=student.get("google_file_uuid"),
+                image_id=student.get("google_file_uuid"),
 
                 student_details=(
                     StudentDetailsSchema(
@@ -865,7 +865,7 @@ class StudentListSchema(SchemaMixin):
 
         student_qs = (
             Student.objects
-            .select_related("student_details", "email", "category")
+            .select_related("student_details", "email", "category", "profile_picture")
             .prefetch_related("assigned_counsellors__employee")
         )
 
@@ -927,6 +927,8 @@ class StudentListSchema(SchemaMixin):
                         assigned_on=str(assignment.assigned_on),
                     )
 
+            profile = getattr(s, "profile_picture", None)
+
             students.append(
                 StudentSchema(
                     id=s.id,
@@ -934,6 +936,7 @@ class StudentListSchema(SchemaMixin):
                     phone_number=s.phone_number,
                     category=s.category.name if s.category else None,
                     email=s.email.email if hasattr(s, "email") else None,
+                    image_id=profile.google_file_id if profile else None,
                     student_details=details,
                     assigned_counsellor=assigned_counsellor,
                 )
