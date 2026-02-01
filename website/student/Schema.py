@@ -863,91 +863,94 @@ class StudentListSchema(SchemaMixin):
 
         limit = min(limit or 50, 100)
 
-        student_qs = (
-            Student.objects
-            .select_related("student_details", "email", "category", "profile_picture")
-            .prefetch_related("assigned_counsellors__employee")
-        )
-
-        if not emp.is_superuser or assigned_to_me_only:
-            student_qs = student_qs.filter(
-                assigned_counsellors__employee=emp
+        try:
+            student_qs = (
+                Student.objects
+                .select_related("student_details", "email", "category", "profile_picture")
+                .prefetch_related("assigned_counsellors__employee")
             )
 
-        if query:
-            student_qs = student_qs.filter(
-                Q(full_name__icontains=query) |
-                Q(phone_number__icontains=query) |
-                Q(email__email__icontains=query)
-            )
-
-        student_qs = student_qs.distinct()
-
-        paginator = Paginator(student_qs, limit)
-        page_obj = paginator.get_page(page)
-
-        students_qs = page_obj.object_list
-        total = paginator.count
-
-        students = []
-
-        for s in students_qs:
-            details = None
-            d = getattr(s, "details", None)
-
-            if d:
-                details = StudentDetailsSchema(
-                    first_name=d.first_name,
-                    last_name=d.last_name,
-                    gender=d.gender,
-                    dob=str(d.dob),
-                    nationality=d.nationality,
-                    address=d.address,
-                    state=d.state,
-                    city=d.city,
-                    zip_code=d.zip_code,
-                    country=d.country,
+            if not emp.is_superuser or assigned_to_me_only:
+                student_qs = student_qs.filter(
+                    assigned_counsellors__employee=emp
                 )
 
-            assigned_counsellor = None
+            if query:
+                student_qs = student_qs.filter(
+                    Q(full_name__icontains=query) |
+                    Q(phone_number__icontains=query) |
+                    Q(email__email__icontains=query)
+                )
 
-            if emp.is_superuser:
+            student_qs = student_qs.distinct()
 
-                assignments = list(s.assigned_counsellors.all())
-                assignment = assignments[0] if assignments else None
+            paginator = Paginator(student_qs, limit)
+            page_obj = paginator.get_page(page)
 
-                if assignment and assignment.employee:
-                    employee = assignment.employee
+            students_qs = page_obj.object_list
+            total = paginator.count
 
-                    assigned_counsellor = AssignedCounsellorSchema(
-                        student_id=s.id,
-                        student_name=s.full_name,
-                        employee_id=employee.id,
-                        employee_name=getattr(employee, "name", str(employee)),
-                        assigned_on=str(assignment.assigned_on),
+            students = []
+
+            for s in students_qs:
+                details = None
+                # d = getattr(s, "details", None)
+                d = getattr(s, "student_details", None)
+
+                if d:
+                    details = StudentDetailsSchema(
+                        first_name=d.first_name,
+                        last_name=d.last_name,
+                        gender=d.gender,
+                        dob=str(d.dob),
+                        nationality=d.nationality,
+                        address=d.address,
+                        state=d.state,
+                        city=d.city,
+                        zip_code=d.zip_code,
+                        country=d.country,
                     )
 
-            profile = getattr(s, "profile_picture", None)
+                assigned_counsellor = None
 
-            students.append(
-                StudentSchema(
-                    id=s.id,
-                    full_name=s.full_name,
-                    phone_number=s.phone_number,
-                    category=s.category.name if s.category else None,
-                    email=s.email.email if hasattr(s, "email") else None,
-                    image_id=profile.google_file_id if profile else None,
-                    student_details=details,
-                    assigned_counsellor=assigned_counsellor,
+                if emp.is_superuser:
+                    assignment = s.assigned_counsellors.first()
+
+                    if assignment and assignment.employee:
+                        employee = assignment.employee
+
+                        assigned_counsellor = [AssignedCounsellorSchema(
+                            student_id=s.id,
+                            student_name=s.full_name,
+                            employee_id=employee.id,
+                            employee_name=getattr(employee, "name", str(employee)),
+                            assigned_on=str(assignment.assigned_on),
+                        )]
+
+                profile = getattr(s, "profile_picture", None)
+
+                students.append(
+                    StudentSchema(
+                        id=s.id,
+                        full_name=s.full_name,
+                        phone_number=s.phone_number,
+                        category=s.category.name if s.category else None,
+                        email=s.email.email if hasattr(s, "email") else None,
+                        image_id=profile.google_file_id if profile else None,
+                        student_details=details,
+                        assigned_counsellor=assigned_counsellor,
+                    )
                 )
+
+            return cls(
+                student_list=students,
+                limit=limit,
+                current_page=page,
+                total=total,
             )
 
-        return cls(
-            student_list=students,
-            limit=limit,
-            current_page=page,
-            total=total,
-        )
+        except:
+            raise GraphQLError("Internal Server Error")
 
 
 @strawberry.type
