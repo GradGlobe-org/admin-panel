@@ -10,7 +10,7 @@ from django.db.models import Q
 from strawberry import Info
 from authentication.models import Employee
 from student.models import Student, AssignedCounsellor, Bucket, Email, StudentDetails, EducationDetails, TestScores, \
-    Preference, ExperienceDetails, AppliedUniversity
+    Preference, ExperienceDetails, AppliedUniversity, StudentLogs
 from authentication.Utils import SchemaMixin
 from .AllSchema import *
 import re
@@ -223,9 +223,21 @@ class StudentSchema(SchemaMixin):
     applied_university: Optional[list[AppliedUniversitySchema]] = None
 
     @classmethod
-    def student_schema_builder(cls, data: dict) -> "StudentSchema":
+    def student_schema_builder(cls, data: dict, logs: Optional[dict] = None) -> "StudentSchema":
         try:
             student = data["student"]
+
+            student_logs = (
+                [
+                    StudentLogsSchema(
+                        logs=l["logs"],
+                        added_on=l["added_on"],
+                    )
+                    for l in logs
+                ]
+                if logs
+                else []
+            )
 
             return StudentSchema(
                 id=student["id"],
@@ -344,6 +356,8 @@ class StudentSchema(SchemaMixin):
                     )
                     for a in (data.get("applied_universities") or [])
                 ],
+
+                student_logs=student_logs,
             )
 
         except Exception as e:
@@ -362,47 +376,50 @@ class StudentSchema(SchemaMixin):
         return True
 
     @classmethod
-    def student(cls, info: Info, auth_token:str, student_id: int):
-        try:
-            emp = cls.get_employee(auth_token)
+    def student(cls, info: Info, auth_token: str, student_id: int):
+        emp = cls.get_employee(auth_token)
+        if not emp:
+            raise GraphQLError("Unauthorized")
 
-            if not emp:
-                raise GraphQLError("Unauthorized")
+        requested_fields = [
+            f.name for f in info.selected_fields[0].selections
+        ]
 
-            if not emp.is_superuser:
-                is_assigned = AssignedCounsellor.objects.filter(
-                    student_id=student_id,
-                    employee_id=emp.id
-                ).exists()
+        logs_requested = "studentLogs" in requested_fields
 
-                if not is_assigned:
-                    raise GraphQLError(
-                        "You do not have permission to view this student"
-                    )
-        except:
-            raise GraphQLError("Internal Server Error")
+        if not emp.is_superuser:
+            is_assigned = AssignedCounsellor.objects.filter(
+                student_id=student_id,
+                employee_id=emp.id
+            ).exists()
 
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT get_student_full_profile(%s);",
-                    [student_id],
+            if not is_assigned:
+                raise GraphQLError(
+                    "You do not have permission to view this student"
                 )
-                row = cursor.fetchone()
 
-            if not row or not row[0]:
-                raise GraphQLError("Student not found")
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT get_student_full_profile(%s);",
+                [student_id],
+            )
+            row = cursor.fetchone()
 
-            raw = row[0]
+        if not row or not row[0]:
+            raise GraphQLError("Student not found")
 
-            if isinstance(raw, str):
-                data = json.loads(raw)
-            else:
-                data = raw
+        data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
 
-            return cls.student_schema_builder(data)
-        except:
-            raise GraphQLError("Internal Server Error")
+        logs = None
+        if logs_requested:
+            logs = list(
+                StudentLogs.objects
+                .filter(student_id=student_id)
+                .values("logs", "added_on")
+                .order_by("-added_on")
+            )
+
+        return cls.student_schema_builder(data, logs)
 
     @classmethod
     def add_student(cls,

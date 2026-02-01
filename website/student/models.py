@@ -7,7 +7,7 @@ from course.models import Course
 from django.core.validators import (MaxLengthValidator, MinLengthValidator,
                                     RegexValidator)
 from .Constants import *
-from django.db import models
+from django.db import models, connection
 from django.utils import timezone
 from university.models import university
 
