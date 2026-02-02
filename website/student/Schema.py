@@ -864,10 +864,19 @@ class StudentListSchema(SchemaMixin):
         limit = min(limit or 50, 100)
 
         try:
+            # Main optimized queryset
             student_qs = (
                 Student.objects
-                .select_related("student_details", "email", "category", "profile_picture")
-                .prefetch_related("assigned_counsellors__employee")
+                .select_related(
+                    "student_details",
+                    "email",
+                    "category",
+                    "profile_picture",
+                )
+                .prefetch_related(
+                    "assigned_counsellors__employee",
+                    "applied_universities__course",
+                )
             )
 
             if not emp.is_superuser or assigned_to_me_only:
@@ -893,8 +902,8 @@ class StudentListSchema(SchemaMixin):
             students = []
 
             for s in students_qs:
+
                 details = None
-                # d = getattr(s, "details", None)
                 d = getattr(s, "student_details", None)
 
                 if d:
@@ -911,6 +920,21 @@ class StudentListSchema(SchemaMixin):
                         country=d.country,
                     )
 
+                applied_university = []
+
+                ap = s.applied_universities.all()
+
+                for application in ap:
+                    applied_university.append(
+                        AppliedUniversitySchema(
+                            id=application.id,
+                            course_id=application.course_id,
+                            course_name=application.course.program_name if application.course else None,
+                            applied_at=application.applied_at,
+                            application_number=application.application_number,
+                        )
+                    )
+
                 assigned_counsellor = None
 
                 if emp.is_superuser:
@@ -919,13 +943,15 @@ class StudentListSchema(SchemaMixin):
                     if assignment and assignment.employee:
                         employee = assignment.employee
 
-                        assigned_counsellor = [AssignedCounsellorSchema(
-                            student_id=s.id,
-                            student_name=s.full_name,
-                            employee_id=employee.id,
-                            employee_name=getattr(employee, "name", str(employee)),
-                            assigned_on=str(assignment.assigned_on),
-                        )]
+                        assigned_counsellor = [
+                            AssignedCounsellorSchema(
+                                student_id=s.id,
+                                student_name=s.full_name,
+                                employee_id=employee.id,
+                                employee_name=getattr(employee, "name", str(employee)),
+                                assigned_on=str(assignment.assigned_on),
+                            )
+                        ]
 
                 profile = getattr(s, "profile_picture", None)
 
@@ -935,10 +961,11 @@ class StudentListSchema(SchemaMixin):
                         full_name=s.full_name,
                         phone_number=s.phone_number,
                         category=s.category.name if s.category else None,
-                        email=s.email.email if hasattr(s, "email") else None,
+                        email=getattr(getattr(s, "email", None), "email", None),
                         image_id=profile.google_file_id if profile else None,
                         student_details=details,
                         assigned_counsellor=assigned_counsellor,
+                        applied_university=applied_university,
                     )
                 )
 
@@ -949,9 +976,8 @@ class StudentListSchema(SchemaMixin):
                 total=total,
             )
 
-        except:
+        except Exception as e:
             raise GraphQLError("Internal Server Error")
-
 
 @strawberry.type
 class StudentsQuery:
