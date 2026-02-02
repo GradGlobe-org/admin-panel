@@ -6,11 +6,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection, transaction
 from graphql import GraphQLError
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from strawberry import Info
 from authentication.models import Employee
 from student.models import Student, AssignedCounsellor, Bucket, Email, StudentDetails, EducationDetails, TestScores, \
-    Preference, ExperienceDetails, AppliedUniversity, StudentLogs
+    Preference, ExperienceDetails, AppliedUniversity, StudentLogs, CallRequest
 from authentication.Utils import SchemaMixin
 from .AllSchema import *
 import re
@@ -876,6 +876,10 @@ class StudentListSchema(SchemaMixin):
                 .prefetch_related(
                     "assigned_counsellors__employee",
                     "applied_universities__course",
+                    Prefetch(
+                        "call_requests",
+                        queryset=CallRequest.objects.select_related("student", "employee")
+                    )
                 )
             )
 
@@ -935,6 +939,19 @@ class StudentListSchema(SchemaMixin):
                         )
                     )
 
+                call_request = []
+                cr = s.call_requests.all()
+                for call in cr:
+                    call_request.append(
+                        CallRequestSchema(
+                            student_id=call.student_id,
+                            student_name=call.student.full_name,
+                            employee_id=call.employee.id,
+                            employee_name=call.employee.name,
+                            requested_on=call.requested_on,
+                        )
+                    )
+
                 assigned_counsellor = None
 
                 if emp.is_superuser:
@@ -966,6 +983,7 @@ class StudentListSchema(SchemaMixin):
                         student_details=details,
                         assigned_counsellor=assigned_counsellor,
                         applied_university=applied_university,
+                        call_request=call_request,
                     )
                 )
 
