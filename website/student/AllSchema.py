@@ -86,13 +86,13 @@ class StudentLogsSchema:
     added_on: datetime
 
 
-@strawberry.type
-class CallRequestSchema:
-    student_id: int
-    student_name: str
-    employee_id: int
-    employee_name: str
-    requested_on: datetime
+# @strawberry.type
+# class CallRequestSchema:
+#     student_id: int
+#     student_name: str
+#     employee_id: int
+#     employee_name: str
+#     requested_on: datetime
 
 
 @strawberry.input
@@ -190,3 +190,19 @@ class AppliedUniversityUpdateInputSchema:
     add: Optional[List[AppliedUniversityInputSchema]] = None
     update: Optional[List[AppliedUniversityUpdateItemSchema]] = None
     delete_ids: Optional[List[int]] = None
+
+@strawberry.input
+class CallRequestInputSchema:
+    id: Optional[int] = None
+    schedule_for: Optional[date] = None
+    call_timing: Optional[datetime] = None
+    status: Optional[str] = None
+    counsellor_notes: Optional[str] = None
+    follow_up_required: Optional[bool] = None
+    follow_up_on: Optional[datetime] = None
+
+
+@strawberry.input
+class CallRequestUpdateInputSchema:
+    add: Optional[List[CallRequestInputSchema]] = None
+    update: Optional[List[CallRequestInputSchema]] = None

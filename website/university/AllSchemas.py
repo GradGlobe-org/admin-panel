@@ -450,3 +450,42 @@ class UniversityPatch:
 @strawberry.type
 class UniversitySchema(UniversityBase):
     id: int
+
+@dataclass
+class AskDocumentBase:
+    document_type_id: int
+    instructions: Optional[str] = None
+
+@strawberry.input
+class AskDocumentInput(AskDocumentBase):
+    pass
+
+@dataclass
+class UpdateDocumentBase:
+    id: int
+    instructions: Optional[str] = None
+
+@strawberry.input
+class UpdateDocumentInput(UpdateDocumentBase):
+    pass
+
+@strawberry.input
+class DocumentRequirementUpdateInput:
+    add: Optional[List[AskDocumentInput]] = None
+    update: Optional[List[UpdateDocumentInput]] = None
+    delete_ids: Optional[List[int]] = None
+
+@dataclass
+class SubMilestoneUpdateBase:
+    id: int
+    status: Optional[str] = None
+    counsellor_comment: Optional[str] = None
+
+@strawberry.input
+class SubMilestoneUpdateInput(SubMilestoneUpdateBase):
+    pass
+
+
+@strawberry.input
+class MilestoneUpdateInput:
+    update: Optional[List[SubMilestoneUpdateInput]] = None

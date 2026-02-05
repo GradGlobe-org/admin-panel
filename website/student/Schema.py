@@ -1,5 +1,7 @@
 import decimal
 import json
+from dataclasses import dataclass
+
 import strawberry
 from typing import List, Optional
 from django.core.exceptions import ObjectDoesNotExist
@@ -10,8 +12,10 @@ from django.db.models import Q, Prefetch
 from strawberry import Info
 from authentication.models import Employee
 from student.models import Student, AssignedCounsellor, Bucket, Email, StudentDetails, EducationDetails, TestScores, \
-    Preference, ExperienceDetails, AppliedUniversity, StudentLogs, CallRequest
+    Preference, ExperienceDetails, AppliedUniversity, StudentLogs, CallRequest, StudentSubMilestone, StudentMilestone, \
+    StudentDocumentRequirement, DocumentType
 from authentication.Utils import SchemaMixin
+from university.AllSchemas import DocumentRequirementUpdateInput, MilestoneUpdateInput
 from .AllSchema import *
 import re
 
@@ -104,11 +108,20 @@ class StudentLogsSchema:
 
 @strawberry.type
 class CallRequestSchema:
-    student_id: int
-    student_name: str
-    employee_id: int
-    employee_name: str
-    requested_on: str
+    id: Optional[int] = None
+    student_id: Optional[int] = None
+    student_name: Optional[str] = None
+    employee_id: Optional[int] = None
+    employee_name: Optional[str] = None
+    requested_on: Optional[str] = None
+    schedule_for: Optional[str] = None
+    call_timing: Optional[str] = None
+    status: Optional[str] = None
+    outcome: Optional[str] = None
+    counsellor_notes: Optional[str] = None
+    follow_up_required: Optional[bool] = None
+    follow_up_on: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 @strawberry.type
@@ -355,6 +368,26 @@ class StudentSchema(SchemaMixin):
                         application_number=a["application_number"],
                     )
                     for a in (data.get("applied_universities") or [])
+                ],
+
+                call_request=[
+                    CallRequestSchema(
+                        id=cr["id"],
+                        student_id=cr["student_id"],
+                        student_name=cr["student_name"],
+                        employee_id=cr["employee_id"],
+                        employee_name=cr["employee_name"],
+                        requested_on=cr["requested_on"],
+                        schedule_for=cr["schedule_for"],
+                        call_timing=cr["call_timing"],
+                        status=cr["status"],
+                        outcome=cr["outcome"],
+                        counsellor_notes=cr["counsellor_notes"],
+                        follow_up_required=cr["follow_up_required"],
+                        follow_up_on=cr["follow_up_on"],
+                        updated_at=cr["updated_at"],
+                    )
+                    for cr in (data.get("call_requests") or [])
                 ],
 
                 student_logs=student_logs,
@@ -615,6 +648,7 @@ class StudentSchema(SchemaMixin):
             experience_details: Optional[ExperienceDetailsUpdateInputSchema] = None,
             applied_university: Optional[AppliedUniversityUpdateInputSchema] = None,
             assigned_counsellor: Optional[AssignedCounsellorInputSchema] = None,
+            call_request: Optional[CallRequestUpdateInputSchema] = None
     ) -> "StudentSchema":
 
         emp = cls.get_employee(auth_token)
@@ -634,8 +668,9 @@ class StudentSchema(SchemaMixin):
             if not is_assigned:
                 raise GraphQLError("You do not have permission to perform this task")
 
-        if not cls.validate_phone(phone_number):
-            raise GraphQLError("Invalid phone number")
+        if phone_number:
+            if not cls.validate_phone(phone_number):
+                raise GraphQLError("Invalid phone number")
 
         if Student.objects.filter(phone_number=phone_number).exists():
             raise GraphQLError("Student with this phone number already exists")
@@ -812,6 +847,77 @@ class StudentSchema(SchemaMixin):
                             employee_id=assigned_counsellor.employee_id
                         )
 
+                if call_request:
+                    allowed_statuses = {
+                        c[0] for c in
+                        CallRequest._meta.get_field("status").choices
+                    }
+
+                    if call_request.add:
+                        for obj in call_request.add:
+                            if not emp.is_superuser and not AssignedCounsellor.objects.filter(
+                                    student=student,
+                                    employee=emp
+                            ).exists():
+                                raise GraphQLError(
+                                    "You do not have permission to create call requests for this student"
+                                )
+
+                            if CallRequest.objects.filter(
+                                    student=student,
+                                    employee=emp
+                            ).exists():
+                                raise GraphQLError(
+                                    "Call request already exists for this student"
+                                )
+
+                            if obj.status and obj.status not in allowed_statuses:
+                                raise GraphQLError("Invalid call status")
+
+                            CallRequest.objects.create(
+                                student=student,
+                                employee=emp,
+                                schedule_for=obj.schedule_for,
+                                call_timing=obj.call_timing,
+                                status=obj.status or "requested",
+                                counsellor_notes=obj.counsellor_notes,
+                                follow_up_required=obj.follow_up_required or False,
+                                follow_up_on=obj.follow_up_on,
+                            )
+
+                    if call_request.update:
+                        for obj in call_request.update:
+                            call_obj = CallRequest.objects.select_for_update().filter(
+                                id=obj.id,
+                                student=student
+                            ).first()
+
+                            if not call_obj:
+                                raise GraphQLError("Call request not found")
+
+                            if not emp.is_superuser and call_obj.employee_id != emp.id:
+                                raise GraphQLError(
+                                    "You do not have permission to update this call request"
+                                )
+
+                            if obj.status:
+                                if obj.status not in allowed_statuses:
+                                    raise GraphQLError("Invalid call status")
+                                call_obj.status = obj.status
+
+                            for field in [
+                                "schedule_for",
+                                "call_timing",
+                                "counsellor_notes",
+                                "follow_up_required",
+                                "follow_up_on",
+                            ]:
+                                val = getattr(obj, field)
+                                if val is not None:
+                                    setattr(call_obj, field, val)
+
+                            call_obj.save()
+
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT get_student_full_profile(%s);",
@@ -827,14 +933,6 @@ class StudentSchema(SchemaMixin):
 
         except Exception as e:
             raise GraphQLError(f"Update failed")
-
-
-    # @classmethod
-    # def bulk_add_student(cls,
-    #                      auth_token: str,
-    #
-    #                      ):
-
 
 @strawberry.type
 class StudentListSchema(SchemaMixin):
@@ -997,6 +1095,403 @@ class StudentListSchema(SchemaMixin):
         except Exception as e:
             raise GraphQLError("Internal Server Error")
 
+import datetime
+
+@strawberry.type
+class DocumentSchema:
+    document_type: str
+    submitted_document: str
+    counsellor_status: str | None
+    counsellor_comments: str | None
+    uploaded_at: datetime.datetime
+
+@strawberry.type
+class RequiredDocumentSchema:
+    required_doc_id: int
+    document_type: str
+    instructions: str | None
+    is_submitted: bool
+    document_id: int | None
+    submitted_document: str | None
+    counsellor_status: str | None
+    counsellor_comments: str | None
+    uploaded_at: datetime.datetime | None
+
+@strawberry.type
+class SubMilestoneSchema:
+    id: int
+    name: str
+    status: str
+    order: int
+    counsellor_comment: str | None
+
+@strawberry.type
+class MilestoneSchema:
+    name: str
+    order: int
+    steps: List[SubMilestoneSchema]
+
+@strawberry.type
+class ApplicationDocumentsSchema:
+    basic: List[RequiredDocumentSchema]
+    university_specific: List[RequiredDocumentSchema]
+
+@strawberry.type
+class ApplicationSchema(SchemaMixin):
+    application_id: int
+    course_id: int
+    applied_at: datetime.datetime
+    status: str
+    application_number: str
+    documents: ApplicationDocumentsSchema
+    milestones: List[MilestoneSchema]
+
+    @classmethod
+    def applications(
+            cls,
+            auth_token: str,
+            student_id: int,
+            application_id: int,
+    ) -> "ApplicationSchema":
+
+        try:
+            emp = cls.get_employee(auth_token)
+            if not emp:
+                raise GraphQLError("Unauthorized")
+
+            student = Student.objects.filter(id=student_id).first()
+            if not student:
+                raise GraphQLError("Student does not exist")
+
+            if not emp.is_superuser:
+                is_assigned = AssignedCounsellor.objects.filter(
+                    student_id=student_id,
+                    employee_id=emp.id,
+                ).exists()
+                if not is_assigned:
+                    raise GraphQLError(
+                        "You do not have permission to access this student's applications"
+                    )
+
+            app = (
+                AppliedUniversity.objects
+                .filter(id=application_id, student_id=student_id)
+                .prefetch_related(
+                    Prefetch(
+                        "student_milestones",
+                        queryset=StudentMilestone.objects
+                        .order_by("order")
+                        .prefetch_related(
+                            Prefetch(
+                                "steps",
+                                queryset=StudentSubMilestone.objects.order_by("order")
+                            )
+                        ),
+                    )
+                )
+                .first()
+            )
+
+            if not app:
+                raise GraphQLError("Invalid application id")
+
+            basic_requirements = (
+                StudentDocumentRequirement.objects
+                .select_related("document_type", "file")
+                .filter(
+                    student_id=student_id,
+                    requested_for_university__isnull=True,
+                )
+                .order_by("document_type__name")
+            )
+
+            basic_docs: List[RequiredDocumentSchema] = []
+            for req in basic_requirements:
+                doc = getattr(req, "file", None)
+                basic_docs.append(
+                    RequiredDocumentSchema(
+                        required_doc_id=req.id,
+                        document_type=req.document_type.name,
+                        instructions=req.instructions,
+                        is_submitted=doc is not None,
+                        document_id=doc.id if doc else None,
+                        submitted_document=doc.submitted_document if doc else None,
+                        counsellor_status=doc.counsellor_status if doc else None,
+                        counsellor_comments=doc.counsellor_comments if doc else None,
+                        uploaded_at=doc.uploaded_at if doc else None,
+                    )
+                )
+
+            university_requirements = (
+                StudentDocumentRequirement.objects
+                .select_related("document_type", "file")
+                .filter(requested_for_university=app)
+                .order_by("document_type__name")
+            )
+
+            university_docs: List[RequiredDocumentSchema] = []
+            for req in university_requirements:
+                doc = getattr(req, "file", None)
+                university_docs.append(
+                    RequiredDocumentSchema(
+                        required_doc_id=req.id,
+                        document_type=req.document_type.name,
+                        instructions=req.instructions,
+                        is_submitted=doc is not None,
+                        document_id=doc.id if doc else None,
+                        submitted_document=doc.submitted_document if doc else None,
+                        counsellor_status=doc.counsellor_status if doc else None,
+                        counsellor_comments=doc.counsellor_comments if doc else None,
+                        uploaded_at=doc.uploaded_at if doc else None,
+                    )
+                )
+
+            milestones: List[MilestoneSchema] = []
+            for m in app.student_milestones.all():
+                milestones.append(
+                    MilestoneSchema(
+                        name=m.name,
+                        order=m.order,
+                        steps=[
+                            SubMilestoneSchema(
+                                id=s.id,
+                                name=s.name,
+                                status=s.status,
+                                order=s.order,
+                                counsellor_comment=s.counsellor_comment,
+                            )
+                            for s in m.steps.all()
+                        ],
+                    )
+                )
+
+            return cls(
+                application_id=app.id,
+                course_id=app.course_id,
+                applied_at=app.applied_at,
+                status=app.status,
+                application_number=str(app.application_number),
+                documents=ApplicationDocumentsSchema(
+                    basic=basic_docs,
+                    university_specific=university_docs,
+                ),
+                milestones=milestones,
+            )
+
+        except GraphQLError:
+            raise
+        except Exception:
+            raise GraphQLError(
+                "Something went wrong while fetching student application"
+            )
+
+    @classmethod
+    def edit_student_application(
+            cls,
+            info,
+            auth_token: str,
+            application_id: int,
+            documents: Optional[DocumentRequirementUpdateInput] = None,
+            milestones: Optional[MilestoneUpdateInput] = None,
+    ) -> "ApplicationSchema":
+
+        emp = cls.get_employee(auth_token)
+        if not emp:
+            raise GraphQLError("Unauthorized")
+
+        try:
+            application = (
+                AppliedUniversity.objects
+                .select_related("student")
+                .get(id=application_id)
+            )
+        except AppliedUniversity.DoesNotExist:
+            raise GraphQLError("Application does not exist")
+
+        student_id = application.student_id
+
+        if not emp.is_superuser:
+            is_assigned = AssignedCounsellor.objects.filter(
+                student_id=student_id,
+                employee_id=emp.id
+            ).exists()
+            if not is_assigned:
+                raise GraphQLError(
+                    "You do not have permission to update this application"
+                )
+
+        allowed_submilestone_statuses = {
+            choice[0] for choice in StudentSubMilestone.STATUS
+        }
+
+        try:
+            with transaction.atomic():
+
+                if documents:
+                    if documents.delete_ids:
+                        reqs = StudentDocumentRequirement.objects.filter(
+                            id__in=documents.delete_ids
+                        )
+                        if reqs.count() != len(documents.delete_ids):
+                            raise GraphQLError(
+                                "One or more document requirements not found"
+                            )
+
+                        for req in reqs:
+                            if req.student_id != student_id:
+                                raise GraphQLError("Invalid document reference")
+
+                            if req.requested_for_university_id != application_id:
+                                raise GraphQLError(
+                                    "Document does not belong to this application"
+                                )
+
+                            if req.requested_by_id != emp.id:
+                                raise GraphQLError(
+                                    "You can delete only documents requested by you"
+                                )
+
+                        reqs.delete()
+
+                    if documents.update:
+                        for obj in documents.update:
+                            req = StudentDocumentRequirement.objects.filter(
+                                id=obj.id
+                            ).first()
+
+                            if not req:
+                                raise GraphQLError(
+                                    "Document requirement not found"
+                                )
+
+                            if req.student_id != student_id:
+                                raise GraphQLError("Invalid document reference")
+
+                            if req.requested_for_university_id != application_id:
+                                raise GraphQLError(
+                                    "Document does not belong to this application"
+                                )
+
+                            req.instructions = obj.instructions
+                            req.save(update_fields=["instructions"])
+
+                    if documents.add:
+                        for obj in documents.add:
+                            doc_type = DocumentType.objects.filter(
+                                id=obj.document_type_id
+                            ).first()
+
+                            if not doc_type:
+                                raise GraphQLError(
+                                    f"Invalid document type {obj.document_type_id}"
+                                )
+
+                            if doc_type.is_default:
+                                raise GraphQLError(
+                                    "It is a basic document and cannot be requested per application"
+                                )
+
+                            exists = StudentDocumentRequirement.objects.filter(
+                                student_id=student_id,
+                                document_type=doc_type,
+                                requested_for_university=application
+                            ).exists()
+
+                            if exists:
+                                raise GraphQLError(
+                                    "This document is already requested"
+                                )
+
+                            StudentDocumentRequirement.objects.create(
+                                student_id=student_id,
+                                document_type=doc_type,
+                                requested_for_university=application,
+                                requested_by=emp,
+                                instructions=obj.instructions
+                            )
+
+                if milestones and milestones.update:
+                    for obj in milestones.update:
+                        sub = StudentSubMilestone.objects.select_related(
+                            "milestone__application"
+                        ).filter(id=obj.id).first()
+
+                        if not sub:
+                            raise GraphQLError(
+                                f"Sub-milestone {obj.id} not found"
+                            )
+                        if sub.milestone.application_id != application_id:
+                            raise GraphQLError(
+                                "Sub-milestone does not belong to this application"
+                            )
+
+                        if obj.status:
+                            if obj.status not in allowed_submilestone_statuses:
+                                raise GraphQLError(
+                                    f"Invalid status '{obj.status}'. "
+                                )
+                            sub.status = obj.status
+                        if obj.counsellor_comment is not None:
+                            sub.counsellor_comment = obj.counsellor_comment
+                        sub.save(update_fields=[
+                            "status",
+                            "counsellor_comment",
+                            "updated_at"
+                        ])
+
+            app = cls.applications(
+                auth_token=auth_token,
+                student_id=student_id,
+                application_id=application_id
+            )
+            if not app:
+                raise GraphQLError("Failed to fetch updated application")
+            return app
+
+        except GraphQLError:
+            raise
+        except Exception:
+            raise GraphQLError(
+                "Update failed due to an internal error"
+            )
+
+@strawberry.type
+class DocumentTypeSchema(SchemaMixin):
+    id: int
+    name: str
+    doc_type: str
+    sub_type: Optional[str]
+    is_default: bool
+
+    @classmethod
+    def documents(cls, auth_token:str) -> List["DocumentTypeSchema"]:
+        try:
+            emp = cls.get_employee(auth_token)
+            if not emp:
+                raise GraphQLError("Unauthorized")
+
+            docs = list(DocumentType.objects.all())
+
+            return [
+                cls(
+                    id=doc.id,
+                    name=doc.name,
+                    doc_type=doc.doc_type,
+                    sub_type=doc.sub_type,
+                    is_default=doc.is_default,
+                )
+                for doc in docs
+            ]
+
+        except:
+            raise GraphQLError("Internal server error")
+
+
+
+
+
+
+
 @strawberry.type
 class StudentsQuery:
     students_list: StudentListSchema = strawberry.field(
@@ -1005,6 +1500,14 @@ class StudentsQuery:
 
     student: StudentSchema = strawberry.field(
         resolver=StudentSchema.student
+    )
+
+    application: ApplicationSchema = strawberry.field(
+        resolver=ApplicationSchema.applications
+    )
+
+    docs: List[DocumentTypeSchema] = strawberry.field(
+        resolver=DocumentTypeSchema.documents
     )
 
 @strawberry.type()
@@ -1019,4 +1522,8 @@ class StudentMutation:
 
     update_student: StudentSchema = strawberry.field(
         resolver=StudentSchema.edit_student
+    )
+
+    edit_application: ApplicationSchema = strawberry.field(
+        resolver=ApplicationSchema.edit_student_application
     )

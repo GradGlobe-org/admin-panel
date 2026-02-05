@@ -280,6 +280,32 @@ class CallRequest(models.Model):
         Employee, on_delete=models.CASCADE, related_name="call_requests"
     )
     requested_on = models.DateTimeField(default=timezone.now)
+    schedule_for = models.DateField(null=True, blank=True)
+
+    call_timing = models.DateTimeField(null=True, blank=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("requested", "Requested"),
+            ("scheduled", "Scheduled"),
+            ("attempted", "Attempted"),
+            ("completed", "Completed"),
+            ("missed", "Missed"),
+            ("cancelled", "Cancelled"),
+            ("rescheduled", "Rescheduled"),
+        ],
+        default="requested",
+        db_index=True,
+    )
+
+    outcome = models.CharField(max_length=30, null=True, blank=True)
+    counsellor_notes = models.TextField(null=True, blank=True)
+
+    follow_up_required = models.BooleanField(default=False)
+    follow_up_on = models.DateTimeField(null=True, blank=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         indexes = [
