@@ -1154,24 +1154,34 @@ class ApplicationSchema(SchemaMixin):
             application_id: int,
     ) -> "ApplicationSchema":
 
+        emp = cls.get_employee(auth_token)
+        if not emp:
+            raise GraphQLError("Unauthorized")
+
+        app = (
+            AppliedUniversity.objects
+            .select_related("student")
+            .filter(id=application_id)
+            .first()
+        )
+
+        if not app:
+            raise GraphQLError("Application does not exist")
+
+        student = app.student
+
+        if not emp.is_superuser:
+            is_assigned = AssignedCounsellor.objects.filter(
+                student=student,
+                employee=emp,
+            ).exists()
+
+            if not is_assigned:
+                raise GraphQLError(
+                    "You do not have permission to access this student's applications"
+                )
+
         try:
-            emp = cls.get_employee(auth_token)
-            if not emp:
-                raise GraphQLError("Unauthorized")
-
-            student = Student.objects.filter(id=student_id).first()
-            if not student:
-                raise GraphQLError("Student does not exist")
-
-            if not emp.is_superuser:
-                is_assigned = AssignedCounsellor.objects.filter(
-                    student_id=student_id,
-                    employee_id=emp.id,
-                ).exists()
-                if not is_assigned:
-                    raise GraphQLError(
-                        "You do not have permission to access this student's applications"
-                    )
 
             app = (
                 AppliedUniversity.objects
