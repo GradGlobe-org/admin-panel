@@ -364,7 +364,7 @@ class AppliedUniversity(models.Model):
     ]
     status = models.CharField(max_length=55, choices=STATUS, default="pending")
 
-    application_number = models.CharField(max_length=20, unique=True, null=True)
+    application_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
 
     class Meta:
         unique_together = ("student", "course")
@@ -384,7 +384,7 @@ class AppliedUniversity(models.Model):
         if self.application_number is None:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT nextval('applied_university_app_no_seq')"
+                    "SELECT generate_application_number();"
                 )
                 self.application_number = cursor.fetchone()[0]
 
