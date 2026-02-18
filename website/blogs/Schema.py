@@ -281,7 +281,8 @@ class PostSchema(EmployeeAuthorization):
                 ))
 
         return blog_lst
-
+    
+    # Mutation starts here
     @classmethod
     def create_blog(
             cls,
@@ -357,7 +358,8 @@ class PostSchema(EmployeeAuthorization):
 
                 blog.image_uuid = generated_uuid
                 blog.google_file_id = drive_file_id
-                blog.save(update_fields=["image_uuid", "google_file_id"])
+                blog.featured_image = f"https://admin.gradglobe.org/blog/images?id={drive_file_id}"
+                blog.save(update_fields=["image_uuid", "google_file_id", "featured_image"])
 
             featured_image = (
                 blog.featured_image
@@ -468,6 +470,8 @@ class PostSchema(EmployeeAuthorization):
                 blog.content = updated_content
 
             if updated_image_url:
+                blog.google_image_url = None
+                blog.image_uuid = None
                 blog.featured_image = updated_image_url
 
             if updated_status:
@@ -490,6 +494,7 @@ class PostSchema(EmployeeAuthorization):
 
                 blog.image_uuid = generated_uuid
                 blog.google_file_id = drive_file_id
+                blog.featured_image = f"https://admin.gradglobe.org/blog/images?id={drive_file_id}"
 
             try:
                 blog.full_clean()
