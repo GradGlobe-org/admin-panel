@@ -193,7 +193,17 @@ class AppliedUniversityUpdateInputSchema:
 
 @strawberry.input
 class CallRequestInputSchema:
-    id: Optional[int] = None
+    schedule_for: Optional[date] = None
+    call_timing: Optional[datetime] = None
+    status: str
+    outcome: Optional[str] = None
+    counsellor_notes: Optional[str] = None
+    follow_up_required: Optional[bool] = None
+    follow_up_on: Optional[datetime] = None
+
+@strawberry.input
+class CallRequestUpdateSchema:
+    id: int
     schedule_for: Optional[date] = None
     call_timing: Optional[datetime] = None
     status: Optional[str] = None
@@ -205,4 +215,4 @@ class CallRequestInputSchema:
 @strawberry.input
 class CallRequestUpdateInputSchema:
     add: Optional[List[CallRequestInputSchema]] = None
-    update: Optional[List[CallRequestInputSchema]] = None
+    update: Optional[List[CallRequestUpdateSchema]] = None

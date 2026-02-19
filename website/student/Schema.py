@@ -873,8 +873,20 @@ class StudentSchema(SchemaMixin):
                             ).exists():
                                 raise GraphQLError("Active call request already exists")
 
-                            if obj.status and obj.status not in allowed_statuses:
-                                raise GraphQLError("Invalid call status")
+                            # if obj.status and obj.status not in allowed_statuses:
+                            #     raise GraphQLError("Invalid call status")
+
+                            if obj.follow_up_required and not obj.follow_up_on:
+                                raise GraphQLError(
+                                    "Follow-up date required when follow-up is enabled"
+                                )
+
+                            if obj.status == "scheduled" and not obj.call_timing:
+                                raise GraphQLError(
+                                    "call_timing is required when status is scheduled"
+                                )
+
+                            print("It worked till here")
 
                             CallRequest.objects.create(
                                 student=student,
