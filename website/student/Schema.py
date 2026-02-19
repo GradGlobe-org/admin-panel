@@ -1371,8 +1371,6 @@ class ApplicationSchema(SchemaMixin):
                                 raise GraphQLError("Document requirement not found")
                             if req.student_id != student_id:
                                 raise GraphQLError("Invalid document reference")
-                            if req.requested_for_university_id != application_id:
-                                raise GraphQLError("Document does not belong to this application")
                             if obj.instructions is not None:
                                 req.instructions = obj.instructions
                                 req.save(update_fields=["instructions"])
