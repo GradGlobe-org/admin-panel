@@ -24,6 +24,7 @@ django-nested-admin==4.1.4
 django-prometheus==2.4.0
 django-schema-viewer==0.5.3
 django-widget-tweaks==1.5.0
+et_xmlfile==2.0.0
 filetype==1.2.0
 google-ai-generativelanguage==0.6.18
 google-api-core==2.25.1
@@ -32,7 +33,6 @@ google-auth==2.40.3
 google-auth-httplib2==0.2.0
 google-genai==1.33.0
 googleapis-common-protos==1.70.0
-granian==2.6.1
 graphql-core==3.2.7
 greenlet==3.2.4
 grpcio==1.74.0
@@ -67,6 +67,7 @@ networkx==3.5
 nltk==3.9.1
 numpy==2.2.6
 openai==2.6.1
+openpyxl==3.1.5
 orjson==3.11.3
 ormsgpack==1.12.1
 packaging==25.0
