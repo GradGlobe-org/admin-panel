@@ -891,7 +891,7 @@ def upload_document(request):
             status=500,
         )
 
-
+@csrf_exempt
 def download_document(request):
     """
     Download a document by required_document_id.

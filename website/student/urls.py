@@ -57,3 +57,9 @@ urlpatterns += [
     path("update_milestone/", employee_update_milestone),
     path("student_profile_picture/", get_student_profile_pic),
 ]
+
+from .bulk_add import download_sample
+
+urlpatterns += [
+    path("download_template/", download_sample)
+]

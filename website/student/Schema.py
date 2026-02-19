@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass
 
 import strawberry
-from typing import List, Optional
+from typing import List, Optional, Annotated
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection, transaction
 from graphql import GraphQLError
@@ -13,11 +13,12 @@ from strawberry import Info
 from authentication.models import Employee
 from student.models import Student, AssignedCounsellor, Bucket, Email, StudentDetails, EducationDetails, TestScores, \
     Preference, ExperienceDetails, AppliedUniversity, StudentLogs, CallRequest, StudentSubMilestone, StudentMilestone, \
-    StudentDocumentRequirement, DocumentType
+    StudentDocumentRequirement, DocumentType, Document
 from authentication.Utils import SchemaMixin
 from university.AllSchemas import DocumentRequirementUpdateInput, MilestoneUpdateInput
 from .AllSchema import *
 import re
+from website.utils import upload_file_to_drive_private, delete_from_google_drive
 
 PHONE_REGEX = re.compile(r"^[6-9]\d{9}$")
 EMAIL_REGEX = re.compile(
@@ -146,7 +147,7 @@ class AssignedCounsellorSchema(SchemaMixin):
     def assign_counsellor(
         cls,
         auth_token: str,
-        student_ids: list[int],
+        student_ids: Annotated[list[int],strawberry.argument(description="List of student ids")],
         employee_id: int
     ) -> list["AssignedCounsellorSchema"]:
 
@@ -649,6 +650,8 @@ class StudentSchema(SchemaMixin):
             applied_university: Optional[AppliedUniversityUpdateInputSchema] = None,
             assigned_counsellor: Optional[AssignedCounsellorInputSchema] = None,
             call_request: Optional[CallRequestUpdateInputSchema] = None
+
+            # document: Optional[]
     ) -> "StudentSchema":
 
         emp = cls.get_employee(auth_token)
@@ -865,11 +868,10 @@ class StudentSchema(SchemaMixin):
 
                             if CallRequest.objects.filter(
                                     student=student,
-                                    employee=emp
+                                    employee=emp,
+                                    status__in=["requested", "scheduled"],
                             ).exists():
-                                raise GraphQLError(
-                                    "Call request already exists for this student"
-                                )
+                                raise GraphQLError("Active call request already exists")
 
                             if obj.status and obj.status not in allowed_statuses:
                                 raise GraphQLError("Invalid call status")
@@ -936,7 +938,7 @@ class StudentSchema(SchemaMixin):
 
 @strawberry.type
 class StudentListSchema(SchemaMixin):
-    student_list: List[StudentSchema]
+    student_list: Annotated[List[StudentSchema], strawberry.argument(description="List of students with student details,assigned counsellor(for superusers), applied universities, call request, and other fields would be null.")]
     limit: int
     current_page: int
     total: int
@@ -1138,13 +1140,13 @@ class ApplicationDocumentsSchema:
 
 @strawberry.type
 class ApplicationSchema(SchemaMixin):
-    application_id: int
+    application_id: int = strawberry.field(description="Application ID for internal use")
     course_id: int
     applied_at: datetime.datetime
     status: str
-    application_number: str
+    application_number: str = strawberry.field(description="Application Number for the application")
     documents: ApplicationDocumentsSchema
-    milestones: List[MilestoneSchema]
+    milestones: Optional[List[MilestoneSchema]] = strawberry.field(description="Milestone for the application")
 
     @classmethod
     def applications(
@@ -1336,7 +1338,6 @@ class ApplicationSchema(SchemaMixin):
 
         try:
             with transaction.atomic():
-
                 if documents:
                     if documents.delete_ids:
                         reqs = StudentDocumentRequirement.objects.filter(
@@ -1353,7 +1354,7 @@ class ApplicationSchema(SchemaMixin):
 
                             if req.requested_for_university_id != application_id:
                                 raise GraphQLError(
-                                    "Document does not belong to this application"
+                                    "Document not found"
                                 )
 
                             if req.requested_by_id != emp.id:
@@ -1365,25 +1366,65 @@ class ApplicationSchema(SchemaMixin):
 
                     if documents.update:
                         for obj in documents.update:
-                            req = StudentDocumentRequirement.objects.filter(
-                                id=obj.id
-                            ).first()
-
+                            req = StudentDocumentRequirement.objects.filter(id=obj.id).first()
                             if not req:
-                                raise GraphQLError(
-                                    "Document requirement not found"
-                                )
-
+                                raise GraphQLError("Document requirement not found")
                             if req.student_id != student_id:
                                 raise GraphQLError("Invalid document reference")
-
                             if req.requested_for_university_id != application_id:
-                                raise GraphQLError(
-                                    "Document does not belong to this application"
+                                raise GraphQLError("Document does not belong to this application")
+                            if obj.instructions is not None:
+                                req.instructions = obj.instructions
+                                req.save(update_fields=["instructions"])
+
+                            uploaded_doc = getattr(req, "file", None)
+
+                            final_status = None
+                            if obj.document:
+                                final_status = "uploaded"
+                            elif obj.status:
+                                VALID_STATUSES = {choice[0] for choice in Document.STATUS_CHOICES}
+                                if obj.status not in VALID_STATUSES:
+                                    raise GraphQLError("Invalid document status")
+                                final_status = obj.status
+
+                            if obj.document:
+                                file_obj = obj.document
+                                MAX_FILE_SIZE = 1 * 1024 * 1024
+
+                                if file_obj.size > MAX_FILE_SIZE:
+                                    raise GraphQLError("File should be under 1 MB")
+
+                                try:
+                                    file_id, file_uuid = upload_file_to_drive_private(file_obj)
+                                except Exception:
+                                    raise GraphQLError("Error uploading document")
+
+                                if uploaded_doc and uploaded_doc.file_id:
+                                    try:
+                                        delete_from_google_drive(uploaded_doc.file_id)
+                                    except Exception:
+                                        pass
+
+                                Document.objects.update_or_create(
+                                    required_document=req,
+                                    defaults={
+                                        "submitted_document": req.document_type.name,
+                                        "counsellor_status": final_status,
+                                        "file_id": file_id,
+                                        "file_uuid": file_uuid,
+                                    },
                                 )
 
-                            req.instructions = obj.instructions
-                            req.save(update_fields=["instructions"])
+                            elif uploaded_doc:
+                                if final_status:
+                                    uploaded_doc.counsellor_status = final_status
+
+                                if obj.comment:
+                                    uploaded_doc.counsellor_comments = obj.comment
+
+                                uploaded_doc.full_clean()
+                                uploaded_doc.save()
 
                     if documents.add:
                         for obj in documents.add:
@@ -1412,13 +1453,38 @@ class ApplicationSchema(SchemaMixin):
                                     "This document is already requested"
                                 )
 
-                            StudentDocumentRequirement.objects.create(
+                            required_document = StudentDocumentRequirement.objects.create(
                                 student_id=student_id,
                                 document_type=doc_type,
                                 requested_for_university=application,
                                 requested_by=emp,
                                 instructions=obj.instructions
                             )
+
+                            if obj.document:
+                                file_obj = obj.document
+
+                                MAX_FILE_SIZE = 1 * 1024 * 1024  # 1MB
+
+                                if file_obj.size > MAX_FILE_SIZE:
+                                    raise GraphQLError("File should be under 1 MB")
+
+                                document_name = required_document.document_type.name
+
+                                try:
+                                    file_id, file_uuid = upload_file_to_drive_private(file_obj)
+                                except Exception:
+                                    raise GraphQLError("Error uploading document")
+
+                                Document.objects.update_or_create(
+                                    required_document=required_document,
+                                    defaults={
+                                        "submitted_document": document_name,
+                                        "counsellor_status": "uploaded",
+                                        "file_id": file_id,
+                                        "file_uuid": file_uuid,
+                                    },
+                                )
 
                 if milestones and milestones.update:
                     for obj in milestones.update:

@@ -12,8 +12,8 @@ from django.db import transaction
 @strawberry.type
 class AssignmentSchema:
     id: int
-    status: str
-    assigned_on: datetime
+    status: str = strawberry.field(description="current task status")
+    assigned_on: datetime = strawberry.field(description="task assigned date")
     employee_id: int | None
     employee_name: str | None
     student_id: int | None
@@ -23,14 +23,14 @@ class AssignmentSchema:
 @strawberry.type
 class TaskSchema:
     id: uuid.UUID
-    title: str
-    description: str
-    priority: str
-    status: str
-    created_by_me: bool
-    assigned_to_me: bool
-    created_at: datetime
-    due_date: datetime | None
+    title: str = strawberry.field(description="title of the task")
+    description: str = strawberry.field(description="description of task")
+    priority: str = strawberry.field(description="priority status of the task")
+    status: str = strawberry.field(description="initial status of status")
+    created_by_me: bool = strawberry.field(description="is task created by you")
+    assigned_to_me: bool = strawberry.field(description="is task assigned to you")
+    created_at: datetime = strawberry.field(description="task creation date")
+    due_date: datetime | None = strawberry.field(description="due date for the task")
     assignments: list[AssignmentSchema] = strawberry.field(description="assigned users if you are the creator")
 
     @classmethod
@@ -103,13 +103,13 @@ class TaskSchema:
     @classmethod
     def create_task(cls,
                     auth_token: str,
-                    title: str,
-                    description: str,
-                    priority: str,
-                    status: str,
-                    due_date: Optional[str] = None,
-                    assign_student_ids: Optional[List[int]] = None,
-                    assign_employee_ids: Optional[List[int]] = None,
+                    title: Annotated[str, strawberry.argument(description="Title of the task")],
+                    description: Annotated[str, strawberry.argument(description="Description of the task")],
+                    priority: Annotated[str, strawberry.argument(description="Priority status of task")],
+                    status: Annotated[str, strawberry.argument(description="Initial status of the task")],
+                    due_date: Annotated[Optional[str], strawberry.argument(description="Due  date for the task")] = None,
+                    assign_student_ids: Annotated[Optional[List[int]], strawberry.argument(description="List of the student ids to assign task")] = None,
+                    assign_employee_ids: Annotated[Optional[List[int]], strawberry.argument(description="List of the employee ids to assign task")] = None,
                     ) -> "TaskSchema":
 
         try:
@@ -187,15 +187,15 @@ class TaskSchema:
             cls,
             auth_token: str,
             id: str,
-            title: Optional[str] = None,
-            description: Optional[str] = None,
-            priority: Optional[str] = None,
-            status: Optional[str] = None,
-            due_date: Optional[str] = None,
-            remove_student_ids: Optional[List[int]] = None,
-            assign_student_ids: Optional[List[int]] = None,
-            remove_employee_ids: Optional[List[int]] = None,
-            assign_employee_ids: Optional[List[int]] = None,
+            title: Annotated[Optional[str],strawberry.argument(description="Title of the task")] = None,
+            description: Annotated[Optional[str],strawberry.argument(description="Description of the task")] = None,
+            priority: Annotated[Optional[str],strawberry.argument(description="Priority of the task")] = None,
+            status: Annotated[Optional[str],strawberry.argument(description="status of the task")] = None,
+            due_date: Annotated[Optional[str],strawberry.argument(description="Due date for task")] = None,
+            remove_student_ids: Annotated[Optional[List[int]],strawberry.argument(description="List of student ids to unassign this task to")] = None,
+            assign_student_ids: Annotated[Optional[List[int]],strawberry.argument(description="List of student ids to assign this task to")] = None,
+            remove_employee_ids: Annotated[Optional[List[int]],strawberry.argument(description="List of employee ids to unassign this task to")] = None,
+            assign_employee_ids: Annotated[Optional[List[int]],strawberry.argument(description="List of employee ids to assign this task to")] = None,
     ) -> "TaskSchema":
 
         try:
@@ -311,7 +311,7 @@ class TaskSchema:
     @classmethod
     def delete_task(cls,
                     auth_token: str,
-                    task_ids: List[str],
+                    task_ids: Annotated[List[str], strawberry.argument("List of task ids to delete")]
                     ) -> bool:
 
         if not task_ids:

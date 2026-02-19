@@ -451,6 +451,8 @@ class UniversityPatch:
 class UniversitySchema(UniversityBase):
     id: int
 
+from strawberry.file_uploads import Upload
+
 @dataclass
 class AskDocumentBase:
     document_type_id: int
@@ -458,7 +460,7 @@ class AskDocumentBase:
 
 @strawberry.input
 class AskDocumentInput(AskDocumentBase):
-    pass
+    document: Optional[Upload] = None
 
 @dataclass
 class UpdateDocumentBase:
@@ -467,7 +469,9 @@ class UpdateDocumentBase:
 
 @strawberry.input
 class UpdateDocumentInput(UpdateDocumentBase):
-    pass
+    document: Optional[Upload] = None
+    status: Optional[str] = None
+    comment: Optional[str] = None
 
 @strawberry.input
 class DocumentRequirementUpdateInput:

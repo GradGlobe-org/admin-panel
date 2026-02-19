@@ -313,12 +313,12 @@ class CallRequest(models.Model):
             models.Index(fields=["employee"]),
             models.Index(fields=["requested_on"]),
         ]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["student", "employee"],
-                name="unique_student_employee_request",
-            )
-        ]
+        # constraints = [
+        #     models.UniqueConstraint(
+        #         fields=["student", "employee"],
+        #         name="unique_student_employee_request",
+        #     )
+        # ]
         verbose_name = "Call Request"
         verbose_name_plural = "Call Requests"
 
