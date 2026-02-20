@@ -654,240 +654,243 @@ class StudentSchema(SchemaMixin):
             # document: Optional[]
     ) -> "StudentSchema":
 
-        emp = cls.get_employee(auth_token)
+        # Authorization
+        try:
+            emp = cls.get_employee(auth_token)
+        except Employee.DoesNotExist:
+            raise GraphQLError("Unauthorized")
+        except:
+            raise GraphQLError("Authorization Error")
         if not emp:
             raise GraphQLError("Unauthorized")
-
         student = Student.objects.filter(id=student_id).first()
         if not student:
             raise GraphQLError("Student does not exist")
 
+        # Permission Check
         if not emp.is_superuser:
             is_assigned = AssignedCounsellor.objects.filter(
                 student_id=student_id,
                 employee_id=emp.id
             ).exists()
-
             if not is_assigned:
                 raise GraphQLError("You do not have permission to perform this task")
 
+        # Phone and email Validation
         if phone_number:
             if not cls.validate_phone(phone_number):
                 raise GraphQLError("Invalid phone number")
-
         if Student.objects.filter(phone_number=phone_number).exists():
-            raise GraphQLError("Student with this phone number already exists")
-
+            raise GraphQLError("Phone Number already in use")
         if email:
             if not cls.validate_email(email):
                 raise GraphQLError("Invalid email")
-
         if Email.objects.filter(email=email).exists():
-            raise GraphQLError("Student with this email already exists")
+            raise GraphQLError("Email already in use")
 
-        try:
-            with transaction.atomic():
+        # Whole Logic
+        with transaction.atomic():
 
-                student = (
-                    Student.objects
-                    .select_for_update()
-                    .filter(id=student_id)
-                    .first()
+            student = (
+                Student.objects
+                .select_for_update()
+                .filter(id=student_id)
+                .first()
+            )
+
+            if not student:
+                raise GraphQLError("Student does not exist")
+
+            if full_name is not None:
+                student.full_name = full_name
+
+            if phone_number is not None:
+                student.phone_number = phone_number
+
+            if category is not None:
+                try:
+                    student.category = Bucket.objects.get(name=category)
+                except Bucket.DoesNotExist:
+                    raise GraphQLError("Invalid category")
+
+            student.save()
+
+            if email is not None:
+                Email.objects.update_or_create(
+                    student=student,
+                    defaults={"email": email}
                 )
 
-                if not student:
-                    raise GraphQLError("Student does not exist")
+            def patch_one_to_one(model, patch_obj):
+                data = {
+                    field: value
+                    for field, value in vars(patch_obj).items()
+                    if value is not None
+                }
 
-                if full_name is not None:
-                    student.full_name = full_name
+                if not data:
+                    return
 
-                if phone_number is not None:
-                    exists = Student.objects.exclude(id=student_id).filter(
-                        phone_number=phone_number
-                    ).exists()
-                    if exists:
-                        raise GraphQLError("Phone number already in use")
-                    student.phone_number = phone_number
+                model.objects.update_or_create(
+                    student=student,
+                    defaults=data
+                )
 
-                if category is not None:
-                    try:
-                        student.category = Bucket.objects.get(name=category)
-                    except Bucket.DoesNotExist:
-                        raise GraphQLError("Invalid category")
+            if student_details:
+                patch_one_to_one(StudentDetails, student_details)
 
-                student.save()
+            if education_details:
+                patch_one_to_one(EducationDetails, education_details)
 
-                if email is not None:
-                    Email.objects.update_or_create(
-                        student=student,
-                        defaults={"email": email}
-                    )
+            if test_scores:
+                patch_one_to_one(TestScores, test_scores)
 
-                def patch_one_to_one(model, patch_obj):
-                    data = {
-                        field: value
-                        for field, value in vars(patch_obj).items()
-                        if value is not None
-                    }
+            if preference:
+                patch_one_to_one(Preference, preference)
 
-                    if not data:
-                        return
+            def handle_list(model, payload, field_map):
+                if not payload:
+                    return
 
-                    model.objects.update_or_create(
-                        student=student,
-                        defaults=data
-                    )
+                if payload.delete_ids:
+                    deleted, _ = model.objects.filter(
+                        id__in=payload.delete_ids,
+                        student=student
+                    ).delete()
 
-                if student_details:
-                    patch_one_to_one(StudentDetails, student_details)
+                    if deleted != len(payload.delete_ids):
+                        raise GraphQLError("Delete failed")
 
-                if education_details:
-                    patch_one_to_one(EducationDetails, education_details)
+                if payload.update:
+                    for obj in payload.update:
+                        data = {
+                            model_field: getattr(obj, input_field)
+                            for model_field, input_field in field_map.items()
+                            if getattr(obj, input_field) is not None
+                        }
 
-                if test_scores:
-                    patch_one_to_one(TestScores, test_scores)
-
-                if preference:
-                    patch_one_to_one(Preference, preference)
-
-                def handle_list(model, payload, field_map):
-                    if not payload:
-                        return
-
-                    if payload.delete_ids:
-                        deleted, _ = model.objects.filter(
-                            id__in=payload.delete_ids,
+                        rows = model.objects.filter(
+                            id=obj.id,
                             student=student
-                        ).delete()
+                        ).update(**data)
 
-                        if deleted != len(payload.delete_ids):
-                            raise GraphQLError("Delete failed")
+                        if rows != 1:
+                            raise GraphQLError("Update failed")
 
-                    if payload.update:
-                        for obj in payload.update:
-                            data = {
+                if payload.add:
+                    model.objects.bulk_create([
+                        model(
+                            student=student,
+                            **{
                                 model_field: getattr(obj, input_field)
                                 for model_field, input_field in field_map.items()
-                                if getattr(obj, input_field) is not None
                             }
+                        )
+                        for obj in payload.add
+                    ])
 
-                            rows = model.objects.filter(
-                                id=obj.id,
-                                student=student
-                            ).update(**data)
+            handle_list(
+                ExperienceDetails,
+                experience_details,
+                {
+                    "company_name": "company_name",
+                    "title": "title",
+                    "city": "city",
+                    "country": "country",
+                    "employment_type": "employment_type",
+                    "industry_type": "industry_type",
+                    "start_date": "start_date",
+                    "end_date": "end_date",
+                    "currently_working": "currently_working",
+                },
+            )
 
-                            if rows != 1:
-                                raise GraphQLError("Update failed")
-
-                    if payload.add:
-                        model.objects.bulk_create([
-                            model(
-                                student=student,
-                                **{
-                                    model_field: getattr(obj, input_field)
-                                    for model_field, input_field in field_map.items()
-                                }
-                            )
-                            for obj in payload.add
-                        ])
-
-                handle_list(
-                    ExperienceDetails,
-                    experience_details,
-                    {
-                        "company_name": "company_name",
-                        "title": "title",
-                        "city": "city",
-                        "country": "country",
-                        "employment_type": "employment_type",
-                        "industry_type": "industry_type",
-                        "start_date": "start_date",
-                        "end_date": "end_date",
-                        "currently_working": "currently_working",
-                    },
-                )
-
-                if applied_university:
-                    if applied_university.delete_ids:
-                        if not emp.is_superuser:
-                            raise GraphQLError(
-                                "You are not allowed to delete applications"
-                            )
-
-                        deleted, _ = AppliedUniversity.objects.filter(
-                            id__in=applied_university.delete_ids,
-                            student=student
-                        ).delete()
-
-                        if deleted != len(applied_university.delete_ids):
-                            raise GraphQLError(
-                                "Delete failed: invalid application ID or ownership mismatch"
-                            )
-
-                    if applied_university.add:
-                        AppliedUniversity.objects.bulk_create([
-                            AppliedUniversity(
-                                student=student,
-                                course_id=obj.course_id
-                            )
-                            for obj in applied_university.add
-                        ])
-
-                if assigned_counsellor:
+            if applied_university:
+                if applied_university.delete_ids:
                     if not emp.is_superuser:
-                        raise GraphQLError("You are not allowed to perform this task")
-
-                    existing = AssignedCounsellor.objects.filter(
-                        student=student
-                    ).select_for_update().first()
-
-                    if existing:
-                        existing.employee_id = assigned_counsellor.employee_id
-                        existing.save(update_fields=["employee"])
-                    else:
-                        AssignedCounsellor.objects.create(
-                            student=student,
-                            employee_id=assigned_counsellor.employee_id
+                        raise GraphQLError(
+                            "You are not allowed to delete applications"
                         )
 
-                if call_request:
-                    allowed_statuses = {
-                        c[0] for c in
-                        CallRequest._meta.get_field("status").choices
-                    }
+                    deleted, _ = AppliedUniversity.objects.filter(
+                        id__in=applied_university.delete_ids,
+                        student=student
+                    ).delete()
 
-                    if call_request.add:
-                        for obj in call_request.add:
-                            if not emp.is_superuser and not AssignedCounsellor.objects.filter(
-                                    student=student,
-                                    employee=emp
-                            ).exists():
-                                raise GraphQLError(
-                                    "You do not have permission to create call requests for this student"
-                                )
+                    if deleted != len(applied_university.delete_ids):
+                        raise GraphQLError(
+                            "Delete failed: invalid application ID or ownership mismatch"
+                        )
 
-                            if CallRequest.objects.filter(
-                                    student=student,
-                                    employee=emp,
-                                    status__in=["requested", "scheduled"],
-                            ).exists():
-                                raise GraphQLError("Active call request already exists")
+                if applied_university.add:
+                    AppliedUniversity.objects.bulk_create([
+                        AppliedUniversity(
+                            student=student,
+                            course_id=obj.course_id
+                        )
+                        for obj in applied_university.add
+                    ])
 
-                            # if obj.status and obj.status not in allowed_statuses:
-                            #     raise GraphQLError("Invalid call status")
+            if assigned_counsellor:
+                if not emp.is_superuser:
+                    raise GraphQLError("You are not allowed to perform this task")
 
-                            if obj.follow_up_required and not obj.follow_up_on:
-                                raise GraphQLError(
-                                    "Follow-up date required when follow-up is enabled"
-                                )
+                existing = AssignedCounsellor.objects.filter(
+                    student=student
+                ).select_for_update().first()
 
-                            if obj.status == "scheduled" and not obj.call_timing:
-                                raise GraphQLError(
-                                    "call_timing is required when status is scheduled"
-                                )
+                if existing:
+                    existing.employee_id = assigned_counsellor.employee_id
+                    existing.save(update_fields=["employee"])
+                else:
+                    AssignedCounsellor.objects.create(
+                        student=student,
+                        employee_id=assigned_counsellor.employee_id
+                    )
 
-                            print("It worked till here")
+            if call_request:
+                allowed_statuses = {
+                    c[0] for c in
+                    CallRequest._meta.get_field("status").choices
+                }
 
+                if call_request.add:
+                    for obj in call_request.add:
+                        if not emp.is_superuser and not AssignedCounsellor.objects.filter(
+                                student=student,
+                                employee=emp
+                        ).exists():
+                            raise GraphQLError(
+                                "You do not have permission to create call requests for this student"
+                            )
+
+                        if CallRequest.objects.filter(
+                                student=student,
+                                employee=emp,
+                                status__in=["requested", "scheduled"],
+                        ).exists():
+                            raise GraphQLError("Active call request already exists")
+
+                        # if obj.status and obj.status not in allowed_statuses:
+                        #     raise GraphQLError("Invalid call status")
+
+                        if obj.follow_up_required and not obj.follow_up_on:
+                            raise GraphQLError(
+                                "Follow-up date required when follow-up is enabled"
+                            )
+
+                        if obj.status == "scheduled" and not obj.call_timing:
+                            raise GraphQLError(
+                                "call_timing is required when status is scheduled"
+                            )
+
+                        # print("It worked till here")
+                        VALID_STATUSES = dict(CallRequest._meta.get_field("status").choices).keys()
+
+                        if obj.status not in VALID_STATUSES:
+                            raise GraphQLError("Invalid call status")
+
+                        try:
                             CallRequest.objects.create(
                                 student=student,
                                 employee=emp,
@@ -898,27 +901,30 @@ class StudentSchema(SchemaMixin):
                                 follow_up_required=obj.follow_up_required or False,
                                 follow_up_on=obj.follow_up_on,
                             )
+                        except:
+                            raise GraphQLError("Server while while creating call request")
 
-                    if call_request.update:
-                        for obj in call_request.update:
-                            call_obj = CallRequest.objects.select_for_update().filter(
-                                id=obj.id,
-                                student=student
-                            ).first()
+                if call_request.update:
+                    for obj in call_request.update:
+                        call_obj = CallRequest.objects.select_for_update().filter(
+                            id=obj.id,
+                            student=student
+                        ).first()
 
-                            if not call_obj:
-                                raise GraphQLError("Call request not found")
+                        if not call_obj:
+                            raise GraphQLError("Call request not found")
 
-                            if not emp.is_superuser and call_obj.employee_id != emp.id:
-                                raise GraphQLError(
-                                    "You do not have permission to update this call request"
-                                )
+                        if not emp.is_superuser and call_obj.employee_id != emp.id:
+                            raise GraphQLError(
+                                "You do not have permission to update this call request"
+                            )
 
-                            if obj.status:
-                                if obj.status not in allowed_statuses:
-                                    raise GraphQLError("Invalid call status")
-                                call_obj.status = obj.status
+                        if obj.status:
+                            if obj.status not in allowed_statuses:
+                                raise GraphQLError("Invalid call status")
+                            call_obj.status = obj.status
 
+                        try:
                             for field in [
                                 "schedule_for",
                                 "call_timing",
@@ -931,22 +937,22 @@ class StudentSchema(SchemaMixin):
                                     setattr(call_obj, field, val)
 
                             call_obj.save()
+                        except:
+                            raise GraphQLError("Internal Server Error")
 
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT get_student_full_profile(%s);",
-                    [student.id],
-                )
-                row = cursor.fetchone()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT get_student_full_profile(%s);",
+                [student.id],
+            )
+            row = cursor.fetchone()
 
-            if not row or not row[0]:
-                raise GraphQLError("Student not found")
+        if not row or not row[0]:
+            raise GraphQLError("Student not found")
 
-            data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
-            return cls.student_schema_builder(data)
+        data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+        return cls.student_schema_builder(data)
 
-        except Exception as e:
-            raise GraphQLError(f"Update failed")
 
 @strawberry.type
 class StudentListSchema(SchemaMixin):
@@ -1348,198 +1354,192 @@ class ApplicationSchema(SchemaMixin):
             choice[0] for choice in StudentSubMilestone.STATUS
         }
 
-        try:
-            with transaction.atomic():
-                if documents:
-                    if documents.delete_ids:
-                        reqs = StudentDocumentRequirement.objects.filter(
-                            id__in=documents.delete_ids
+        with transaction.atomic():
+            if documents:
+                if documents.delete_ids:
+                    reqs = StudentDocumentRequirement.objects.filter(
+                        id__in=documents.delete_ids
+                    )
+                    if reqs.count() != len(documents.delete_ids):
+                        raise GraphQLError(
+                            "One or more document requirements not found"
                         )
-                        if reqs.count() != len(documents.delete_ids):
+
+                    for req in reqs:
+                        if req.student_id != student_id:
+                            raise GraphQLError("Invalid document reference")
+
+                        #Issue here
+                        if req.requested_for_university_id != application_id:
                             raise GraphQLError(
-                                "One or more document requirements not found"
+                                "Document not found"
                             )
 
-                        for req in reqs:
-                            if req.student_id != student_id:
-                                raise GraphQLError("Invalid document reference")
+                        if req.requested_by_id != emp.id:
+                            raise GraphQLError(
+                                "You can delete only documents requested by you"
+                            )
 
-                            if req.requested_for_university_id != application_id:
-                                raise GraphQLError(
-                                    "Document not found"
-                                )
+                    reqs.delete()
 
-                            if req.requested_by_id != emp.id:
-                                raise GraphQLError(
-                                    "You can delete only documents requested by you"
-                                )
+                if documents.update:
+                    for obj in documents.update:
+                        req = StudentDocumentRequirement.objects.filter(id=obj.id).first()
+                        if not req:
+                            raise GraphQLError("Document requirement not found")
+                        if req.student_id != student_id:
+                            raise GraphQLError("Invalid document reference")
+                        if obj.instructions is not None:
+                            req.instructions = obj.instructions
+                            req.save(update_fields=["instructions"])
 
-                        reqs.delete()
+                        uploaded_doc = getattr(req, "file", None)
 
-                    if documents.update:
-                        for obj in documents.update:
-                            req = StudentDocumentRequirement.objects.filter(id=obj.id).first()
-                            if not req:
-                                raise GraphQLError("Document requirement not found")
-                            if req.student_id != student_id:
-                                raise GraphQLError("Invalid document reference")
-                            if obj.instructions is not None:
-                                req.instructions = obj.instructions
-                                req.save(update_fields=["instructions"])
+                        final_status = None
+                        if obj.document:
+                            final_status = "uploaded"
+                        elif obj.status:
+                            VALID_STATUSES = {choice[0] for choice in Document.STATUS_CHOICES}
+                            if obj.status not in VALID_STATUSES:
+                                raise GraphQLError("Invalid document status")
+                            final_status = obj.status
 
-                            uploaded_doc = getattr(req, "file", None)
+                        if obj.document:
+                            file_obj = obj.document
+                            MAX_FILE_SIZE = 1 * 1024 * 1024
 
-                            final_status = None
-                            if obj.document:
-                                final_status = "uploaded"
-                            elif obj.status:
-                                VALID_STATUSES = {choice[0] for choice in Document.STATUS_CHOICES}
-                                if obj.status not in VALID_STATUSES:
-                                    raise GraphQLError("Invalid document status")
-                                final_status = obj.status
+                            if file_obj.size > MAX_FILE_SIZE:
+                                raise GraphQLError("File should be under 1 MB")
 
-                            if obj.document:
-                                file_obj = obj.document
-                                MAX_FILE_SIZE = 1 * 1024 * 1024
+                            try:
+                                file_id, file_uuid = upload_file_to_drive_private(file_obj)
+                            except Exception:
+                                raise GraphQLError("Error uploading document")
 
-                                if file_obj.size > MAX_FILE_SIZE:
-                                    raise GraphQLError("File should be under 1 MB")
-
+                            if uploaded_doc and uploaded_doc.file_id:
                                 try:
-                                    file_id, file_uuid = upload_file_to_drive_private(file_obj)
+                                    delete_from_google_drive(uploaded_doc.file_id)
                                 except Exception:
-                                    raise GraphQLError("Error uploading document")
+                                    pass
 
-                                if uploaded_doc and uploaded_doc.file_id:
-                                    try:
-                                        delete_from_google_drive(uploaded_doc.file_id)
-                                    except Exception:
-                                        pass
-
-                                Document.objects.update_or_create(
-                                    required_document=req,
-                                    defaults={
-                                        "submitted_document": req.document_type.name,
-                                        "counsellor_status": final_status,
-                                        "file_id": file_id,
-                                        "file_uuid": file_uuid,
-                                    },
-                                )
-
-                            elif uploaded_doc:
-                                if final_status:
-                                    uploaded_doc.counsellor_status = final_status
-
-                                if obj.comment:
-                                    uploaded_doc.counsellor_comments = obj.comment
-
-                                uploaded_doc.full_clean()
-                                uploaded_doc.save()
-
-                    if documents.add:
-                        for obj in documents.add:
-                            doc_type = DocumentType.objects.filter(
-                                id=obj.document_type_id
-                            ).first()
-
-                            if not doc_type:
-                                raise GraphQLError(
-                                    f"Invalid document type {obj.document_type_id}"
-                                )
-
-                            if doc_type.is_default:
-                                raise GraphQLError(
-                                    "It is a basic document and cannot be requested per application"
-                                )
-
-                            exists = StudentDocumentRequirement.objects.filter(
-                                student_id=student_id,
-                                document_type=doc_type,
-                                requested_for_university=application
-                            ).exists()
-
-                            if exists:
-                                raise GraphQLError(
-                                    "This document is already requested"
-                                )
-
-                            required_document = StudentDocumentRequirement.objects.create(
-                                student_id=student_id,
-                                document_type=doc_type,
-                                requested_for_university=application,
-                                requested_by=emp,
-                                instructions=obj.instructions
+                            Document.objects.update_or_create(
+                                required_document=req,
+                                defaults={
+                                    "submitted_document": req.document_type.name,
+                                    "counsellor_status": final_status,
+                                    "file_id": file_id,
+                                    "file_uuid": file_uuid,
+                                },
                             )
 
-                            if obj.document:
-                                file_obj = obj.document
+                        elif uploaded_doc:
+                            if final_status:
+                                uploaded_doc.counsellor_status = final_status
 
-                                MAX_FILE_SIZE = 1 * 1024 * 1024  # 1MB
+                            if obj.comment:
+                                uploaded_doc.counsellor_comments = obj.comment
 
-                                if file_obj.size > MAX_FILE_SIZE:
-                                    raise GraphQLError("File should be under 1 MB")
+                            uploaded_doc.full_clean()
+                            uploaded_doc.save()
 
-                                document_name = required_document.document_type.name
+                if documents.add:
+                    for obj in documents.add:
+                        doc_type = DocumentType.objects.filter(
+                            id=obj.document_type_id
+                        ).first()
 
-                                try:
-                                    file_id, file_uuid = upload_file_to_drive_private(file_obj)
-                                except Exception:
-                                    raise GraphQLError("Error uploading document")
-
-                                Document.objects.update_or_create(
-                                    required_document=required_document,
-                                    defaults={
-                                        "submitted_document": document_name,
-                                        "counsellor_status": "uploaded",
-                                        "file_id": file_id,
-                                        "file_uuid": file_uuid,
-                                    },
-                                )
-
-                if milestones and milestones.update:
-                    for obj in milestones.update:
-                        sub = StudentSubMilestone.objects.select_related(
-                            "milestone__application"
-                        ).filter(id=obj.id).first()
-
-                        if not sub:
+                        if not doc_type:
                             raise GraphQLError(
-                                f"Sub-milestone {obj.id} not found"
+                                f"Invalid document type {obj.document_type_id}"
                             )
-                        if sub.milestone.application_id != application_id:
+
+                        if doc_type.is_default:
                             raise GraphQLError(
-                                "Sub-milestone does not belong to this application"
+                                "It is a basic document and cannot be requested per application"
                             )
 
-                        if obj.status:
-                            if obj.status not in allowed_submilestone_statuses:
-                                raise GraphQLError(
-                                    f"Invalid status '{obj.status}'. "
-                                )
-                            sub.status = obj.status
-                        if obj.counsellor_comment is not None:
-                            sub.counsellor_comment = obj.counsellor_comment
-                        sub.save(update_fields=[
-                            "status",
-                            "counsellor_comment",
-                            "updated_at"
-                        ])
+                        exists = StudentDocumentRequirement.objects.filter(
+                            student_id=student_id,
+                            document_type=doc_type,
+                            requested_for_university=application
+                        ).exists()
 
-            app = cls.applications(
-                auth_token=auth_token,
-                student_id=student_id,
-                application_id=application_id
-            )
-            if not app:
-                raise GraphQLError("Failed to fetch updated application")
-            return app
+                        if exists:
+                            raise GraphQLError(
+                                "This document is already requested"
+                            )
 
-        except GraphQLError:
-            raise
-        except Exception:
-            raise GraphQLError(
-                "Update failed due to an internal error"
-            )
+                        required_document = StudentDocumentRequirement.objects.create(
+                            student_id=student_id,
+                            document_type=doc_type,
+                            requested_for_university=application,
+                            requested_by=emp,
+                            instructions=obj.instructions
+                        )
+
+                        if obj.document:
+                            file_obj = obj.document
+
+                            MAX_FILE_SIZE = 1 * 1024 * 1024  # 1MB
+
+                            if file_obj.size > MAX_FILE_SIZE:
+                                raise GraphQLError("File should be under 1 MB")
+
+                            document_name = required_document.document_type.name
+
+                            try:
+                                file_id, file_uuid = upload_file_to_drive_private(file_obj)
+                            except Exception:
+                                raise GraphQLError("Error uploading document")
+
+                            Document.objects.update_or_create(
+                                required_document=required_document,
+                                defaults={
+                                    "submitted_document": document_name,
+                                    "counsellor_status": "uploaded",
+                                    "file_id": file_id,
+                                    "file_uuid": file_uuid,
+                                },
+                            )
+                #Fix this piece of shit
+
+            if milestones and milestones.update:
+                for obj in milestones.update:
+                    sub = StudentSubMilestone.objects.select_related(
+                        "milestone__application"
+                    ).filter(id=obj.id).first()
+
+                    if not sub:
+                        raise GraphQLError(
+                            f"Sub-milestone {obj.id} not found"
+                        )
+                    if sub.milestone.application_id != application_id:
+                        raise GraphQLError(
+                            "Sub-milestone does not belong to this application"
+                        )
+
+                    if obj.status:
+                        if obj.status not in allowed_submilestone_statuses:
+                            raise GraphQLError(
+                                f"Invalid status '{obj.status}'. "
+                            )
+                        sub.status = obj.status
+                    if obj.counsellor_comment is not None:
+                        sub.counsellor_comment = obj.counsellor_comment
+                    sub.save(update_fields=[
+                        "status",
+                        "counsellor_comment",
+                        "updated_at"
+                    ])
+
+        app = cls.applications(
+            auth_token=auth_token,
+            student_id=student_id,
+            application_id=application_id
+        )
+        if not app:
+            raise GraphQLError("Failed to fetch updated application")
+        return app
 
 @strawberry.type
 class DocumentTypeSchema(SchemaMixin):
@@ -1547,7 +1547,7 @@ class DocumentTypeSchema(SchemaMixin):
     name: str
     doc_type: str
     sub_type: Optional[str]
-    is_default: bool
+    is_default: bool = strawberry.field(description="If true, docs gets automatically assigned. No need to assign again.")
 
     @classmethod
     def documents(cls, auth_token:str) -> List["DocumentTypeSchema"]:

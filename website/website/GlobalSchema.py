@@ -7,6 +7,7 @@ from tasks.Schema import TaskQuery, TaskMutation
 from university.Schema import UniversityQuery, UniversityMutation
 from course.Schema import CourseQuery, CourseMutation
 from student.Schema import StudentsQuery, StudentMutation
+from scholarship.Schema import ScholarshipQuery
 
 @strawberry.type
 class Query:
@@ -33,6 +34,10 @@ class Query:
     @strawberry.field
     def student(self) -> StudentsQuery:
         return StudentsQuery()
+
+    @strawberry.field
+    def scholarship(self) -> ScholarshipQuery:
+        return ScholarshipQuery()
 
 
 @strawberry.type
