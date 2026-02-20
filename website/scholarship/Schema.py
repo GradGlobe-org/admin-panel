@@ -61,6 +61,7 @@ class FAQSchema:
 
 @strawberry.type(description="Represents a scholarship")
 class ScholarshipSchema(SchemaMixin):
+    id: int
     name: str = strawberry.field(description="Scholarship name")
     awarded_by: str = strawberry.field(description="Scholarship provider")
     overview: str = strawberry.field(description="Short scholarship summary")
@@ -176,6 +177,7 @@ class ScholarshipListSchema(SchemaMixin):
             ]
 
             scholarship_obj = ScholarshipSchema(
+                id=sch.id,
                 name=sch.name,
                 awarded_by=sch.awarded_by,
                 overview=sch.overview,
