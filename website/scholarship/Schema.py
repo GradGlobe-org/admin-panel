@@ -123,8 +123,8 @@ class ScholarshipInputSchema:
     brochure: Optional[str] = strawberry.field(default=None, description="Brochure URL")
 
     country_id: int = strawberry.field(description="Scholarship country")
-    university_ids: List[int] = strawberry.field(description="Ids of the universities scholarship applies on")
-    eligible_nationalities_ids: List[int] = strawberry.field(description="Ids of countries whose citizens are eligible for this scholarship")
+    university_ids: Optional[List[int]] = strawberry.field(default=None, description="Ids of the universities scholarship applies on")
+    eligible_nationalities_ids: Optional[List[int]] = strawberry.field(default=None, description="Ids of countries whose citizens are eligible for this scholarship")
 
 @strawberry.input
 class ScholarshipExpenseCoverageSchemaUpdateInput:
@@ -659,6 +659,10 @@ class ScholarshipQuery:
 class ScholarshipMutation:
     add_scholarship : ScholarshipSchema = strawberry.field(
         resolver=ScholarshipSchema.add_scholarship
+    )
+
+    edit_scholarship: ScholarshipSchema = strawberry.field(
+        resolver=ScholarshipSchema.update_scholarship
     )
 
 
