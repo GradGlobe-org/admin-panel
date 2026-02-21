@@ -28,7 +28,8 @@ class ExpenseTypeSchema(SchemaMixin):
         if not emp.is_superuser:
             has_permission = emp.job_roles.filter(
                 Q(permissions__name="scholarship_add") |
-                Q(permissions__name="scholarship_update")
+                Q(permissions__name="scholarship_update") |
+                Q(permissions__name="scholarship_view")
             ).exists()
             if not has_permission:
                 raise GraphQLError("Insufficient Permissions")
@@ -65,11 +66,12 @@ class CountryNameSchema(SchemaMixin):
 
             if not emp.is_superuser:
                 has_permission = emp.job_roles.filter(
-                    permissions__name="country_view"
+                    Q(permissions__name="scholarship_add") |
+                    Q(permissions__name="scholarship_update") |
+                    Q(permissions__name="scholarship_view")
                 ).exists()
-
                 if not has_permission:
-                    raise GraphQLError("Unauthorized")
+                    raise GraphQLError("Insufficient Permissions")
 
             countries = Country.objects.all().order_by("name")
 
